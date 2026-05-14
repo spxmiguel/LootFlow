@@ -2,10 +2,10 @@ import { useState, useMemo, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import {
   Plus, ChevronLeft, ChevronRight, Search, X, Package,
-  Trash2, DollarSign, AlertCircle,
+  Trash2, DollarSign, AlertCircle, Calendar, HelpCircle, Zap,
 } from 'lucide-react'
 import { useStore } from '../store'
-import { formatCurrency, getCurrentWeekId, getWeekLabel, getPreviousWeeks } from '../lib/utils'
+import { formatCurrency, getCurrentWeekId, getWeekLabel, getPreviousWeeks, getWeekIdForDate } from '../lib/utils'
 import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
@@ -147,22 +147,30 @@ interface DropModalProps {
   onClose: () => void
 }
 
+type DateMode = 'this-week' | 'manual' | 'unknown'
+
 function DropModal({ onSave, onClose }: DropModalProps) {
   const { accounts, drops, settings } = useStore()
   const activeAccounts = accounts.filter(a => a.active)
-  const weeks = getPreviousWeeks(8)
   const currentWid = getCurrentWeekId()
 
   const [accountId, setAccountId] = useState(activeAccounts[0]?.id ?? '')
-  const [weekId, setWeekId] = useState(currentWid)
+  const [dateMode, setDateMode] = useState<DateMode>('this-week')
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [item1, setItem1] = useState<SteamItem | null>(null)
   const [value1, setValue1] = useState('')
   const [item2, setItem2] = useState<SteamItem | null>(null)
   const [value2, setValue2] = useState('')
   const [error, setError] = useState('')
 
+  const weekId = dateMode === 'this-week'
+    ? currentWid
+    : dateMode === 'manual'
+    ? getWeekIdForDate(new Date(manualDate + 'T12:00:00'))
+    : 'unknown'
+
   const existingDrops = drops.filter(d => d.accountId === accountId && d.weekId === weekId)
-  const slotsLeft = 2 - existingDrops.length
+  const slotsLeft = weekId === 'unknown' ? 2 : 2 - existingDrops.length
 
   function handleSave() {
     setError('')
@@ -209,32 +217,65 @@ function DropModal({ onSave, onClose }: DropModalProps) {
   return (
     <Modal open onClose={onClose} title="Registrar Drops da Semana" size="md">
       <div className="space-y-4">
-        {/* Account + Week selectors */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-slate-400 block mb-1.5">Conta *</label>
-            <select
-              value={accountId}
-              onChange={e => { setAccountId(e.target.value); setItem1(null); setValue1(''); setItem2(null); setValue2('') }}
-              className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
-            >
-              {activeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+        {/* Conta */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-1.5">Conta *</label>
+          <select
+            value={accountId}
+            onChange={e => { setAccountId(e.target.value); setItem1(null); setValue1(''); setItem2(null); setValue2('') }}
+            className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+          >
+            {activeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        </div>
+
+        {/* Quando foi o drop */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-2">Quando foi?</label>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {([
+              { mode: 'this-week' as DateMode, icon: Zap,        label: 'Esta semana' },
+              { mode: 'manual'    as DateMode, icon: Calendar,   label: 'Escolher data' },
+              { mode: 'unknown'   as DateMode, icon: HelpCircle, label: 'Não lembro' },
+            ] as const).map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDateMode(mode)}
+                className={`flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-medium transition-all ${
+                  dateMode === mode
+                    ? 'border-primary/60 bg-primary/10 text-primary'
+                    : 'border-white/[0.08] bg-[#111827] text-slate-400 hover:border-white/[0.16] hover:text-slate-200'
+                }`}
+              >
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
           </div>
-          <div>
-            <label className="text-xs text-slate-400 block mb-1.5">Semana</label>
-            <select
-              value={weekId}
-              onChange={e => setWeekId(e.target.value)}
-              className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
-            >
-              {weeks.map(w => (
-                <option key={w} value={w}>
-                  {w === currentWid ? '★ Esta semana' : getWeekLabel(w)}
-                </option>
-              ))}
-            </select>
-          </div>
+
+          {dateMode === 'this-week' && (
+            <p className="text-xs text-slate-500 px-1">{getWeekLabel(currentWid)}</p>
+          )}
+          {dateMode === 'manual' && (
+            <div className="space-y-1">
+              <input
+                type="date"
+                value={manualDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={e => setManualDate(e.target.value)}
+                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+              />
+              {manualDate && (
+                <p className="text-xs text-slate-500 px-1">
+                  Semana: {getWeekLabel(getWeekIdForDate(new Date(manualDate + 'T12:00:00')))}
+                </p>
+              )}
+            </div>
+          )}
+          {dateMode === 'unknown' && (
+            <p className="text-xs text-slate-500 px-1">Drop salvo sem data — não entra nos gráficos semanais.</p>
+          )}
         </div>
 
         {/* Status */}
