@@ -33,13 +33,8 @@ export function getWeekRange(weekId: string): { start: Date; end: Date } {
 }
 
 export function getWeekLabel(weekId: string): string {
-  if (weekId === 'unknown') return 'Sem data'
-  try {
-    const { start, end } = getWeekRange(weekId)
-    return `${format(start, 'dd/MM', { locale: ptBR })} – ${format(end, 'dd/MM/yy', { locale: ptBR })}`
-  } catch {
-    return weekId
-  }
+  const { start, end } = getWeekRange(weekId)
+  return `${format(start, 'dd/MM', { locale: ptBR })} – ${format(end, 'dd/MM/yy', { locale: ptBR })}`
 }
 
 export function getPreviousWeeks(count: number): string[] {

@@ -1,14 +1,31 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowLeft, Zap, UserCircle2, Chrome, Loader2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, Zap, UserCircle2, Chrome, Loader2, Shield, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { FIREBASE_ENABLED } from '../lib/config'
+import { LegalModal, type LegalType } from '../components/LegalModal'
+
+const CONSENT_KEY = 'lootflow_google_consent'
 
 export default function AuthPage({ onBack }: { onBack?: () => void }) {
   const { loginLocal, loginGoogle } = useAuth()
   const [loadingGoogle, setLoadingGoogle] = useState(false)
+  const [showConsent, setShowConsent] = useState(false)
+  const [legalModal, setLegalModal] = useState<LegalType | null>(null)
 
-  const handleGoogle = async () => {
+  const hasFirebase = FIREBASE_ENABLED
+
+  const handleGoogleClick = () => {
+    if (localStorage.getItem(CONSENT_KEY) === 'true') {
+      doGoogleLogin()
+    } else {
+      setShowConsent(true)
+    }
+  }
+
+  const doGoogleLogin = async () => {
+    setShowConsent(false)
+    localStorage.setItem(CONSENT_KEY, 'true')
     setLoadingGoogle(true)
     const result = await loginGoogle()
     if (result === 'redirect') {
@@ -18,113 +35,185 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
     setLoadingGoogle(false)
   }
 
-  const hasFirebase = FIREBASE_ENABLED
-
   return (
-    <div className="min-h-screen bg-[#07090f] flex items-center justify-center p-4 relative overflow-hidden">
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0c1018]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.16] transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </button>
-      )}
-      {/* Ambient glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-[120px]"
-          style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 6%, transparent)' }} />
-      </div>
+    <>
+      {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm relative z-10"
-      >
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
-            style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #38bdf8) 30%, transparent), color-mix(in srgb, var(--color-primary, #38bdf8) 10%, transparent))', border: '1px solid color-mix(in srgb, var(--color-primary, #38bdf8) 25%, transparent)' }}
+      <div className="min-h-screen bg-[#07090f] flex items-center justify-center p-4 relative overflow-hidden">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0c1018]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.16] transition-colors"
           >
-            <Zap className="w-8 h-8" style={{ color: 'var(--color-primary, #38bdf8)' }} strokeWidth={2} />
-          </motion.div>
-          <h1 className="font-display text-3xl font-extrabold text-slate-100 leading-tight">LootFlow</h1>
-          <p className="text-sm text-slate-500 mt-2">Analytics premium de drops CS2 · Prime Weekly</p>
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </button>
+        )}
+        {/* Ambient glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-[120px]"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 6%, transparent)' }} />
         </div>
 
-        {/* Options */}
-        <div className="space-y-3">
-          {/* Anonymous */}
-          <motion.button
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            onClick={loginLocal}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#0c1018] border border-white/[0.09] hover:bg-[#111827] hover:border-white/[0.15] transition-all group"
-          >
-            <div className="w-11 h-11 rounded-xl bg-[#111827] flex items-center justify-center shrink-0 group-hover:bg-[#1a2235] transition-colors">
-              <UserCircle2 className="w-5 h-5 text-slate-400" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="font-semibold text-slate-200 text-sm">Entrar como Convidado</p>
-              <p className="text-xs text-slate-500 mt-0.5">Dados salvos localmente · sem conta</p>
-            </div>
-            <div className="px-3 py-1.5 rounded-xl bg-[#1a2235] text-xs text-slate-300 font-medium shrink-0">
-              Entrar
-            </div>
-          </motion.button>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-sm relative z-10"
+        >
+          {/* Logo */}
+          <div className="text-center mb-10">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
+              style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #38bdf8) 30%, transparent), color-mix(in srgb, var(--color-primary, #38bdf8) 10%, transparent))', border: '1px solid color-mix(in srgb, var(--color-primary, #38bdf8) 25%, transparent)' }}
+            >
+              <Zap className="w-8 h-8" style={{ color: 'var(--color-primary, #38bdf8)' }} strokeWidth={2} />
+            </motion.div>
+            <h1 className="font-display text-3xl font-extrabold text-slate-100 leading-tight">LootFlow</h1>
+            <p className="text-sm text-slate-500 mt-2">Analytics premium de drops CS2 · Prime Weekly</p>
+          </div>
 
-          {/* Google */}
-          <motion.button
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            onClick={handleGoogle}
-            disabled={loadingGoogle || !hasFirebase}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl border transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 8%, transparent)',
-              borderColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 25%, transparent)',
-            }}
-          >
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 15%, transparent)' }}>
-              {loadingGoogle
-                ? <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-primary, #38bdf8)' }} />
-                : <Chrome className="w-5 h-5" style={{ color: 'var(--color-primary, #38bdf8)' }} />}
-            </div>
-            <div className="flex-1 text-left">
-              <p className="font-semibold text-slate-200 text-sm">Entrar com Google</p>
-              <p className="text-xs text-slate-500 mt-0.5">Sync na nuvem · acesso em qualquer dispositivo</p>
-            </div>
-            <div className="px-3 py-1.5 rounded-xl text-xs font-medium shrink-0"
+          {/* Options */}
+          <div className="space-y-3">
+            {/* Anonymous */}
+            <motion.button
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              onClick={loginLocal}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#0c1018] border border-white/[0.09] hover:bg-[#111827] hover:border-white/[0.15] transition-all group"
+            >
+              <div className="w-11 h-11 rounded-xl bg-[#111827] flex items-center justify-center shrink-0 group-hover:bg-[#1a2235] transition-colors">
+                <UserCircle2 className="w-5 h-5 text-slate-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-semibold text-slate-200 text-sm">Entrar como Convidado</p>
+                <p className="text-xs text-slate-500 mt-0.5">Dados salvos localmente · sem conta</p>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-[#1a2235] text-xs text-slate-300 font-medium shrink-0">
+                Entrar
+              </div>
+            </motion.button>
+
+            {/* Google */}
+            <motion.button
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              onClick={handleGoogleClick}
+              disabled={loadingGoogle || !hasFirebase}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl border transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 15%, transparent)',
-                color: 'var(--color-primary, #38bdf8)',
-              }}>
-              {loadingGoogle ? '...' : 'Entrar'}
-            </div>
-          </motion.button>
-        </div>
+                backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 8%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 25%, transparent)',
+              }}
+            >
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 15%, transparent)' }}>
+                {loadingGoogle
+                  ? <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-primary, #38bdf8)' }} />
+                  : <Chrome className="w-5 h-5" style={{ color: 'var(--color-primary, #38bdf8)' }} />}
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-semibold text-slate-200 text-sm">Entrar com Google</p>
+                <p className="text-xs text-slate-500 mt-0.5">Sync na nuvem · acesso em qualquer dispositivo</p>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl text-xs font-medium shrink-0"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 15%, transparent)',
+                  color: 'var(--color-primary, #38bdf8)',
+                }}>
+                {loadingGoogle ? '...' : 'Entrar'}
+              </div>
+            </motion.button>
 
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center text-[11px] text-slate-700 mt-8"
-        >
-          {hasFirebase
-            ? 'Dados do Convidado ficam só no seu navegador. Google sincroniza na nuvem.'
-            : 'Firebase não configurado — apenas modo Convidado disponível.'}
-        </motion.p>
-      </motion.div>
-    </div>
+            {/* Google consent panel */}
+            <AnimatePresence>
+              {showConsent && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-4 rounded-2xl bg-[#0c1018] border border-white/[0.12]">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Shield size={14} className="text-primary shrink-0 mt-0.5" />
+                        <p className="text-sm font-semibold text-slate-200">Antes de continuar</p>
+                      </div>
+                      <button onClick={() => setShowConsent(false)} className="text-slate-600 hover:text-slate-400 transition-colors">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-5 mb-3">
+                      Ao entrar com Google, o LootFlow receberá do Google:{' '}
+                      <strong className="text-slate-300">e-mail, nome e foto de perfil</strong>.
+                      Usados apenas para identificar sua conta e sincronizar dados no Firestore (Google Cloud, EUA).
+                    </p>
+                    <p className="text-xs text-slate-500 leading-5 mb-4">
+                      Você pode desativar o sync ou apagar seus dados a qualquer momento em{' '}
+                      <strong className="text-slate-400">Configurações → Privacidade</strong>.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={doGoogleLogin}
+                        className="flex-1 py-2 rounded-xl text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 20%, transparent)',
+                          color: 'var(--color-primary, #38bdf8)',
+                        }}
+                      >
+                        Entendi, continuar
+                      </button>
+                      <button
+                        onClick={() => setShowConsent(false)}
+                        className="flex-1 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] text-xs text-slate-400 font-medium transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                    <p className="text-center mt-3">
+                      <button
+                        onClick={() => setLegalModal('privacy')}
+                        className="text-[11px] text-slate-600 hover:text-slate-400 underline underline-offset-2 transition-colors"
+                      >
+                        Ver Política de Privacidade completa
+                      </button>
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Footer */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-center mt-8 space-y-2"
+          >
+            <p className="text-[11px] text-slate-700">
+              {hasFirebase
+                ? 'Dados do Convidado ficam só no seu navegador. Google sincroniza na nuvem.'
+                : 'Firebase não configurado — apenas modo Convidado disponível.'}
+            </p>
+            <div className="flex items-center justify-center gap-3 text-[11px] text-slate-700">
+              <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
+                Privacidade
+              </button>
+              <span>·</span>
+              <button onClick={() => setLegalModal('terms')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
+                Termos de Uso
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      </div>
+    </>
   )
 }

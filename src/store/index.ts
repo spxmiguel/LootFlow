@@ -2,7 +2,7 @@ import { logger } from '../lib/logger'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { CSAccount, Drop, Goal, AppSettings, AppUser, Page, ModalType } from '../lib/types'
-import { storage } from '../lib/storage'
+import { storage, DEFAULT_SETTINGS } from '../lib/storage'
 import { generateId, getAccountColor } from '../lib/utils'
 import {
   isFirebaseReady, firestoreSaveDoc, firestoreDeleteDoc,
@@ -56,6 +56,12 @@ interface AppState {
   updateSettings: (updates: Partial<AppSettings>) => void
   updateTheme: (updates: Partial<AppSettings['theme']>) => void
 
+  // Actions – Privacy / Selective clear
+  clearDrops: () => void
+  clearAccounts: () => void
+  clearGoals: () => void
+  resetSettingsToDefault: () => void
+
   // Actions – UI
   setCurrentPage: (page: Page) => void
   openModal: (type: ModalType, data?: unknown) => void
@@ -76,13 +82,16 @@ function syncToFirestore(
   collection: string,
   docId: string,
   data: Record<string, unknown>,
+  enabled = true,
 ) {
+  if (!enabled) return
   if (user?.provider === 'google' && isFirebaseReady()) {
     firestoreSaveDoc(user.uid, collection, docId, data).catch(logger.error)
   }
 }
 
-function deleteFromFirestore(user: AppUser | null, collection: string, docId: string) {
+function deleteFromFirestore(user: AppUser | null, collection: string, docId: string, enabled = true) {
+  if (!enabled) return
   if (user?.provider === 'google' && isFirebaseReady()) {
     firestoreDeleteDoc(user.uid, collection, docId).catch(logger.error)
   }
@@ -135,7 +144,8 @@ export const useStore = create<AppState>()(
     // ── Accounts ────────────────────────────────────────────────────────────
 
     addAccount: (data) => {
-      const { accounts, user } = get()
+      const { accounts, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const account: CSAccount = {
         ...data,
         id: generateId(),
@@ -145,29 +155,31 @@ export const useStore = create<AppState>()(
       const updated = [...accounts, account]
       set({ accounts: updated })
       storage.saveAccounts(updated)
-      syncToFirestore(user, 'accounts', account.id, account as unknown as Record<string, unknown>)
+      syncToFirestore(user, 'accounts', account.id, account as unknown as Record<string, unknown>, sync)
       return account
     },
 
     updateAccount: (id, updates) => {
-      const { accounts, user } = get()
+      const { accounts, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const updated = accounts.map(a => a.id === id ? { ...a, ...updates } : a)
       set({ accounts: updated })
       storage.saveAccounts(updated)
       const acct = updated.find(a => a.id === id)
-      if (acct) syncToFirestore(user, 'accounts', id, acct as unknown as Record<string, unknown>)
+      if (acct) syncToFirestore(user, 'accounts', id, acct as unknown as Record<string, unknown>, sync)
     },
 
     deleteAccount: (id) => {
-      const { accounts, drops, user } = get()
+      const { accounts, drops, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const updatedAccounts = accounts.filter(a => a.id !== id)
       const updatedDrops = drops.filter(d => d.accountId !== id)
       const removedDrops = drops.filter(d => d.accountId === id)
       set({ accounts: updatedAccounts, drops: updatedDrops })
       storage.saveAccounts(updatedAccounts)
       storage.saveDrops(updatedDrops)
-      deleteFromFirestore(user, 'accounts', id)
-      removedDrops.forEach(d => deleteFromFirestore(user, 'drops', d.id))
+      deleteFromFirestore(user, 'accounts', id, sync)
+      removedDrops.forEach(d => deleteFromFirestore(user, 'drops', d.id, sync))
     },
 
     toggleAccountActive: (id) => {
@@ -179,7 +191,8 @@ export const useStore = create<AppState>()(
     // ── Drops ────────────────────────────────────────────────────────────────
 
     addDrop: (data) => {
-      const { drops, user } = get()
+      const { drops, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const drop: Drop = {
         ...data,
         id: generateId(),
@@ -188,25 +201,27 @@ export const useStore = create<AppState>()(
       const updated = [...drops, drop]
       set({ drops: updated })
       storage.saveDrops(updated)
-      syncToFirestore(user, 'drops', drop.id, drop as unknown as Record<string, unknown>)
+      syncToFirestore(user, 'drops', drop.id, drop as unknown as Record<string, unknown>, sync)
       return drop
     },
 
     updateDrop: (id, updates) => {
-      const { drops, user } = get()
+      const { drops, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const updated = drops.map(d => d.id === id ? { ...d, ...updates } : d)
       set({ drops: updated })
       storage.saveDrops(updated)
       const drop = updated.find(d => d.id === id)
-      if (drop) syncToFirestore(user, 'drops', id, drop as unknown as Record<string, unknown>)
+      if (drop) syncToFirestore(user, 'drops', id, drop as unknown as Record<string, unknown>, sync)
     },
 
     deleteDrop: (id) => {
-      const { drops, user } = get()
+      const { drops, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const updated = drops.filter(d => d.id !== id)
       set({ drops: updated })
       storage.saveDrops(updated)
-      deleteFromFirestore(user, 'drops', id)
+      deleteFromFirestore(user, 'drops', id, sync)
     },
 
     markDropSold: (id, cashoutValue) => {
@@ -220,7 +235,8 @@ export const useStore = create<AppState>()(
     // ── Goals ────────────────────────────────────────────────────────────────
 
     addGoal: (data) => {
-      const { goals, user } = get()
+      const { goals, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const goal: Goal = {
         ...data,
         id: generateId(),
@@ -229,24 +245,26 @@ export const useStore = create<AppState>()(
       const updated = [...goals, goal]
       set({ goals: updated })
       storage.saveGoals(updated)
-      syncToFirestore(user, 'goals', goal.id, goal as unknown as Record<string, unknown>)
+      syncToFirestore(user, 'goals', goal.id, goal as unknown as Record<string, unknown>, sync)
     },
 
     updateGoal: (id, updates) => {
-      const { goals, user } = get()
+      const { goals, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const updated = goals.map(g => g.id === id ? { ...g, ...updates } : g)
       set({ goals: updated })
       storage.saveGoals(updated)
       const goal = updated.find(g => g.id === id)
-      if (goal) syncToFirestore(user, 'goals', id, goal as unknown as Record<string, unknown>)
+      if (goal) syncToFirestore(user, 'goals', id, goal as unknown as Record<string, unknown>, sync)
     },
 
     deleteGoal: (id) => {
-      const { goals, user } = get()
+      const { goals, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
       const updated = goals.filter(g => g.id !== id)
       set({ goals: updated })
       storage.saveGoals(updated)
-      deleteFromFirestore(user, 'goals', id)
+      deleteFromFirestore(user, 'goals', id, sync)
     },
 
     // ── Settings ─────────────────────────────────────────────────────────────
@@ -254,17 +272,52 @@ export const useStore = create<AppState>()(
     updateSettings: (updates) => {
       const { settings: current, user } = get()
       const updated = { ...current, ...updates }
+      const sync = updated.firebaseSyncEnabled !== false
       set({ settings: updated })
       storage.saveSettings(updated)
-      syncToFirestore(user, 'settings', 'app', updated as unknown as Record<string, unknown>)
+      syncToFirestore(user, 'settings', 'app', updated as unknown as Record<string, unknown>, sync)
     },
 
     updateTheme: (updates) => {
       const { settings: current, user } = get()
       const updated = { ...current, theme: { ...current.theme, ...updates } }
+      const sync = updated.firebaseSyncEnabled !== false
       set({ settings: updated })
       storage.saveSettings(updated)
-      syncToFirestore(user, 'settings', 'app', updated as unknown as Record<string, unknown>)
+      syncToFirestore(user, 'settings', 'app', updated as unknown as Record<string, unknown>, sync)
+    },
+
+    clearDrops: () => {
+      const { user, settings, drops: current } = get()
+      const sync = settings.firebaseSyncEnabled !== false
+      set({ drops: [] })
+      storage.saveDrops([])
+      current.forEach(d => deleteFromFirestore(user, 'drops', d.id, sync))
+    },
+
+    clearAccounts: () => {
+      const { user, settings, accounts: current } = get()
+      const sync = settings.firebaseSyncEnabled !== false
+      set({ accounts: [] })
+      storage.saveAccounts([])
+      current.forEach(a => deleteFromFirestore(user, 'accounts', a.id, sync))
+    },
+
+    clearGoals: () => {
+      const { user, settings, goals: current } = get()
+      const sync = settings.firebaseSyncEnabled !== false
+      set({ goals: [] })
+      storage.saveGoals([])
+      current.forEach(g => deleteFromFirestore(user, 'goals', g.id, sync))
+    },
+
+    resetSettingsToDefault: () => {
+      const { user, settings: current } = get()
+      const sync = current.firebaseSyncEnabled !== false
+      const defaultSettings = { ...DEFAULT_SETTINGS }
+      set({ settings: defaultSettings })
+      storage.saveSettings(defaultSettings)
+      syncToFirestore(user, 'settings', 'app', defaultSettings as unknown as Record<string, unknown>, sync)
     },
 
     // ── UI ───────────────────────────────────────────────────────────────────
@@ -287,24 +340,9 @@ export const useStore = create<AppState>()(
     },
 
     hydrateCloud: async (user) => {
-      if (user.provider !== 'google') {
+      if (user.provider !== 'google' || !isFirebaseReady()) {
         get().hydrate()
         return
-      }
-      if (!isFirebaseReady()) {
-        // Firebase não inicializado — tenta inicializar
-        try {
-          const { FIREBASE_CONFIG } = await import('../lib/config')
-          const { initFirebase } = await import('../lib/firebase')
-          initFirebase(FIREBASE_CONFIG)
-        } catch {
-          get().hydrate()
-          return
-        }
-        if (!isFirebaseReady()) {
-          get().hydrate()
-          return
-        }
       }
 
       const localSnapshot = {

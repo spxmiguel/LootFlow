@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Users, TrendingUp, Package,
@@ -12,7 +12,7 @@ import {
   Button, Card, Badge, Modal, Input, Textarea,
   Empty, Progress, Divider,
 } from '../components/ui'
-import { PRIME_COST_BRL } from '../lib/config'
+import { getPrimeCostBRL, getPrimeCostBRLSync } from '../lib/steam'
 import toast from 'react-hot-toast'
 
 // ─── Account Form ─────────────────────────────────────────────────────────────
@@ -43,13 +43,19 @@ function AccountModal({
   const [form, setForm] = useState<AccountFormData>(initial ?? emptyForm)
   const [errors, setErrors] = useState<Partial<AccountFormData>>({})
   // Custo Prime fixo em BRL.
-  const primeCostBRL = PRIME_COST_BRL
+  const [primeCostBRL, setPrimeCostBRL] = useState<number>(getPrimeCostBRLSync())
 
   React.useEffect(() => {
     setForm(initial ?? emptyForm)
     setErrors({})
   }, [open, initial])
 
+  // Mantém o mesmo fluxo caso o valor fixo mude no config.
+  useEffect(() => {
+    if (open) {
+      getPrimeCostBRL().then(v => setPrimeCostBRL(v)).catch(() => {})
+    }
+  }, [open])
 
   const validate = () => {
     const e: Partial<AccountFormData> = {}

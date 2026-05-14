@@ -10,6 +10,7 @@ export const FIREBASE_CONFIG = {
   storageBucket:     "kkkkkkkk-3fc45.firebasestorage.app",
   messagingSenderId: "529544539876",
   appId:             "1:529544539876:web:fdd4832e4096f0e465c6f1",
+  measurementId:     "G-W34TK015CG",
 }
 
 export const FIREBASE_ENABLED = true

@@ -5,7 +5,7 @@ import {
   Trash2, DollarSign, AlertCircle,
 } from 'lucide-react'
 import { useStore } from '../store'
-import { formatCurrency, getCurrentWeekId, getWeekLabel, getPreviousWeeks, cn } from '../lib/utils'
+import { formatCurrency, getCurrentWeekId, getWeekLabel, getPreviousWeeks } from '../lib/utils'
 import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
@@ -154,7 +154,6 @@ function DropModal({ onSave, onClose }: DropModalProps) {
   const currentWid = getCurrentWeekId()
 
   const [accountId, setAccountId] = useState(activeAccounts[0]?.id ?? '')
-  const [dateMode, setDateMode] = useState<'current' | 'pick' | 'unknown'>('current')
   const [weekId, setWeekId] = useState(currentWid)
   const [item1, setItem1] = useState<SteamItem | null>(null)
   const [value1, setValue1] = useState('')
@@ -162,10 +161,8 @@ function DropModal({ onSave, onClose }: DropModalProps) {
   const [value2, setValue2] = useState('')
   const [error, setError] = useState('')
 
-  // "não lembro" usa weekId especial que não afeta gráficos
-  const effectiveWeekId = dateMode === 'unknown' ? 'unknown' : weekId
-  const existingDrops = dateMode === 'unknown' ? [] : drops.filter(d => d.accountId === accountId && d.weekId === weekId)
-  const slotsLeft = dateMode === 'unknown' ? 2 : 2 - existingDrops.length
+  const existingDrops = drops.filter(d => d.accountId === accountId && d.weekId === weekId)
+  const slotsLeft = 2 - existingDrops.length
 
   function handleSave() {
     setError('')
@@ -181,7 +178,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
     if (item1 && slotsLeft >= 1) {
       const sv = parseFloat(value1) || 0
       toSave.push({
-        accountId, weekId: effectiveWeekId,
+        accountId, weekId,
         dropNumber: firstDropNum as 1 | 2,
         item: item1,
         steamValue: sv,
@@ -192,7 +189,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
     if (item2 && slotsLeft >= 2 && existingDrops.length === 0) {
       const sv = parseFloat(value2) || 0
       toSave.push({
-        accountId, weekId: effectiveWeekId,
+        accountId, weekId,
         dropNumber: 2,
         item: item2,
         steamValue: sv,
@@ -226,43 +223,17 @@ function DropModal({ onSave, onClose }: DropModalProps) {
           </div>
           <div>
             <label className="text-xs text-slate-400 block mb-1.5">Semana</label>
-            <div className="flex gap-1.5 mb-2">
-              {([
-                { mode: 'current' as const, label: 'Esta semana' },
-                { mode: 'pick' as const, label: 'Escolher' },
-                { mode: 'unknown' as const, label: 'Não lembro' },
-              ]).map(opt => (
-                <button
-                  key={opt.mode}
-                  type="button"
-                  onClick={() => { setDateMode(opt.mode); if (opt.mode === 'current') setWeekId(currentWid) }}
-                  className={cn(
-                    'flex-1 text-[11px] py-1.5 rounded-lg font-medium transition-all',
-                    dateMode === opt.mode
-                      ? 'bg-primary/15 text-primary border border-primary/30'
-                      : 'bg-[#111827] text-slate-500 border border-white/[0.06] hover:text-slate-300',
-                  )}
-                >
-                  {opt.label}
-                </button>
+            <select
+              value={weekId}
+              onChange={e => setWeekId(e.target.value)}
+              className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+            >
+              {weeks.map(w => (
+                <option key={w} value={w}>
+                  {w === currentWid ? '★ Esta semana' : getWeekLabel(w)}
+                </option>
               ))}
-            </div>
-            {dateMode === 'pick' && (
-              <select
-                value={weekId}
-                onChange={e => setWeekId(e.target.value)}
-                className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
-              >
-                {weeks.map(w => (
-                  <option key={w} value={w}>
-                    {w === currentWid ? '★ Esta semana' : getWeekLabel(w)}
-                  </option>
-                ))}
-              </select>
-            )}
-            {dateMode === 'unknown' && (
-              <p className="text-[11px] text-slate-600 italic">Drop registrado sem data — não afeta gráficos.</p>
-            )}
+            </select>
           </div>
         </div>
 
@@ -426,7 +397,7 @@ export default function Drops() {
 
   const filteredDrops = useMemo(() =>
     drops
-      .filter(d => (d.weekId === selectedWeek || d.weekId === 'unknown') && (filterAccount === 'all' || d.accountId === filterAccount))
+      .filter(d => d.weekId === selectedWeek && (filterAccount === 'all' || d.accountId === filterAccount))
       .sort((a, b) => a.accountId.localeCompare(b.accountId) || a.dropNumber - b.dropNumber),
     [drops, selectedWeek, filterAccount]
   )

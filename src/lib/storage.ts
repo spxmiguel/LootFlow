@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cashoutRate: 85,
   currency: 'BRL',
   weeklyGoalAmount: 50,
+  firebaseSyncEnabled: true,
   theme: {
     primaryColor: '#38bdf8',
     accentColor: '#4ade80',

@@ -3,8 +3,9 @@ import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
   Shield, RotateCcw, Check, AlertTriangle, Zap, ChevronRight,
-  RefreshCw,
+  RefreshCw, Lock, Info, ExternalLink,
 } from 'lucide-react'
+import { LegalModal, type LegalType } from '../components/LegalModal'
 import { useStore } from '../store'
 import { exportDropsCSV, exportDropsXLSX, exportBackupJSON } from '../lib/export'
 import { storage } from '../lib/storage'
@@ -60,8 +61,14 @@ const PRESET_COLORS = [
 ]
 
 export default function Settings() {
-  const { accounts, drops, goals, settings, updateSettings, updateTheme, reset, user, hydrateCloud } = useStore()
+  const {
+    accounts, drops, goals, settings,
+    updateSettings, updateTheme, reset,
+    clearDrops, clearAccounts, clearGoals, resetSettingsToDefault,
+  } = useStore()
   const [resetConfirm, setResetConfirm] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<'drops' | 'accounts' | 'goals' | 'settings' | null>(null)
+  const [legalModal, setLegalModal] = useState<LegalType | null>(null)
   const [cacheStats, setCacheStats] = useState<{ entries: number; sizeKB: number } | null>(null)
   const importRef = useRef<HTMLInputElement>(null)
 
@@ -138,9 +145,24 @@ export default function Settings() {
     setTimeout(() => window.location.reload(), 500)
   }
 
+  function handleSelectiveDelete(type: 'drops' | 'accounts' | 'goals' | 'settings') {
+    if (deleteConfirm !== type) {
+      setDeleteConfirm(type)
+      setTimeout(() => setDeleteConfirm(null), 4000)
+      return
+    }
+    setDeleteConfirm(null)
+    if (type === 'drops') { clearDrops(); toast.success('Drops apagados') }
+    else if (type === 'accounts') { clearAccounts(); toast.success('Contas apagadas') }
+    else if (type === 'goals') { clearGoals(); toast.success('Metas apagadas') }
+    else if (type === 'settings') { resetSettingsToDefault(); toast.success('Configurações restauradas') }
+  }
+
   const cashoutRate = settings.cashoutRate
 
   return (
+    <>
+    {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
     <div className="p-4 md:p-6 space-y-5 pb-12">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
@@ -398,26 +420,114 @@ export default function Settings() {
               <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
               <div className="text-xs text-slate-400">
                 <p className="text-profit font-semibold mb-1">Firebase configurado ✓</p>
-                <p>Login com Google disponível. Dados sincronizam automaticamente entre dispositivos.</p>
+                <p>Login com Google disponível na tela inicial. Seus dados sincronizam automaticamente entre dispositivos quando logado com conta Google.</p>
+                
               </div>
             </div>
-            {user?.provider === 'google' && (
-              <button
-                onClick={async () => {
-                  try {
-                    toast.loading('Sincronizando...', { id: 'sync' })
-                    await hydrateCloud(user)
-                    toast.success('Dados sincronizados!', { id: 'sync' })
-                  } catch {
-                    toast.error('Erro ao sincronizar', { id: 'sync' })
-                  }
-                }}
-                className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
-              >
-                <RefreshCw size={14} />
-                Sincronizar agora
-              </button>
-            )}
+          </Section>
+        </motion.div>
+
+        {/* ── Privacidade ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+          className="lg:col-span-2"
+        >
+          <Section icon={Lock} color="purple" title="Privacidade" subtitle="Controle total sobre seus dados">
+            {/* Firebase sync toggle */}
+            <SettingRow
+              label="Sincronizar com Firebase"
+              hint="Com sync ativo, exclusões locais também removem do Firestore. Desativado, novas alterações ficam só no dispositivo."
+            >
+              <Toggle
+                value={settings.firebaseSyncEnabled !== false}
+                onChange={v => updateSettings({ firebaseSyncEnabled: v })}
+              />
+            </SettingRow>
+
+            {/* Selective deletion */}
+            <div>
+              <p className="text-xs text-slate-400 mb-3">Apagar dados seletivamente</p>
+              <div className="space-y-2">
+                {/* Drops */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Drops</p>
+                    <p className="text-xs text-slate-500">{drops.length} registro{drops.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'drops' ? AlertTriangle : Trash2}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('drops')}
+                    disabled={drops.length === 0}
+                  >
+                    {deleteConfirm === 'drops' ? 'Confirmar?' : 'Apagar'}
+                  </Button>
+                </div>
+
+                {/* Contas */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Contas</p>
+                    <p className="text-xs text-slate-500">{accounts.length} registro{accounts.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'accounts' ? AlertTriangle : Trash2}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('accounts')}
+                    disabled={accounts.length === 0}
+                  >
+                    {deleteConfirm === 'accounts' ? 'Confirmar?' : 'Apagar'}
+                  </Button>
+                </div>
+
+                {/* Metas */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Metas</p>
+                    <p className="text-xs text-slate-500">{goals.length} registro{goals.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'goals' ? AlertTriangle : Trash2}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('goals')}
+                    disabled={goals.length === 0}
+                  >
+                    {deleteConfirm === 'goals' ? 'Confirmar?' : 'Apagar'}
+                  </Button>
+                </div>
+
+                {/* Configurações */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Configurações</p>
+                    <p className="text-xs text-slate-500">Restaurar valores padrão</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'settings' ? AlertTriangle : RotateCcw}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('settings')}
+                  >
+                    {deleteConfirm === 'settings' ? 'Confirmar?' : 'Resetar'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Storage disclosure */}
+            <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.06] rounded-xl">
+              <Info size={14} className="text-slate-500 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-slate-500 space-y-1">
+                <p>Contas, drops e metas ficam no <span className="text-slate-400">localStorage</span> do seu navegador.</p>
+                <p>Se logado com Google, uma cópia é sincronizada no Firestore (desative o toggle acima para impedir).</p>
+                <p>Nenhum IP, comportamento de navegação ou dado de terceiros é coletado. Projeto <span className="text-slate-400">open source</span> — você pode auditar o código.</p>
+              </div>
+            </div>
           </Section>
         </motion.div>
 
@@ -448,8 +558,25 @@ export default function Settings() {
         </motion.div>
       </div>
 
-      {/* Version */}
-      <p className="text-center text-xs text-slate-700 pt-2">LootFlow v1.0.0 · Feito para acompanhar drops com calma</p>
+      {/* Version & Legal */}
+      <div className="text-center text-xs text-slate-700 pt-2 space-y-1.5">
+        <p>LootFlow v1.0.0 · Feito para acompanhar drops com calma</p>
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
+            Política de Privacidade
+          </button>
+          <span>·</span>
+          <button onClick={() => setLegalModal('terms')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
+            Termos de Uso
+          </button>
+          <span>·</span>
+          <a href="https://github.com/spxmiguel/LootFlow" target="_blank" rel="noreferrer"
+            className="hover:text-slate-500 transition-colors inline-flex items-center gap-1 underline underline-offset-2">
+            GitHub <ExternalLink size={10} />
+          </a>
+        </div>
+      </div>
     </div>
+    </>
   )
 }

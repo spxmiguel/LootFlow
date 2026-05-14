@@ -54,17 +54,12 @@ export async function firestoreLoadCollection<T>(
   userId: string,
   collectionName: string,
 ): Promise<T[]> {
-  if (!db) {
-    logger.error(`[Firestore] db is null when loading ${collectionName} — Firebase not initialized`)
-    return []
-  }
+  if (!db) return []
   try {
     const snap = await getDocs(collection(db, 'users', userId, collectionName))
-    const results = snap.docs.map(d => ({ id: d.id, ...d.data() } as T))
-    logger.log(`[Firestore] Loaded ${results.length} ${collectionName} for user ${userId.substring(0,8)}...`)
-    return results
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as T))
   } catch (e) {
-    logger.error(`[Firestore] ERRO ao carregar ${collectionName}:`, e)
+    logger.error(`[Firestore] Load ${collectionName}:`, e)
     return []
   }
 }
@@ -75,16 +70,11 @@ export async function firestoreSaveDoc(
   docId: string,
   data: Record<string, unknown>,
 ): Promise<void> {
-  if (!db) {
-    logger.error(`[Firestore] db is null when saving ${collectionName}/${docId}`)
-    return
-  }
+  if (!db) return
   try {
     await setDoc(doc(db, 'users', userId, collectionName, docId), data, { merge: true })
-    logger.log(`[Firestore] Saved ${collectionName}/${docId}`)
   } catch (e) {
-    logger.error(`[Firestore] ERRO ao salvar ${collectionName}/${docId}:`, e)
-    throw e  // Propaga o erro pra quem chamou saber que falhou
+    logger.error(`[Firestore] Save doc ${collectionName}/${docId}:`, e)
   }
 }
 

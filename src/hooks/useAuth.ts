@@ -7,21 +7,23 @@ import {
 import { useStore } from '../store'
 import { initFirebase, getGoogleProvider, isFirebaseReady } from '../lib/firebase'
 import { FIREBASE_CONFIG, FIREBASE_ENABLED } from '../lib/config'
+import { storage } from '../lib/storage'
 import type { AppUser } from '../lib/types'
 import toast from 'react-hot-toast'
 
 const SESSION_KEY = 'lootflow_session'
-let authInitDone = false
-let loginInProgress = false  // Prevents double hydration
+let authListenerStarted = false
+let redirectHandled = false
 
 interface StoredSession { mode: 'local' | 'firebase'; user: AppUser }
+type LoginResult = 'success' | 'redirect' | 'cancelled' | 'error'
 
 function makeAppUser(fbUser: import('firebase/auth').User): AppUser {
-  const p = fbUser.providerData.find(d => d.providerId === 'google.com')
+  const providerProfile = fbUser.providerData.find(p => p.providerId === 'google.com')
   return {
     uid: fbUser.uid, email: fbUser.email,
-    displayName: fbUser.displayName ?? p?.displayName,
-    photoURL: fbUser.photoURL ?? p?.photoURL,
+    displayName: fbUser.displayName ?? providerProfile?.displayName,
+    photoURL: fbUser.photoURL ?? providerProfile?.photoURL,
     isAnonymous: false, provider: 'google',
   }
 }
@@ -30,12 +32,21 @@ function saveSession(mode: 'local' | 'firebase', user: AppUser) {
   try { localStorage.setItem(SESSION_KEY, JSON.stringify({ mode, user })) } catch {}
 }
 
-function shouldUseRedirect(): boolean {
+function savePendingGoogleLogin() {
+  try { sessionStorage.setItem('lootflow_google_pending', '1') } catch {}
+}
+
+function clearPendingGoogleLogin() {
+  try { sessionStorage.removeItem('lootflow_google_pending') } catch {}
+}
+
+function shouldUseRedirectLogin(): boolean {
   if (typeof window === 'undefined') return false
-  const ua = navigator.userAgent.toLowerCase()
-  return /android|iphone|ipad|ipod|mobile/i.test(ua) ||
-    window.matchMedia?.('(pointer: coarse)').matches ||
-    window.matchMedia?.('(max-width: 768px)').matches
+  const ua = window.navigator.userAgent.toLowerCase()
+  const isTouch = window.matchMedia?.('(pointer: coarse)').matches ?? false
+  const isSmallScreen = window.matchMedia?.('(max-width: 768px)').matches ?? false
+  const isMobileUA = /android|iphone|ipad|ipod|mobile/.test(ua)
+  return isTouch || isSmallScreen || isMobileUA
 }
 
 export function useAuth() {
@@ -43,170 +54,191 @@ export function useAuth() {
   const authMode = useStore(s => s.authMode)
   const setUser = useStore(s => s.setUser)
   const setAuthMode = useStore(s => s.setAuthMode)
+  const authReady = useStore(s => s.authReady)
   const setAuthReady = useStore(s => s.setAuthReady)
   const hydrate = useStore(s => s.hydrate)
   const hydrateCloud = useStore(s => s.hydrateCloud)
 
   useEffect(() => {
-    if (authInitDone) return
-    authInitDone = true
+    const finishReady = () => {
+      setAuthReady(true)
+    }
 
-    const finish = () => setAuthReady(true)
+    // ── PASSO 1: Checar Firebase/redirect do Google ────────────────────
+    if (FIREBASE_ENABLED) {
+      try {
+        const { auth } = initFirebase(FIREBASE_CONFIG)
 
-    // ── Restaurar sessão local primeiro (resposta imediata) ─────────────
+        // getRedirectResult só retorna algo se o usuário acabou de voltar de redirect.
+        if (!redirectHandled) {
+          redirectHandled = true
+          getRedirectResult(auth).then(result => {
+          if (result?.user) {
+            clearPendingGoogleLogin()
+            const appUser = makeAppUser(result.user)
+            setUser(appUser)
+            setAuthMode('firebase')
+            saveSession('firebase', appUser)
+            hydrateCloud(appUser)
+              .then(() => toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`))
+              .catch(e => {
+                logger.error('[Auth] cloud hydration error:', e)
+                hydrate()
+                toast.error('Login feito, mas não consegui sincronizar a nuvem agora.')
+              })
+          }
+          }).catch(e => {
+            logger.error('[Auth] redirect result error:', e)
+          })
+        }
+
+        // Listener é a fonte confiável depois de redirect/reload.
+        if (!authListenerStarted) {
+          authListenerStarted = true
+          onAuthStateChanged(auth, (fbUser) => {
+            if (!fbUser) {
+              clearPendingGoogleLogin()
+              finishReady()
+              return
+            }
+            clearPendingGoogleLogin()
+            const appUser = makeAppUser(fbUser)
+            setUser(appUser)
+            setAuthMode('firebase')
+            saveSession('firebase', appUser)
+            hydrateCloud(appUser).catch(e => {
+              logger.error('[Auth] cloud hydration error:', e)
+              hydrate()
+            }).finally(finishReady)
+          })
+        }
+      } catch (e) {
+        logger.error('[Auth] Firebase init error:', e)
+        finishReady()
+      }
+    } else {
+      finishReady()
+    }
+
+    // ── PASSO 2: Restaurar sessão do localStorage ───────────────────────
     try {
       const raw = localStorage.getItem(SESSION_KEY)
-      if (raw) {
-        const session = JSON.parse(raw) as StoredSession
-        if (session.mode === 'local') {
-          setUser(session.user)
-          setAuthMode('local')
-          hydrate()
-          finish()
-          return  // Local mode — sem Firebase
-        }
-        if (session.mode === 'firebase') {
-          // Mostra dados locais imediatamente enquanto verifica Firebase
-          setUser(session.user)
-          setAuthMode('firebase')
-          hydrate()
-        }
+      if (!raw) return
+
+      const session = JSON.parse(raw) as StoredSession
+
+      if (session.mode === 'local') {
+        setUser(session.user)
+        setAuthMode('local')
+        hydrate()
+        finishReady()
+        return
       }
-    } catch { localStorage.removeItem(SESSION_KEY) }
 
-    // ── Firebase auth ───────────────────────────────────────────────────
-    if (!FIREBASE_ENABLED) { finish(); return }
-
-    try {
-      const { auth } = initFirebase(FIREBASE_CONFIG)
-
-      // Checar redirect (mobile Google login retorno)
-      getRedirectResult(auth).then(async result => {
-        if (result?.user) {
-          loginInProgress = true
-          const appUser = makeAppUser(result.user)
-          setUser(appUser)
-          setAuthMode('firebase')
-          saveSession('firebase', appUser)
-          try {
-            await hydrateCloud(appUser)
-            toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`)
-          } catch {
-            hydrate()
-            toast.error('Login OK, mas erro ao sincronizar.')
-          }
-          loginInProgress = false
-          finish()
-        }
-      }).catch(e => logger.error('[Auth] redirect:', e))
-
-      // Listener permanente — verifica token e sincroniza
-      onAuthStateChanged(auth, async (fbUser) => {
-        if (!fbUser) {
-          // Não logado no Firebase
-          const cur = useStore.getState().user
-          if (cur?.provider === 'google') {
-            // Token expirou
-            localStorage.removeItem(SESSION_KEY)
-            setUser(null)
-          }
-          finish()
-          return
-        }
-
-        // Logado no Firebase
-        const appUser = makeAppUser(fbUser)
-        setUser(appUser)
+      if (session.mode === 'firebase' && FIREBASE_ENABLED) {
+        // Restaura imediatamente com dados salvos (UX rápida)
+        // O onAuthStateChanged acima vai verificar o token assincronamente
+        setUser(session.user)
         setAuthMode('firebase')
-        saveSession('firebase', appUser)
+        hydrate()
+        hydrateCloud(session.user).catch(e => logger.error('[Auth] cloud hydration error:', e))
+      }
+    } catch {
+      localStorage.removeItem(SESSION_KEY)
+    }
 
-        // Só faz hydration se loginGoogle/redirect não já fez
-        if (!loginInProgress) {
-          try {
-            await hydrateCloud(appUser)
-          } catch {
-            hydrate()
-          }
-        }
-        finish()
-      })
-
-      // Timeout de segurança
-      setTimeout(finish, 4000)
-    } catch (e) {
-      logger.error('[Auth] init:', e)
-      finish()
+    const fallback = window.setTimeout(finishReady, 2500)
+    return () => {
+      window.clearTimeout(fallback)
     }
   }, [hydrate, hydrateCloud, setAuthMode, setAuthReady, setUser])
 
-  // ── Login Local ─────────────────────────────────────────────────────
+  // ── Login Local (convidado) ───────────────────────────────────────────
   const loginLocal = () => {
-    const u: AppUser = {
+    const localUser: AppUser = {
       uid: 'local', displayName: 'Usuário Local',
       email: null, photoURL: null, isAnonymous: true, provider: 'local',
     }
-    setUser(u); setAuthMode('local'); hydrate()
-    saveSession('local', u)
+    setUser(localUser)
+    setAuthMode('local')
+    hydrate()
+    saveSession('local', localUser)
     toast.success('Modo offline ativado!')
   }
 
-  // ── Login Google ────────────────────────────────────────────────────
-  const loginGoogle = async () => {
-    if (!FIREBASE_ENABLED) { toast.error('Firebase não configurado.'); return 'error' }
-    loginInProgress = true
+  // ── Login Google ──────────────────────────────────────────────────────
+  const loginGoogle = async (): Promise<LoginResult> => {
+    if (!FIREBASE_ENABLED) {
+      toast.error('Firebase não configurado.')
+      return 'error'
+    }
     try {
       const { auth } = initFirebase(FIREBASE_CONFIG)
       const provider = getGoogleProvider()
 
-      if (shouldUseRedirect()) {
-        try { sessionStorage.setItem('lootflow_google_pending', '1') } catch {}
-        await signInWithRedirect(auth, provider)
+      if (shouldUseRedirectLogin()) {
+        logger.log('[Auth] Mobile/touch environment, using redirect...')
+        savePendingGoogleLogin()
+        signInWithRedirect(auth, provider).catch(e => {
+          clearPendingGoogleLogin()
+          logger.error('[Auth] redirect start error:', e)
+          toast.error('Não consegui abrir o login do Google.')
+        })
         return 'redirect'
       }
 
+      // Tenta popup primeiro — funciona em desktop e alguns mobiles
       try {
         const result = await signInWithPopup(auth, provider)
         const appUser = makeAppUser(result.user)
         setUser(appUser)
         setAuthMode('firebase')
         saveSession('firebase', appUser)
-        toast.loading('Sincronizando dados...', { id: 'sync' })
         await hydrateCloud(appUser)
-        toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`, { id: 'sync' })
+        toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`)
         return 'success'
-      } catch (pe: unknown) {
-        const code = (pe as { code?: string })?.code
+      } catch (popupErr: unknown) {
+        const code = (popupErr as { code?: string })?.code
         if (code === 'auth/popup-closed-by-user') return 'cancelled'
-        if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
-          try { sessionStorage.setItem('lootflow_google_pending', '1') } catch {}
-          await signInWithRedirect(auth, provider)
+        // Popup bloqueado ou falhou → usa redirect (mobile-friendly)
+        if (
+          code === 'auth/popup-blocked' ||
+          code === 'auth/operation-not-supported-in-this-environment' ||
+          code === 'auth/cancelled-popup-request' ||
+          code === 'auth/web-storage-unsupported'
+        ) {
+          logger.log('[Auth] Popup blocked, using redirect...')
+          savePendingGoogleLogin()
+          signInWithRedirect(auth, provider).catch(e => {
+            clearPendingGoogleLogin()
+            logger.error('[Auth] redirect start error:', e)
+            toast.error('Não consegui abrir o login do Google.')
+          })
+          // Página vai recarregar. getRedirectResult no useEffect trata o retorno.
           return 'redirect'
         }
-        throw pe
+        throw popupErr
       }
     } catch (e: unknown) {
-      logger.error('[Auth]', e)
-      toast.error('Erro ao fazer login com Google.')
+      const err = e as { code?: string; message?: string }
+      logger.error('[Auth]', err?.code, err?.message)
+      toast.error('Erro ao fazer login com Google. Tente novamente.')
       return 'error'
-    } finally {
-      loginInProgress = false
     }
   }
 
-  // ── Logout ──────────────────────────────────────────────────────────
+  // ── Logout ────────────────────────────────────────────────────────────
   const logout = () => {
     if (authMode === 'firebase' && isFirebaseReady()) {
-      try { const { auth } = initFirebase(FIREBASE_CONFIG); signOut(auth).catch(() => {}) } catch {}
+      try {
+        const { auth } = initFirebase(FIREBASE_CONFIG)
+        signOut(auth).catch(() => {})
+      } catch {}
     }
     localStorage.removeItem(SESSION_KEY)
     setUser(null)
     toast.success('Até mais!')
   }
 
-  return {
-    user, authMode,
-    authReady: useStore(s => s.authReady),
-    isLoggedIn: !!user,
-    loginLocal, loginGoogle, logout,
-  }
+  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, logout }
 }

@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowRight, Bot, FileSpreadsheet, LineChart, PackageSearch,
   Sparkles, Target, Zap,
 } from 'lucide-react'
+import { LegalModal, type LegalType } from '../components/LegalModal'
 
 const points = [
   {
@@ -93,7 +95,11 @@ function ProductMock() {
 }
 
 export default function WelcomePage({ onContinue }: { onContinue: () => void }) {
+  const [legalModal, setLegalModal] = useState<LegalType | null>(null)
+
   return (
+    <>
+    {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
     <main className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_18%_16%,rgba(56,189,248,0.13),transparent_28%),radial-gradient(circle_at_78%_12%,rgba(74,222,128,0.07),transparent_22%),linear-gradient(180deg,#07090f_0%,#0a0f17_48%,#07090f_100%)] text-slate-100">
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.055] [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:44px_44px]" />
@@ -185,7 +191,21 @@ export default function WelcomePage({ onContinue }: { onContinue: () => void }) 
           </div>
         </div>
 
+        {/* Legal footer */}
+        <div className="text-center pb-8 pt-2">
+          <p className="text-xs text-slate-700">
+            Projeto open source · gratuito · sem rastreamento &nbsp;·&nbsp;
+            <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
+              Privacidade
+            </button>
+            &nbsp;·&nbsp;
+            <button onClick={() => setLegalModal('terms')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
+              Termos
+            </button>
+          </p>
+        </div>
       </section>
     </main>
+    </>
   )
 }

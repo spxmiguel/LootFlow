@@ -67,6 +67,9 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
+# ─── Claude Code (local config) ──────────────────────────────────────────────
+.claude/
+
 # ─── Misc ─────────────────────────────────────────────────────────────────────
 *.zip
 *.tar.gz

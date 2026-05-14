@@ -68,6 +68,7 @@ export interface AppSettings {
   currency: 'BRL';               // always BRL — Steam prices fetched in R$
   weeklyGoalAmount: number;
   firebaseConfig?: FirebaseConfig;
+  firebaseSyncEnabled: boolean;  // when false, no data is sent to Firestore
   theme: ThemeConfig;
   showOnboarding: boolean;
 }

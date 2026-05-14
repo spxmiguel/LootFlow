@@ -46,8 +46,8 @@ export function calcAccountStats(
   const isPaidBack = totalCashout >= investedCost
   const remainingPayback = Math.max(0, investedCost - totalCashout)
 
-  // Weekly average cashout (excluir drops sem data)
-  const weekIds = [...new Set(drops.map(d => d.weekId).filter(w => w !== 'unknown'))]
+  // Weekly average cashout
+  const weekIds = [...new Set(drops.map(d => d.weekId))]
   const weeklyAvgCashout = weekIds.length > 0 ? totalCashout / weekIds.length : 0
 
   // Best drop
