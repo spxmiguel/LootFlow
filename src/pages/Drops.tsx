@@ -111,7 +111,7 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
     if (q.length < 2) { setResults([]); return }
     setSearching(true)
     try {
-      const r = await searchSteamMarket(q)
+      const r = await searchSteamMarket(normalizeQueryPT(q))
       setResults(r.slice(0, 8))
     } catch {
       setResults([])
@@ -204,7 +204,7 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
           step="0.01"
           value={steamValue}
           onChange={e => onValueChange(e.target.value)}
-          placeholder="Valor Steam (R$)"
+          placeholder="Valor bruto (R$)"
           className="flex-1 h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60 transition-all placeholder:text-slate-600"
         />
         {parseFloat(steamValue) > 0 && (
@@ -433,7 +433,7 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
       <div className="space-y-4">
         <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
           <p className="text-sm font-medium text-white">{drop.item.name}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Steam: {formatCurrency(drop.steamValue)}</p>
+          <p className="text-xs text-slate-500 mt-0.5">Bruto: {formatCurrency(drop.steamValue)}</p>
         </div>
         <Input label="Valor recebido (R$)" type="number" min="0" step="0.01"
           value={value} onChange={e => setValue(e.target.value)} />

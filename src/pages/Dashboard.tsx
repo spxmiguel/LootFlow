@@ -238,7 +238,7 @@ export function Dashboard() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.09]">
-                    <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Steam</p>
+                    <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Bruto</p>
                     <p className="font-mono text-sm font-medium text-slate-200 mt-0.5">
                       {formatCurrencyCompact(currentWeekStats.totalSteamValue)}
                     </p>
@@ -299,7 +299,7 @@ export function Dashboard() {
                   <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-body">
                     <th className="text-left pb-3">Conta</th>
                     <th className="text-right pb-3">Drops</th>
-                    <th className="text-right pb-3">Steam</th>
+                    <th className="text-right pb-3">Bruto</th>
                     <th className="text-right pb-3">Cashout</th>
                     <th className="text-right pb-3">ROI</th>
                   </tr>
@@ -425,7 +425,7 @@ export function Dashboard() {
                         {formatCurrency(cashout)}
                       </p>
                       <p className="text-[10px] text-slate-600 font-mono">
-                        {formatCurrency(drop.steamValue)} Steam
+                        {formatCurrency(drop.steamValue)} bruto
                       </p>
                     </div>
                   </div>
