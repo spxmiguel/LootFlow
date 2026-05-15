@@ -63,6 +63,15 @@ export interface ThemeConfig {
   sidebarCompact: boolean;
 }
 
+// Profile overrides — stored in settings so they sync to Firestore
+// and persist across devices. These override the values from Google OAuth.
+export interface ProfileOverride {
+  displayName?: string      // custom name shown in UI
+  hideEmail?: boolean       // hide email under avatar in sidebar/header
+  photoRemoved?: boolean    // true = always show initials (user removed photo)
+  customPhotoURL?: string   // custom avatar URL provided by user
+}
+
 export interface AppSettings {
   cashoutRate: number;            // 0-100, e.g. 85 = 85% of Steam value
   currency: 'BRL';               // always BRL — Steam prices fetched in R$
@@ -71,6 +80,7 @@ export interface AppSettings {
   firebaseSyncEnabled: boolean;  // when false, no data is sent to Firestore
   theme: ThemeConfig;
   showOnboarding: boolean;
+  profile?: ProfileOverride;
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────

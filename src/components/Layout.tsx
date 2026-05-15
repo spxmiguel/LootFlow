@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react'
+import React, { type ReactNode, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, Package, BarChart3, Target,
@@ -8,6 +8,7 @@ import {
 import { cn } from '../lib/utils'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
+import { Avatar, ProfileModal, useProfileDisplay } from './ProfileModal'
 import type { Page } from '../lib/types'
 
 // ─── Nav Config ───────────────────────────────────────────────────────────────
@@ -75,6 +76,8 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
   const drops = useStore(s => s.drops)
   const { user, logout } = useAuth()
   const compact = !mobile && settings.theme.sidebarCompact
+  const { displayName, photoURL, email, showEmail } = useProfileDisplay()
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const handleNav = (page: Page) => {
     setCurrentPage(page)
@@ -147,41 +150,25 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
       </nav>
 
       {/* User */}
-      <div className={cn(
-        'px-3 py-4 border-t border-white/[0.09]',
-        compact && 'px-2',
-      )}>
-        <div className={cn(
-          'flex items-center gap-3 p-2.5 rounded-xl',
-          compact && 'justify-center',
-        )}>
-          {user?.photoURL ? (
-            <img
-              src={user.photoURL}
-              alt=""
-              referrerPolicy="no-referrer"
-              className="w-7 h-7 rounded-full shrink-0 bg-primary/20 object-cover"
-            />
-          ) : (
-            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-xs text-primary font-display font-bold">
-              {(user?.displayName ?? 'L')[0].toUpperCase()}
-            </div>
-          )}
+      <div className={cn('px-3 py-4 border-t border-white/[0.09]', compact && 'px-2')}>
+        {profileOpen && <ProfileModal open onClose={() => setProfileOpen(false)} />}
+        <div className={cn('flex items-center gap-3 p-2.5 rounded-xl', compact && 'justify-center')}>
+          <button
+            onClick={() => setProfileOpen(true)}
+            title="Editar perfil"
+            className="relative shrink-0 rounded-full ring-2 ring-transparent hover:ring-primary/50 transition-all"
+          >
+            <Avatar photoURL={photoURL} displayName={displayName} size={28} />
+          </button>
           {!compact && (
             <>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-body font-medium text-slate-300 truncate">
-                  {user?.displayName ?? 'Usuário Local'}
-                </p>
+              <button onClick={() => setProfileOpen(true)} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity">
+                <p className="text-xs font-body font-medium text-slate-300 truncate">{displayName}</p>
                 <p className="text-[10px] text-slate-600 truncate">
-                  {user?.isAnonymous ? 'Modo offline' : user?.email}
+                  {user?.isAnonymous ? 'Modo offline' : showEmail ? email : '••••••••'}
                 </p>
-              </div>
-              <button
-                onClick={logout}
-                className="text-slate-600 hover:text-loss transition-colors p-1"
-                title="Sair"
-              >
+              </button>
+              <button onClick={logout} className="text-slate-600 hover:text-loss transition-colors p-1" title="Sair">
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </>
@@ -197,10 +184,13 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
 function MobileHeader() {
   const currentPage = useStore(s => s.currentPage)
   const currentItem = NAV_ITEMS.find(i => i.id === currentPage)
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
+  const { displayName, photoURL } = useProfileDisplay()
+  const [profileOpen, setProfileOpen] = useState(false)
 
   return (
     <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#07090f]/92 backdrop-blur-xl sticky top-0 z-30 pt-[env(safe-area-inset-top)] h-[calc(4rem+env(safe-area-inset-top))]">
+      {profileOpen && <ProfileModal open onClose={() => setProfileOpen(false)} />}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shadow-glow">
           <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
@@ -213,18 +203,13 @@ function MobileHeader() {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {user?.photoURL ? (
-          <img
-            src={user.photoURL}
-            alt=""
-            referrerPolicy="no-referrer"
-            className="h-8 w-8 rounded-full border border-white/[0.08] bg-primary/20 object-cover"
-          />
-        ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] bg-primary/15 text-xs font-bold text-primary">
-            {(user?.displayName ?? 'L')[0].toUpperCase()}
-          </div>
-        )}
+        <button
+          onClick={() => setProfileOpen(true)}
+          title="Editar perfil"
+          className="rounded-full ring-2 ring-transparent hover:ring-primary/50 active:ring-primary/50 transition-all"
+        >
+          <Avatar photoURL={photoURL} displayName={displayName} size={32} />
+        </button>
         <button
           onClick={logout}
           aria-label="Sair da conta"

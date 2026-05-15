@@ -2,7 +2,7 @@ import { logger } from '../lib/logger'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
-import type { CSAccount, Drop, Goal, AppSettings, AppUser, Page, ModalType } from '../lib/types'
+import type { CSAccount, Drop, Goal, AppSettings, AppUser, Page, ModalType, ProfileOverride } from '../lib/types'
 import { storage, DEFAULT_SETTINGS } from '../lib/storage'
 import { generateId, getAccountColor } from '../lib/utils'
 import {
@@ -56,6 +56,7 @@ interface AppState {
   // Actions – Settings
   updateSettings: (updates: Partial<AppSettings>) => void
   updateTheme: (updates: Partial<AppSettings['theme']>) => void
+  updateProfile: (updates: Partial<ProfileOverride>) => void
 
   // Actions – Privacy / Selective clear
   clearDrops: () => void
@@ -290,6 +291,15 @@ export const useStore = create<AppState>()(
     updateTheme: (updates) => {
       const { settings: current, user } = get()
       const updated = { ...current, theme: { ...current.theme, ...updates } }
+      const sync = updated.firebaseSyncEnabled !== false
+      set({ settings: updated })
+      storage.saveSettings(updated)
+      syncToFirestore(user, 'settings', 'app', updated as unknown as Record<string, unknown>, sync)
+    },
+
+    updateProfile: (updates) => {
+      const { settings: current, user } = get()
+      const updated = { ...current, profile: { ...(current.profile ?? {}), ...updates } }
       const sync = updated.firebaseSyncEnabled !== false
       set({ settings: updated })
       storage.saveSettings(updated)
