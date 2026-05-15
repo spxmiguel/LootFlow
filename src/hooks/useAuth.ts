@@ -151,11 +151,13 @@ export function useAuth() {
       }
 
       if (session.mode === 'firebase' && FIREBASE_ENABLED) {
-        // Restore immediately for fast UX; Firebase listener validates token
+        // Restore user immediately for fast UX — show local data right away.
+        // Do NOT call hydrateCloud here: the auth token isn't ready yet and
+        // Firestore would return PERMISSION_DENIED. onAuthStateChanged fires
+        // once the token is valid and handles the cloud sync from there.
         setUser(session.user)
         setAuthMode('firebase')
         hydrate()
-        hydrateCloud(session.user).catch(e => logger.error('[Auth] cloud hydration error:', e))
       }
     } catch {
       localStorage.removeItem(SESSION_KEY)
