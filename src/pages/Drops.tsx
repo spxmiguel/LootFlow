@@ -9,7 +9,7 @@ import { formatCurrency, getCurrentWeekId, getWeekLabel, getWeekIdForDate } from
 import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
-import type { Drop, SteamItem } from '../lib/types'
+import type { Drop, SteamItem, WearCondition } from '../lib/types'
 
 // ─── Item type detection ──────────────────────────────────────────────────────
 
@@ -217,6 +217,63 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
   )
 }
 
+// ─── Wear Condition Selector ──────────────────────────────────────────────────
+
+const WEAR_OPTIONS: { value: WearCondition; label: string; color: string }[] = [
+  { value: 'FN', label: 'Factory New',    color: '#4ade80' },
+  { value: 'MW', label: 'Minimal Wear',   color: '#86efac' },
+  { value: 'FT', label: 'Field-Tested',   color: '#fbbf24' },
+  { value: 'WW', label: 'Well-Worn',      color: '#fb923c' },
+  { value: 'BS', label: 'Battle-Scarred', color: '#f87171' },
+]
+
+function WearSelector({
+  wear, float, onWearChange, onFloatChange,
+}: {
+  wear: WearCondition | undefined
+  float: string
+  onWearChange: (w: WearCondition | undefined) => void
+  onFloatChange: (f: string) => void
+}) {
+  return (
+    <div className="space-y-2 px-1">
+      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Desgaste (opcional)</p>
+      <div className="flex gap-1.5 flex-wrap">
+        {WEAR_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onWearChange(wear === opt.value ? undefined : opt.value)}
+            className={`h-7 px-2.5 rounded-lg text-[11px] font-semibold border transition-all ${
+              wear === opt.value
+                ? 'border-current'
+                : 'border-white/[0.08] bg-[#111827] text-slate-500 hover:text-slate-300 hover:border-white/20'
+            }`}
+            style={wear === opt.value ? { color: opt.color, backgroundColor: `${opt.color}18`, borderColor: `${opt.color}60` } : {}}
+          >
+            {opt.value}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min="0"
+          max="1"
+          step="0.0001"
+          value={float}
+          onChange={e => onFloatChange(e.target.value)}
+          placeholder="Float (ex: 0.1234)"
+          className="flex-1 h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+        />
+        {float && parseFloat(float) >= 0 && parseFloat(float) <= 1 && (
+          <span className="text-[11px] font-mono text-slate-400">{parseFloat(float).toFixed(4)}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Drop Registration Modal ──────────────────────────────────────────────────
 
 interface DropModalProps {
@@ -236,8 +293,12 @@ function DropModal({ onSave, onClose }: DropModalProps) {
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [item1, setItem1] = useState<SteamItem | null>(null)
   const [value1, setValue1] = useState('')
+  const [wear1, setWear1] = useState<WearCondition | undefined>(undefined)
+  const [float1, setFloat1] = useState('')
   const [item2, setItem2] = useState<SteamItem | null>(null)
   const [value2, setValue2] = useState('')
+  const [wear2, setWear2] = useState<WearCondition | undefined>(undefined)
+  const [float2, setFloat2] = useState('')
   const [error, setError] = useState('')
 
   const weekId = dateMode === 'this-week'
@@ -262,23 +323,29 @@ function DropModal({ onSave, onClose }: DropModalProps) {
 
     if (item1 && slotsLeft >= 1) {
       const sv = parseFloat(value1) || 0
+      const f1 = parseFloat(float1)
       toSave.push({
         accountId, weekId,
         dropNumber: firstDropNum as 1 | 2,
         item: item1,
         steamValue: sv,
         cashoutValue: sv > 0 ? parseFloat((sv * rate).toFixed(2)) : undefined,
+        wear: wear1,
+        float: !isNaN(f1) && f1 >= 0 && f1 <= 1 && float1 !== '' ? f1 : undefined,
         sold: false,
       })
     }
     if (item2 && slotsLeft >= 2 && existingDrops.length === 0) {
       const sv = parseFloat(value2) || 0
+      const f2 = parseFloat(float2)
       toSave.push({
         accountId, weekId,
         dropNumber: 2,
         item: item2,
         steamValue: sv,
         cashoutValue: sv > 0 ? parseFloat((sv * rate).toFixed(2)) : undefined,
+        wear: wear2,
+        float: !isNaN(f2) && f2 >= 0 && f2 <= 1 && float2 !== '' ? f2 : undefined,
         sold: false,
       })
     }
@@ -299,7 +366,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
           <label className="text-xs text-slate-400 block mb-1.5">Conta *</label>
           <select
             value={accountId}
-            onChange={e => { setAccountId(e.target.value); setItem1(null); setValue1(''); setItem2(null); setValue2('') }}
+            onChange={e => { setAccountId(e.target.value); setItem1(null); setValue1(''); setWear1(undefined); setFloat1(''); setItem2(null); setValue2(''); setWear2(undefined); setFloat2('') }}
             className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
           >
             {activeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -375,20 +442,28 @@ function DropModal({ onSave, onClose }: DropModalProps) {
               label="Item 1"
               value={item1}
               steamValue={value1}
-              onItemChange={setItem1}
+              onItemChange={i => { setItem1(i); if (!i) { setWear1(undefined); setFloat1('') } }}
               onValueChange={setValue1}
               cashoutRate={settings.cashoutRate}
             />
+            {item1 && detectItemType(item1.name) === 'weapon' && (
+              <WearSelector wear={wear1} float={float1} onWearChange={setWear1} onFloatChange={setFloat1} />
+            )}
             {slotsLeft >= 2 && existingDrops.length === 0 && (
-              <ItemPicker
-                label="Item 2"
-                optional
-                value={item2}
-                steamValue={value2}
-                onItemChange={setItem2}
-                onValueChange={setValue2}
-                cashoutRate={settings.cashoutRate}
-              />
+              <>
+                <ItemPicker
+                  label="Item 2"
+                  optional
+                  value={item2}
+                  steamValue={value2}
+                  onItemChange={i => { setItem2(i); if (!i) { setWear2(undefined); setFloat2('') } }}
+                  onValueChange={setValue2}
+                  cashoutRate={settings.cashoutRate}
+                />
+                {item2 && detectItemType(item2.name) === 'weapon' && (
+                  <WearSelector wear={wear2} float={float2} onWearChange={setWear2} onFloatChange={setFloat2} />
+                )}
+              </>
             )}
           </>
         )}
@@ -491,7 +566,25 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
         <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 overflow-hidden">
           <SteamItemImage imageUrl={drop.item.imageUrl} alt={drop.item.name} size={40} />
         </div>
-        <p className="text-sm text-white font-medium leading-tight">{drop.item.name}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-white font-medium leading-tight truncate">{drop.item.name}</p>
+          {(drop.wear || drop.float != null) && (
+            <div className="flex items-center gap-1.5 mt-1">
+              {drop.wear && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                  drop.wear === 'FN' ? 'bg-[#4ade80]/15 text-[#4ade80]' :
+                  drop.wear === 'MW' ? 'bg-[#86efac]/15 text-[#86efac]' :
+                  drop.wear === 'FT' ? 'bg-[#fbbf24]/15 text-[#fbbf24]' :
+                  drop.wear === 'WW' ? 'bg-[#fb923c]/15 text-[#fb923c]' :
+                                       'bg-[#f87171]/15 text-[#f87171]'
+                }`}>{drop.wear}</span>
+              )}
+              {drop.float != null && (
+                <span className="text-[10px] font-mono text-slate-500">{drop.float.toFixed(4)}</span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <div className="flex items-center justify-between">
         <div>

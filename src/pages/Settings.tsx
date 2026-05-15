@@ -385,10 +385,10 @@ export default function Settings() {
               />
             </SettingRow>
 
-            <SettingRow label="Animações" hint="Transições e micro-animações">
+            <SettingRow label="Otimizar site" hint="Desativa animações e efeitos para melhor performance">
               <Toggle
-                value={settings.theme.animations}
-                onChange={v => updateTheme({ animations: v })}
+                value={!settings.theme.animations}
+                onChange={v => updateTheme({ animations: !v })}
               />
             </SettingRow>
 

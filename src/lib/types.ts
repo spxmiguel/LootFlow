@@ -20,6 +20,8 @@ export interface SteamItem {
   cachedAt?: string;
 }
 
+export type WearCondition = 'FN' | 'MW' | 'FT' | 'WW' | 'BS'
+
 export interface Drop {
   id: string;
   accountId: string;
@@ -28,6 +30,8 @@ export interface Drop {
   item: SteamItem;
   steamValue: number;     // value from Steam Market (BRL)
   cashoutValue?: number;  // user-entered actual sale value
+  wear?: WearCondition;   // skin wear condition (weapons only)
+  float?: number;         // float value 0.0–1.0 (weapons only)
   sold: boolean;
   soldAt?: string;        // ISO date
   note?: string;

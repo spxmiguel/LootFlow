@@ -87,7 +87,7 @@ export function exportDropsXLSX(
     Nome: a.name,
     'Steam ID': a.steamId ?? '',
     Ativa: a.active ? 'Sim' : 'Não',
-    'Custo (R$)': (a.cost > 0 ? a.cost : PRIME_COST_BRL).toFixed(2),
+    'Custo (R$)': PRIME_COST_BRL.toFixed(2),
     'Tipo Custo': 'Prime',
     'Criada em': formatDate(a.createdAt),
     Nota: a.note ?? '',

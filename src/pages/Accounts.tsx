@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Users, TrendingUp, Package,
   CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
-  Image as ImageIcon,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { calcAccountStats } from '../lib/calculations'
@@ -12,7 +11,7 @@ import {
   Button, Card, Badge, Modal, Input, Textarea,
   Empty, Progress, Divider,
 } from '../components/ui'
-import { getPrimeCostBRL, getPrimeCostBRLSync } from '../lib/steam'
+import { getPrimeCostBRL, getPrimeCostBRLSync, fetchSteamProfileAvatar } from '../lib/steam'
 import toast from 'react-hot-toast'
 
 // ─── Account Form ─────────────────────────────────────────────────────────────
@@ -42,20 +41,43 @@ function AccountModal({
   const { addAccount, updateAccount } = useStore()
   const [form, setForm] = useState<AccountFormData>(initial ?? emptyForm)
   const [errors, setErrors] = useState<Partial<AccountFormData>>({})
-  // Custo Prime fixo em BRL.
   const [primeCostBRL, setPrimeCostBRL] = useState<number>(getPrimeCostBRLSync())
+  const [fetchingAvatar, setFetchingAvatar] = useState(false)
 
   React.useEffect(() => {
     setForm(initial ?? emptyForm)
     setErrors({})
   }, [open, initial])
 
-  // Mantém o mesmo fluxo caso o valor fixo mude no config.
   useEffect(() => {
     if (open) {
       getPrimeCostBRL().then(v => setPrimeCostBRL(v)).catch(() => {})
     }
   }, [open])
+
+  // Auto-fetch Steam avatar when a valid Steam URL or Steam64 ID is entered
+  useEffect(() => {
+    const id = form.steamId.trim()
+    const isSteamUrl = /steamcommunity\.com\/(profiles|id)\//.test(id)
+    const isSteam64 = /^7656119\d{10}$/.test(id)
+    if (!id || (!isSteamUrl && !isSteam64)) return
+    if (form.avatarUrl.trim()) return  // don't overwrite manually set avatar
+
+    let cancelled = false
+    setFetchingAvatar(true)
+    fetchSteamProfileAvatar(id)
+      .then(url => {
+        if (!cancelled && url) {
+          setForm(p => ({ ...p, avatarUrl: url }))
+          toast.success('Foto de perfil detectada!')
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setFetchingAvatar(false) })
+
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.steamId])
 
   const validate = () => {
     const e: Partial<AccountFormData> = {}
@@ -121,10 +143,10 @@ function AccountModal({
           maxLength={64}
         />
         <Input
-          label="Foto da conta (URL opcional)"
+          label={fetchingAvatar ? 'Foto da conta (buscando…)' : 'Foto da conta (URL opcional)'}
           value={form.avatarUrl}
           onChange={e => f('avatarUrl', e.target.value)}
-          placeholder="https://..."
+          placeholder="https://... (auto-detectado via Steam ID)"
           maxLength={500}
         />
         <Divider />
@@ -214,10 +236,13 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
               />
             ) : (
               <div
-                className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold text-[#07090f]"
-                style={{ backgroundColor: as.account.color ?? '#38bdf8' }}
+                className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${as.account.color ?? '#38bdf8'}18`, border: `1px solid ${as.account.color ?? '#38bdf8'}30` }}
               >
-                <ImageIcon className="h-4 w-4" />
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <circle cx="11" cy="8" r="3.5" fill={as.account.color ?? '#38bdf8'} opacity="0.7" />
+                  <path d="M3.5 20c0-4.142 3.358-7.5 7.5-7.5s7.5 3.358 7.5 7.5" stroke={as.account.color ?? '#38bdf8'} strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+                </svg>
               </div>
             )}
             <div className="min-w-0">

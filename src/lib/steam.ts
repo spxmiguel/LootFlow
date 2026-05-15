@@ -357,6 +357,42 @@ export function getSteamCacheStats(): { entries: number; sizeKB: number } {
   return { entries, sizeKB: Math.round(size / 1024) }
 }
 
+// ─── Steam Profile Avatar ─────────────────────────────────────────────────────
+
+/**
+ * Given a Steam profile URL or Steam64 ID, fetches the player's full avatar URL
+ * via the public XML profile endpoint (no API key needed).
+ *
+ * Supported formats:
+ *   https://steamcommunity.com/profiles/76561198xxxxxxxxx
+ *   https://steamcommunity.com/id/vanityname
+ *   76561198xxxxxxxxx  (17-digit Steam64 ID)
+ */
+export async function fetchSteamProfileAvatar(input: string): Promise<string | null> {
+  const s = input.trim().replace(/\/$/, '')
+  if (!s) return null
+
+  let xmlUrl: string
+  if (/steamcommunity\.com\/profiles\//.test(s)) {
+    xmlUrl = `${s.split('?')[0]}/?xml=1`
+  } else if (/steamcommunity\.com\/id\//.test(s)) {
+    xmlUrl = `${s.split('?')[0]}/?xml=1`
+  } else if (/^7656119\d{10}$/.test(s)) {
+    xmlUrl = `https://steamcommunity.com/profiles/${s}/?xml=1`
+  } else {
+    return null
+  }
+
+  try {
+    const res = await fetchWithProxy(xmlUrl)
+    const text = await res.text()
+    const match = text.match(/<avatarFull>(?:<!\[CDATA\[)?(https?:\/\/[^<\]]+)(?:\]\]>)?<\/avatarFull>/)
+    return match?.[1] ?? null
+  } catch {
+    return null
+  }
+}
+
 // ─── Prime Cost Utility ───────────────────────────────────────────────────────
 
 /**

@@ -302,7 +302,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </AnimatePresence>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <MobileHeader />
         <div className="flex-1 overflow-y-auto mobile-scroll">
           <AnimatePresence mode="wait">
@@ -312,7 +312,7 @@ export function Layout({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0 }}
               exit={settings.theme.animations ? { opacity: 0, y: -8 } : {}}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="h-full pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0"
+              className="min-h-full pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0"
             >
               {children}
             </motion.div>

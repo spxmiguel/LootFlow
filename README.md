@@ -1,141 +1,142 @@
 # LootFlow
-Dashboard moderno para acompanhar, analisar e calcular ganhos com drops semanais do Prime no CS2.
 
-## ✨ Features
+> Dashboard moderno para acompanhar, analisar e calcular seus ganhos com drops do Prime CS2.
 
-- 📦 Registro de drops semanais
-- 💰 Cálculo automático de lucro e ROI
-- 👥 Gerenciamento de múltiplas contas Prime
-- 📊 Dashboard com analytics completos
-- 🎯 Sistema de metas
-- 🧾 Histórico de drops
-- 🌙 Interface moderna e responsiva
-- ⚡ Performance rápida e leve
-
-## 🚀 Objetivo
-
-O LootFlow foi criado pra facilitar a vida de quem farma drops no CS2 e quer visualizar tudo de forma organizada, sem precisar calcular lucro na mão ou usar planilhas confusas.
-
-## 🛠️ Tecnologias
-
-- React + TypeScript
-- Vite
-- TailwindCSS
-- Firebase (Auth + Firestore)
-- Framer Motion
-- Recharts
+**[▶ Abrir agora → spxmiguel.github.io/LootFlow](https://spxmiguel.github.io/LootFlow)**
 
 ---
 
-## 📥 Formas de uso
+## O que é
 
-### 🌐 Online via GitHub Pages
+LootFlow é um tracker de drops semanais do CS2. Registre os itens que você recebe nas suas contas Prime, acompanhe cashout, ROI e payback em tempo real — sem planilha, sem calculadora.
 
-Acesse diretamente no navegador — sem instalar nada:  
-**[https://spxmiguel.github.io/LootFlow](https://spxmiguel.github.io/LootFlow)**
+---
 
-Crie uma conta com Google para sincronizar entre dispositivos, ou entre como convidado para uso local.
+## Funcionalidades
 
-### 💻 Instalação Local (offline)
+| | |
+|---|---|
+| **Drops** | Registre até 2 drops por conta por semana · pesquisa bilíngue PT/EN · desgaste (FN/MW/FT/WW/BS) e float |
+| **Contas** | Múltiplas contas Prime · avatar automático via Steam URL · payback e ROI por conta |
+| **Analytics** | Gráficos semanais, acumulado, volume e distribuição por conta · Top 8 drops |
+| **Metas** | Defina metas de cashout, receita ou drops com deadline |
+| **Exportação** | CSV, XLSX (abas: Drops + Contas) e backup JSON |
+| **Sync** | Login com Google + Firestore · ou 100% offline via localStorage |
+| **PWA** | Instala como app no celular · suporte a safe-area iOS |
+| **Perfil** | Nome personalizado, foto customizada, ocultar email (LGPD) |
+
+---
+
+## Stack
+
+- **React 18** + TypeScript + Vite
+- **TailwindCSS** + Framer Motion
+- **Zustand** (estado global)
+- **Firebase** Auth + Firestore (opcional)
+- **Recharts** (gráficos)
+
+---
+
+## Usar online
+
+Acesse direto — sem instalar nada:
+
+```
+https://spxmiguel.github.io/LootFlow
+```
+
+- Clique **"Entrar com Google"** para sync entre dispositivos
+- Ou **"Continuar sem conta"** para uso 100% local
+
+---
+
+## Rodar localmente
 
 ```bash
-git clone https://github.com/spxmiguel/LootFlow/
+git clone https://github.com/spxmiguel/LootFlow
 cd LootFlow
 npm install
 npm run dev
 ```
 
-Acesse `http://localhost:5173` no navegador.
+Acesse `http://localhost:5173`.
 
 ---
 
-## 🔥 Configurar Firebase (opcional)
+## Firebase (opcional)
 
-Sem Firebase, o app funciona 100% offline via localStorage.  
-Para ativar **login Google** e **sync entre dispositivos**:
+Sem Firebase o app funciona 100% offline. Para ativar login Google e sync entre dispositivos:
 
-### 1. Criar projeto Firebase
+### 1. Criar projeto
 
-1. Acesse [console.firebase.google.com](https://console.firebase.google.com)
-2. Crie um projeto novo
-3. Ative **Authentication → Google**
-4. Crie o **Firestore Database** em modo produção
+1. Acesse [console.firebase.google.com](https://console.firebase.google.com) → "Criar projeto"
+2. Ative **Authentication → Google**
+3. Crie **Firestore Database** em modo produção
+4. Em Authentication → Settings → **Authorized domains** → adicione `seuusuario.github.io`
 
-### 2. Security Rules do Firestore
+### 2. Regras do Firestore
 
-Em **Firestore → Rules**, use:
-
-```javascript
+```js
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    match /users/{uid}/{d=**} {
+      allow read, write: if request.auth.uid == uid;
     }
   }
 }
 ```
 
-### 3. Configurar variáveis de ambiente
+### 3. Variáveis de ambiente
 
 ```bash
 cp .env.example .env
-# Preencha com suas credenciais do Firebase
+# Preencha com as credenciais do seu projeto Firebase
 ```
+
+Ou use a opção **"Usar Firebase próprio"** diretamente dentro do app (Configurações → Firebase).
 
 ---
 
-## 🚀 Deploy no GitHub Pages
+## Deploy no GitHub Pages
 
 ### Automático (recomendado)
 
-O repositório inclui um workflow que faz deploy automático a cada push na `main`.
+O repositório já tem workflow de CI/CD. Basta:
 
-**Passos:**
+1. **GitHub Pages:** Settings → Pages → Source: **GitHub Actions**
+2. **Secrets:** Settings → Secrets → Actions → adicione:
 
-1. **Ative o GitHub Pages:**  
-   Settings → Pages → Source: **GitHub Actions**
-
-2. **Configure os secrets:**  
-   Settings → Secrets → Actions → adicione cada `VITE_FIREBASE_*`:
-
-   | Secret | Descrição |
-   |--------|-----------|
-   | `VITE_FIREBASE_API_KEY` | API Key do Firebase |
+   | Secret | Valor |
+   |--------|-------|
+   | `VITE_FIREBASE_API_KEY` | API Key |
    | `VITE_FIREBASE_AUTH_DOMAIN` | Auth Domain |
    | `VITE_FIREBASE_PROJECT_ID` | Project ID |
    | `VITE_FIREBASE_STORAGE_BUCKET` | Storage Bucket |
    | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Sender ID |
    | `VITE_FIREBASE_APP_ID` | App ID |
-   | `VITE_FIREBASE_MEASUREMENT_ID` | Measurement ID |
 
-3. **Adicione o domínio autorizado no Firebase:**  
-   Authentication → Settings → Authorized domains → `seuusuario.github.io`
-
-4. **Faça um push** — o deploy acontece automaticamente em ~2 minutos.
+3. Faça um push na `main` — deploy automático em ~2 min.
 
 ### Manual
 
 ```bash
 npm run build
-# Faça upload da pasta dist/ para seu servidor
+# Suba a pasta dist/ para seu servidor
 ```
 
 ---
 
-## 🔒 Segurança
+## Segurança
 
-- Credenciais Firebase nunca expostas no código — usam `VITE_*` env vars
-- Firestore Rules garantem isolamento total entre usuários
+- Credenciais Firebase apenas em `VITE_*` env vars — nunca no código
+- Firestore Rules com isolamento total por `uid`
 - Dados locais ficam apenas no seu navegador
-- Modo offline 100% funcional sem conta ou servidor
+- Projeto open source — código auditável
 
 ---
 
-## 🤖 Desenvolvimento
+## Desenvolvimento
 
-Feito a partir de ideias próprias e desenvolvido com auxílio de IA usando Claude.
-
----
-
-Criado por um jogador de CS2 cansado de calcular drop na mão kkkkk
+Criado por um jogador de CS2 cansado de calcular drop na mão.  
+Desenvolvido com auxílio de IA usando [Claude](https://claude.ai).
