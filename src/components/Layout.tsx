@@ -189,7 +189,7 @@ function MobileHeader() {
   const [profileOpen, setProfileOpen] = useState(false)
 
   return (
-    <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#07090f]/92 backdrop-blur-xl sticky top-0 z-30 pt-[env(safe-area-inset-top)] h-[calc(4rem+env(safe-area-inset-top))]">
+    <header className="pwa-header lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#07090f]/92 backdrop-blur-xl sticky top-0 z-30 pt-[env(safe-area-inset-top)] h-[calc(4rem+env(safe-area-inset-top))]">
       {profileOpen && <ProfileModal open onClose={() => setProfileOpen(false)} />}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shadow-glow">

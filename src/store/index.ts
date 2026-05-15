@@ -96,7 +96,13 @@ function syncToFirestore(
         logger.error(`[Sync] ${collection}/${docId}:`, e)
         if (!syncErrorToastShown) {
           syncErrorToastShown = true
-          toast.error('Falha ao salvar na nuvem. Verifique as regras do Firestore.', { duration: 6000 })
+          const isPermission = (e as { code?: string })?.code === 'permission-denied'
+          toast.error(
+            isPermission
+              ? 'Sem permissão no Firestore. Configure as regras em Console Firebase → Firestore → Rules.'
+              : 'Falha ao salvar na nuvem. Verifique sua conexão e as regras do Firestore.',
+            { duration: 8000 },
+          )
         }
       })
   }

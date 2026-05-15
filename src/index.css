@@ -124,12 +124,33 @@ body {
   overscroll-behavior-y: contain;
 }
 
-/* In standalone (PWA) mode, ensure body never bounces outside scroll area */
+/* In standalone (PWA) mode — fill screen, no bounce, respect safe areas */
 @media all and (display-mode: standalone) {
-  html, body, #root {
-    position: fixed;
-    width: 100%;
+  html {
+    /* Use dvh so the layout fills exactly the visible viewport */
+    height: 100dvh;
+    overflow: hidden;
+  }
+  body {
     height: 100%;
     overflow: hidden;
+  }
+  #root {
+    height: 100%;
+    overflow: hidden;
+    /* Push content below the status-bar / Dynamic Island */
+    padding-top: env(safe-area-inset-top);
+    /* Compensate: MobileHeader already adds its own safe-area padding,
+       so we subtract it to avoid double-padding the header. */
+    --pwa-top-pad: env(safe-area-inset-top);
+  }
+}
+
+/* When running as PWA, the MobileHeader must NOT add its own inset-top
+   because #root already accounts for it. */
+@media all and (display-mode: standalone) {
+  .pwa-header {
+    padding-top: 0 !important;
+    height: 4rem !important;
   }
 }

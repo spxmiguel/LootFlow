@@ -201,10 +201,17 @@ export function useAuth() {
       const { auth } = initFirebase(getActiveFirebaseConfig())
       const provider = getGoogleProvider()
 
-      const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      const isPWA = window.matchMedia?.('(display-mode: standalone)').matches ||
+        (navigator as { standalone?: boolean }).standalone === true
+      const isMobileBrowser = !isPWA && (
+        /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
         window.matchMedia?.('(pointer: coarse)').matches
+      )
 
-      if (isMobile) {
+      // PWA mode: popup works (redirect leaves the PWA and never comes back)
+      // Mobile browser: redirect works better than popup
+      // Desktop: popup first, fallback to redirect
+      if (isMobileBrowser) {
         setRedirectPending()
         signInWithRedirect(auth, provider).catch(e => {
           clearRedirectPending()
