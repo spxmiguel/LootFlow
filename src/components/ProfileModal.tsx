@@ -130,8 +130,24 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
   const hasGooglePhoto = !!(user?.photoURL)
   const isGoogleUser = user?.provider === 'google'
 
+  const footer = (
+    <div className="flex items-center gap-2 w-full">
+      <button
+        onClick={handleReset}
+        className="text-xs text-slate-500 hover:text-slate-300 px-3 py-2 rounded-lg hover:bg-white/[0.04] transition-colors"
+      >
+        Restaurar padrão
+      </button>
+      <div className="flex-1" />
+      <Button variant="ghost" onClick={onClose} size="sm">Cancelar</Button>
+      <Button onClick={handleSave} size="sm" disabled={saving} icon={Check}>
+        {saving ? 'Salvando…' : 'Salvar'}
+      </Button>
+    </div>
+  )
+
   return (
-    <Modal open={open} onClose={onClose} title="Editar Perfil" size="sm">
+    <Modal open={open} onClose={onClose} title="Editar Perfil" size="sm" footer={footer}>
       <div className="space-y-5">
 
         {/* ── Preview avatar ── */}
@@ -238,20 +254,6 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
           </div>
         )}
 
-        {/* ── Buttons ── */}
-        <div className="flex gap-2 pt-1 border-t border-white/[0.06]">
-          <button
-            onClick={handleReset}
-            className="text-xs text-slate-500 hover:text-slate-300 px-3 py-2 rounded-lg hover:bg-white/[0.04] transition-colors"
-          >
-            Restaurar padrão
-          </button>
-          <div className="flex-1" />
-          <Button variant="ghost" onClick={onClose} size="sm">Cancelar</Button>
-          <Button onClick={handleSave} size="sm" disabled={saving} icon={Check}>
-            {saving ? 'Salvando…' : 'Salvar'}
-          </Button>
-        </div>
       </div>
     </Modal>
   )
