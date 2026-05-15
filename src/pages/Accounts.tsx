@@ -2,14 +2,14 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Users, TrendingUp, Package,
-  CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
+  CheckCircle2, AlertCircle, ToggleLeft, ToggleRight, Check,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { calcAccountStats } from '../lib/calculations'
 import { formatCurrency, formatPercent, generateId, cn } from '../lib/utils'
 import {
   Button, Card, Badge, Modal, Input, Textarea,
-  Empty, Progress, Divider,
+  Empty, Progress, Divider, ImageUploadButton,
 } from '../components/ui'
 import { getPrimeCostBRL, getPrimeCostBRLSync, fetchSteamProfileAvatar } from '../lib/steam'
 import toast from 'react-hot-toast'
@@ -142,13 +142,23 @@ function AccountModal({
           placeholder="76561198..."
           maxLength={64}
         />
-        <Input
-          label={fetchingAvatar ? 'Foto da conta (buscando…)' : 'Foto da conta (URL opcional)'}
-          value={form.avatarUrl}
-          onChange={e => f('avatarUrl', e.target.value)}
-          placeholder="https://... (auto-detectado via Steam ID)"
-          maxLength={500}
-        />
+        <div>
+          <Input
+            label={fetchingAvatar ? 'Foto da conta (buscando…)' : 'Foto da conta (opcional)'}
+            value={form.avatarUrl.startsWith('data:') ? '' : form.avatarUrl}
+            onChange={e => f('avatarUrl', e.target.value)}
+            placeholder="https://... (auto-detectado via Steam ID)"
+            maxLength={500}
+          />
+          <div className="flex items-center gap-2 mt-2">
+            <ImageUploadButton onSelect={dataUrl => f('avatarUrl', dataUrl)} />
+            {form.avatarUrl.startsWith('data:') && (
+              <span className="flex items-center gap-1 text-[11px] text-profit">
+                <Check size={12} /> Foto anexada
+              </span>
+            )}
+          </div>
+        </div>
         <Divider />
         <div className="flex items-center justify-between p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
           <div>

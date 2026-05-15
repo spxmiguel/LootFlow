@@ -1,8 +1,9 @@
-import React, { forwardRef, useEffect, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
+import React, { forwardRef, useEffect, useRef, useState, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Loader2 } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { X, Loader2, Upload } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { cn, fileToCompressedDataURL } from '../lib/utils'
 
 // ─── Button ───────────────────────────────────────────────────────────────────
 
@@ -355,6 +356,54 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
       )}
     </AnimatePresence>,
     document.body,
+  )
+}
+
+// ─── Image Upload Button ──────────────────────────────────────────────────────
+
+interface ImageUploadButtonProps {
+  onSelect: (dataUrl: string) => void
+  label?: string
+  className?: string
+}
+
+export function ImageUploadButton({ onSelect, label = 'Anexar foto do dispositivo', className }: ImageUploadButtonProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setLoading(true)
+    try {
+      const dataUrl = await fileToCompressedDataURL(file)
+      onSelect(dataUrl)
+    } catch {
+      toast.error('Não consegui processar essa imagem.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={loading}
+        className={cn(
+          'flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition-colors',
+          'bg-[#1a2235] border border-white/[0.08] text-slate-300 hover:text-white hover:border-white/[0.18]',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
+          className,
+        )}
+      >
+        {loading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+        {loading ? 'Processando…' : label}
+      </button>
+    </>
   )
 }
 

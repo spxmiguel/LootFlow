@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { User, Camera, Trash2, Eye, EyeOff, Check, AlertTriangle, X, Info } from 'lucide-react'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
-import { Modal, Button, Input, Toggle } from './ui'
+import { Modal, Button, Input, Toggle, ImageUploadButton } from './ui'
 import toast from 'react-hot-toast'
 
 // ─── Avatar component (shared with Layout) ───────────────────────────────────
@@ -80,6 +80,7 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
   const effectivePhoto = photoRemoved
     ? null
     : (customPhotoURL.trim() || user?.photoURL || null)
+  const isUploadedPhoto = customPhotoURL.startsWith('data:')
 
   function handleRemovePhoto() {
     if (!confirmRemovePhoto) {
@@ -200,18 +201,26 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
           </div>
         )}
 
-        {/* ── Custom photo URL ── */}
+        {/* ── Custom photo (URL or upload) ── */}
         {!photoRemoved && (
           <div>
             <Input
-              label="URL da foto personalizada (opcional)"
-              value={customPhotoURL}
+              label="Foto personalizada (opcional)"
+              value={isUploadedPhoto ? '' : customPhotoURL}
               onChange={e => { setCustomPhotoURL(e.target.value) }}
               placeholder="https://exemplo.com/foto.jpg"
               maxLength={500}
             />
-            <p className="text-[10px] text-slate-600 mt-1">
-              Deixe vazio para usar a foto do Google{hasGooglePhoto ? ' (padrão)' : ''}.
+            <div className="flex items-center gap-2 mt-2">
+              <ImageUploadButton onSelect={dataUrl => { setCustomPhotoURL(dataUrl); setPhotoRemoved(false) }} />
+              {isUploadedPhoto && (
+                <span className="flex items-center gap-1 text-[11px] text-profit">
+                  <Check size={12} /> Foto anexada
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-600 mt-1.5">
+              Cole uma URL ou anexe uma imagem. Deixe vazio para usar a foto do Google{hasGooglePhoto ? ' (padrão)' : ''}.
             </p>
           </div>
         )}

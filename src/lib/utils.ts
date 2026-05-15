@@ -148,3 +148,49 @@ export function roiColorClass(roi: number): string {
   if (roi < 0) return 'text-loss'
   return 'text-slate-400'
 }
+
+// ─── Image upload ─────────────────────────────────────────────────────────────
+
+// Reads an image file, downscales it to a small square-ish avatar and returns a
+// compressed JPEG data URL. Keeps the result tiny so it fits in localStorage and
+// well under the Firestore 1 MB document limit.
+export function fileToCompressedDataURL(
+  file: File,
+  maxSize = 256,
+  quality = 0.82,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('O arquivo não é uma imagem'))
+      return
+    }
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Falha ao ler o arquivo'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('Falha ao decodificar a imagem'))
+      img.onload = () => {
+        let { width, height } = img
+        if (width >= height && width > maxSize) {
+          height = Math.round((height * maxSize) / width)
+          width = maxSize
+        } else if (height > width && height > maxSize) {
+          width = Math.round((width * maxSize) / height)
+          height = maxSize
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Canvas indisponível'))
+          return
+        }
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
