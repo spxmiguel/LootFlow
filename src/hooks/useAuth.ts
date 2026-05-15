@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 
 const SESSION_KEY = 'lootflow_session'
 const REDIRECT_PENDING_KEY = 'lootflow_google_pending'
+const POPUP_PENDING_KEY = 'lootflow_popup_pending'
 
 let authListenerStarted = false
 let redirectHandled = false
@@ -110,14 +111,17 @@ export function useAuth() {
 
         onAuthStateChanged(auth, fbUser => {
           if (!fbUser) {
-            // If a redirect is still in flight, don't finalize yet —
-            // getRedirectResult above will set the user when it resolves.
+            // Don't finalize if a redirect or popup is still in flight —
+            // the result handler will set the user when it resolves.
             if (isRedirectPending()) return
+            if (localStorage.getItem(POPUP_PENDING_KEY)) return
             clearRedirectPending()
             finishReady()
             return
           }
 
+          // Popup completed (possibly after PWA was killed and restarted)
+          localStorage.removeItem(POPUP_PENDING_KEY)
           clearRedirectPending()
           const appUser = makeAppUser(fbUser)
           setUser(appUser)
@@ -222,7 +226,12 @@ export function useAuth() {
       }
 
       try {
+        // Save flag before opening popup so that if iOS kills the PWA while
+        // the popup is open, onAuthStateChanged won't finalize as "logged out"
+        // on restart — it will wait for Firebase to restore the auth state.
+        try { localStorage.setItem(POPUP_PENDING_KEY, '1') } catch {}
         const result = await signInWithPopup(auth, provider)
+        localStorage.removeItem(POPUP_PENDING_KEY)
         const appUser = makeAppUser(result.user)
         setUser(appUser)
         setAuthMode('firebase')
@@ -231,6 +240,7 @@ export function useAuth() {
         toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`)
         return 'success'
       } catch (popupErr: unknown) {
+        localStorage.removeItem(POPUP_PENDING_KEY)
         const code = (popupErr as { code?: string })?.code
 
         if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
@@ -274,6 +284,7 @@ export function useAuth() {
       } catch {}
     }
     localStorage.removeItem(SESSION_KEY)
+    localStorage.removeItem(POPUP_PENDING_KEY)
     clearRedirectPending()
     setUser(null)
     toast.success('Até mais!')

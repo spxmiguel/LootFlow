@@ -76,7 +76,7 @@ function ThemeInjector() {
 }
 
 export default function App() {
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, authReady } = useAuth()
   const animations = useStore(s => s.settings.theme.animations)
   const [showLogin, setShowLogin] = useState(false)
   const [storageConsent, setStorageConsent] = useState(() =>
@@ -99,7 +99,9 @@ export default function App() {
           style: { background: '#0f172a', color: '#e2e8f0', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '13px' },
         }}
       />
-      {!isLoggedIn ? (
+      {!authReady ? (
+        <PageFallback />
+      ) : !isLoggedIn ? (
         <ErrorBoundary page="auth">
           <Suspense fallback={<PageFallback />}>
             {showLogin ? (
