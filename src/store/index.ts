@@ -157,7 +157,10 @@ export const useStore = create<AppState>()(
 
     // ── Auth ────────────────────────────────────────────────────────────────
 
-    setUser: (user) => set({ user }),
+    setUser: (user) => {
+      if (user) syncErrorToastShown = false
+      set({ user })
+    },
     setAuthMode: (authMode) => set({ authMode }),
     setAuthReady: (authReady) => set({ authReady }),
 
@@ -438,6 +441,7 @@ export const useStore = create<AppState>()(
     },
 
     reset: () => {
+      syncErrorToastShown = false
       storage.clearAll()
       try { localStorage.removeItem('lootflow_session') } catch {}
       set({

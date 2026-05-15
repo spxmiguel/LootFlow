@@ -151,7 +151,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
 
       {/* User */}
       <div className={cn('px-3 py-4 border-t border-white/[0.09]', compact && 'px-2')}>
-        {profileOpen && <ProfileModal open onClose={() => setProfileOpen(false)} />}
+        <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
         <div className={cn('flex items-center gap-3 p-2.5 rounded-xl', compact && 'justify-center')}>
           <button
             onClick={() => setProfileOpen(true)}
@@ -190,7 +190,7 @@ function MobileHeader() {
 
   return (
     <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#07090f]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
-      {profileOpen && <ProfileModal open onClose={() => setProfileOpen(false)} />}
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shadow-glow">
           <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />

@@ -50,6 +50,11 @@ export function getGoogleProvider(): GoogleAuthProvider {
 
 // ─── Firestore Helpers ────────────────────────────────────────────────────────
 
+// Firestore doesn't accept undefined values — strip them recursively before writing.
+function sanitize(obj: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(obj))
+}
+
 // Throws on error so callers can detect Firestore access failures (e.g. missing rules).
 export async function firestoreLoadCollection<T>(
   userId: string,
@@ -68,7 +73,7 @@ export async function firestoreSaveDoc(
   data: Record<string, unknown>,
 ): Promise<void> {
   if (!db) throw new Error('Firestore not initialized')
-  await setDoc(doc(db, 'users', userId, collectionName, docId), data, { merge: true })
+  await setDoc(doc(db, 'users', userId, collectionName, docId), sanitize(data), { merge: true })
 }
 
 export async function firestoreDeleteDoc(
