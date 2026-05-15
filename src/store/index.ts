@@ -6,7 +6,7 @@ import type { CSAccount, Drop, Goal, AppSettings, AppUser, Page, ModalType, Prof
 import { storage, DEFAULT_SETTINGS } from '../lib/storage'
 import { generateId, getAccountColor } from '../lib/utils'
 import {
-  isFirebaseReady, firestoreSaveDoc, firestoreDeleteDoc,
+  isFirebaseReady, getFirebaseAuth, firestoreSaveDoc, firestoreDeleteDoc,
   firestoreLoadCollection,
 } from '../lib/firebase'
 
@@ -89,7 +89,9 @@ function syncToFirestore(
   enabled = true,
 ) {
   if (!enabled) return
-  if (user?.provider === 'google' && isFirebaseReady()) {
+  // Only write when Firebase Auth has a confirmed current user.
+  // Session restore sets user before onAuthStateChanged fires — token may not be valid yet.
+  if (user?.provider === 'google' && isFirebaseReady() && getFirebaseAuth()?.currentUser) {
     firestoreSaveDoc(user.uid, collection, docId, data)
       .then(() => { syncErrorToastShown = false })
       .catch(e => {
@@ -110,7 +112,7 @@ function syncToFirestore(
 
 function deleteFromFirestore(user: AppUser | null, collection: string, docId: string, enabled = true) {
   if (!enabled) return
-  if (user?.provider === 'google' && isFirebaseReady()) {
+  if (user?.provider === 'google' && isFirebaseReady() && getFirebaseAuth()?.currentUser) {
     firestoreDeleteDoc(user.uid, collection, docId).catch(logger.error)
   }
 }
