@@ -6,7 +6,6 @@ import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LegalModal, type LegalType } from './components/LegalModal'
-import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 
 const STORAGE_CONSENT_KEY = 'lootflow_storage_consent'
 
@@ -91,7 +90,6 @@ export default function App() {
   return (
     <MotionConfig reducedMotion={animations ? 'never' : 'always'}>
       {!storageConsent && <StorageBanner onDismiss={dismissBanner} />}
-      <PWAInstallPrompt />
       <ThemeInjector />
       <Toaster position="top-right" gutter={8}
         toastOptions={{

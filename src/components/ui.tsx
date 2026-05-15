@@ -1,4 +1,5 @@
 import React, { forwardRef, useEffect, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -301,7 +302,8 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
       document.removeEventListener('keydown', onKey)
     }
   }, [open, onClose])
-  return (
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -309,10 +311,11 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
             onClick={onClose}
+            onTouchMove={e => e.preventDefault()}
           />
-          <div className="fixed inset-0 z-50 flex items-end justify-center p-0 pointer-events-none sm:items-center sm:p-4">
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 pointer-events-none sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.98, y: 28 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -321,13 +324,12 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
               className={cn(
                 'w-full pointer-events-auto flex flex-col',
                 'bg-[#0d1117] border border-white/[0.08] rounded-t-2xl shadow-modal sm:rounded-2xl',
-                // Leave room for bottom nav (~5.5rem) + safe area on mobile
-                'max-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))] sm:max-h-[90vh]',
+                'max-h-[calc(100dvh-5.5rem)] sm:max-h-[90vh]',
                 widthClass,
               )}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.09] sm:px-6">
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.09] sm:px-6 shrink-0">
                 <h2 className="font-display text-base font-bold text-slate-100">{title}</h2>
                 <button
                   onClick={onClose}
@@ -343,7 +345,7 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
 
               {/* Footer */}
               {footer && (
-                <div className="px-5 py-4 border-t border-white/[0.09] flex items-center justify-end gap-2 sm:px-6">
+                <div className="px-5 py-4 border-t border-white/[0.09] flex items-center justify-end gap-2 sm:px-6 shrink-0">
                   {footer}
                 </div>
               )}
@@ -351,7 +353,8 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
 
