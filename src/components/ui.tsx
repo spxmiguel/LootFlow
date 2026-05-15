@@ -36,6 +36,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           'inline-flex items-center justify-center font-body font-medium',
           'transition-all duration-150 cursor-pointer select-none',
+          'active:scale-[0.97] disabled:active:scale-100',
           'disabled:opacity-40 disabled:cursor-not-allowed',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           variants[variant],
@@ -75,7 +76,7 @@ export function Card({ children, className, glass = true, hover, glow, onClick }
       className={cn(
         'rounded-2xl border border-white/[0.08]',
         glass ? 'lf-card' : 'bg-[#0c1018]',
-        hover && 'cursor-pointer hover:bg-[#111827] hover:border-white/[0.15] transition-all duration-200',
+        hover && 'cursor-pointer hover:bg-[#111827] hover:border-white/[0.15] hover:-translate-y-0.5 transition-all duration-200',
         className,
       )}
     >
@@ -329,7 +330,8 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
                 <h2 className="font-display text-base font-bold text-slate-100">{title}</h2>
                 <button
                   onClick={onClose}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-200 hover:bg-[#1e2d45] transition-all"
+                  aria-label="Fechar"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-200 hover:bg-[#1e2d45] active:scale-90 transition-all"
                 >
                   <X className="w-4 h-4" />
                 </button>

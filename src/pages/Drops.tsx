@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Plus, Search, X, Package,
   Trash2, DollarSign, AlertCircle, Calendar, HelpCircle, Zap, Filter,
@@ -428,6 +428,8 @@ function DropModal({ onSave, onClose }: DropModalProps) {
 function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string, v: number) => void; onClose: () => void }) {
   const { settings } = useStore()
   const [value, setValue] = useState((drop.steamValue * settings.cashoutRate / 100).toFixed(2))
+  const parsed = parseFloat(value)
+  const valid = Number.isFinite(parsed) && parsed >= 0
   return (
     <Modal open onClose={onClose} title="Registrar Venda">
       <div className="space-y-4">
@@ -436,10 +438,12 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
           <p className="text-xs text-slate-500 mt-0.5">Bruto: {formatCurrency(drop.steamValue)}</p>
         </div>
         <Input label="Valor recebido (R$)" type="number" min="0" step="0.01"
-          value={value} onChange={e => setValue(e.target.value)} />
+          value={value} onChange={e => setValue(e.target.value)}
+          error={!valid && value !== '' ? 'Informe um valor válido' : undefined} />
         <div className="flex gap-3">
           <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
-          <Button variant="success" onClick={() => onSave(drop.id, parseFloat(value))} className="flex-1">
+          <Button variant="success" disabled={!valid}
+            onClick={() => { if (valid) onSave(drop.id, parsed) }} className="flex-1">
             Confirmar Venda
           </Button>
         </div>
@@ -450,13 +454,18 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
 
 // ─── Drop Card ────────────────────────────────────────────────────────────────
 
-function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSell }: {
+function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSell, index }: {
   drop: Drop; accountName: string; accountColor: string
-  cashoutRate: number
+  cashoutRate: number; index: number
   onDelete: () => void; onSell: () => void
 }) {
   const cashout = drop.cashoutValue ?? drop.steamValue * cashoutRate / 100
   return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.04, 0.4), duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+    >
     <Card className="p-4">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -472,7 +481,7 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
               Vender
             </button>
           )}
-          <button onClick={onDelete}
+          <button onClick={onDelete} aria-label="Deletar drop"
             className="p-1.5 rounded-lg text-slate-600 hover:text-loss hover:bg-loss/10 transition-colors">
             <Trash2 size={12} />
           </button>
@@ -490,11 +499,12 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
           <p className="font-mono font-semibold text-profit">{formatCurrency(cashout)}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-500 mb-0.5">Steam</p>
+          <p className="text-xs text-slate-500 mb-0.5">Bruto</p>
           <p className="font-mono text-sm text-slate-400">{formatCurrency(drop.steamValue)}</p>
         </div>
       </div>
     </Card>
+    </motion.div>
   )
 }
 
@@ -721,12 +731,13 @@ export default function Drops() {
                 isCurrentWeek={weekId === currentWid}
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
-                {wdrops.map(drop => {
+                {wdrops.map((drop, i) => {
                   const acct = accounts.find(a => a.id === drop.accountId)
                   return (
                     <DropCard
                       key={drop.id}
                       drop={drop}
+                      index={i}
                       accountName={acct?.name ?? '?'}
                       accountColor={acct?.color ?? '#64748b'}
                       cashoutRate={settings.cashoutRate}

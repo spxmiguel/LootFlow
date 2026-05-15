@@ -265,8 +265,8 @@ export default function Settings() {
                 <span className="text-lg font-mono font-bold text-primary">{cashoutRate}%</span>
               </div>
               <p className="text-xs text-slate-500 mb-3">
-                Percentual do valor Steam que você realmente recebe na venda.<br/>
-                Ex: item R$10 no Steam → cashout {formatCurrency(10 * cashoutRate / 100)}
+                Percentual do valor bruto que você realmente recebe na venda.<br/>
+                Ex: item R$10 de valor bruto → cashout {formatCurrency(10 * cashoutRate / 100)}
               </p>
               <input
                 type="range"

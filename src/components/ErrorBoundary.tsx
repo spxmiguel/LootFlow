@@ -29,12 +29,20 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-slate-600 text-xs max-w-md mb-6 font-mono">
             {this.state.error.stack?.split('\n')[1]?.trim()}
           </p>
-          <button
-            onClick={() => this.setState({ error: null })}
-            className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/30 text-primary text-sm hover:bg-primary/20 transition-colors"
-          >
-            Tentar novamente
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => this.setState({ error: null })}
+              className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/30 text-primary text-sm hover:bg-primary/20 active:scale-[0.97] transition-all"
+            >
+              Tentar novamente
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-400 text-sm hover:text-slate-200 hover:bg-white/[0.08] active:scale-[0.97] transition-all"
+            >
+              Recarregar app
+            </button>
+          </div>
         </div>
       )
     }

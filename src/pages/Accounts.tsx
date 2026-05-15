@@ -240,12 +240,16 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
             </button>
             <button
               onClick={onEdit}
+              aria-label="Editar conta"
+              title="Editar"
               className="text-slate-500 hover:text-slate-200 p-1.5 rounded-lg hover:bg-[#1a2235] transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={onDelete}
+              aria-label="Deletar conta"
+              title="Deletar"
               className="text-slate-500 hover:text-loss p-1.5 rounded-lg hover:bg-loss/10 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />

@@ -53,7 +53,7 @@ export default function Analytics() {
       return {
         week: getWeekLabel(wid).split('–')[0].trim(),
         Cashout: parseFloat((ws?.totalCashout ?? 0).toFixed(2)),
-        Steam:   parseFloat((ws?.totalSteamValue ?? 0).toFixed(2)),
+        Bruto:   parseFloat((ws?.totalSteamValue ?? 0).toFixed(2)),
         Drops:   ws?.totalDrops ?? 0,
       }
     })
@@ -107,7 +107,7 @@ export default function Analytics() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Cashout Total"  value={formatCurrency(stats.totalCashoutAllTime)}  icon={DollarSign} color="profit" />
-        <StatCard label="Valor Steam"    value={formatCurrency(stats.totalSteamValueAllTime)} icon={Package}   color="primary" />
+        <StatCard label="Valor Bruto"    value={formatCurrency(stats.totalSteamValueAllTime)} icon={Package}   color="primary" />
         <StatCard label="ROI Geral"      value={isFinite(stats.overallROI) ? formatPercent(stats.overallROI) : '∞'} icon={TrendingUp} color={stats.overallROI >= 0 ? 'profit' : 'loss'} />
         <StatCard label="Total de Drops" value={String(stats.totalDropsAllTime)} icon={Zap} color="gold" />
       </div>
@@ -131,7 +131,7 @@ export default function Analytics() {
               <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTip currency={cur} />} />
               <Bar dataKey="Cashout" fill="#38bdf8" radius={[4,4,0,0]} maxBarSize={36} />
-              <Bar dataKey="Steam"   fill="#4ade80" radius={[4,4,0,0]} maxBarSize={36} opacity={0.4} />
+              <Bar dataKey="Bruto"   fill="#4ade80" radius={[4,4,0,0]} maxBarSize={36} opacity={0.4} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -197,7 +197,7 @@ export default function Analytics() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                {['Conta','Drops','Steam','Cashout','Investido','ROI','Status'].map(h => (
+                {['Conta','Drops','Bruto','Cashout','Investido','ROI','Status'].map(h => (
                   <th key={h} className="text-left text-xs text-slate-500 font-medium pb-3 pr-4 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -256,7 +256,7 @@ export default function Analytics() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-mono font-semibold text-profit">{formatCurrency(val)}</p>
-                    <p className="text-xs text-slate-500 font-mono">Steam {formatCurrency(drop.steamValue)}</p>
+                    <p className="text-xs text-slate-500 font-mono">Bruto {formatCurrency(drop.steamValue)}</p>
                   </div>
                   <ArrowUpRight size={13} className="text-slate-600" />
                 </div>

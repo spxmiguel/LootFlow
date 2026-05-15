@@ -90,13 +90,15 @@ function syncToFirestore(
 ) {
   if (!enabled) return
   if (user?.provider === 'google' && isFirebaseReady()) {
-    firestoreSaveDoc(user.uid, collection, docId, data).catch(e => {
-      logger.error(`[Sync] ${collection}/${docId}:`, e)
-      if (!syncErrorToastShown) {
-        syncErrorToastShown = true
-        toast.error('Falha ao salvar na nuvem. Verifique as regras do Firestore.', { duration: 6000 })
-      }
-    })
+    firestoreSaveDoc(user.uid, collection, docId, data)
+      .then(() => { syncErrorToastShown = false })
+      .catch(e => {
+        logger.error(`[Sync] ${collection}/${docId}:`, e)
+        if (!syncErrorToastShown) {
+          syncErrorToastShown = true
+          toast.error('Falha ao salvar na nuvem. Verifique as regras do Firestore.', { duration: 6000 })
+        }
+      })
   }
 }
 

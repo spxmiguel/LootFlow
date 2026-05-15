@@ -19,7 +19,12 @@ export function getWeekIdForDate(date: Date = new Date()): string {
   const daysBack = day === 0 ? 5 : (day - 2 + 7) % 7
   d.setDate(d.getDate() - daysBack)
   d.setHours(0, 0, 0, 0)
-  return d.toISOString().slice(0, 10)
+  // Format from local date parts — toISOString() would shift the day
+  // for users in positive-UTC timezones.
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
 }
 
 export function getCurrentWeekId(): string {

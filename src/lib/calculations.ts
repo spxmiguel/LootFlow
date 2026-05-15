@@ -38,8 +38,9 @@ export function calcAccountStats(
   const totalCashout = drops.reduce((s, d) => s + (d.cashoutValue ?? calcCashout(d.steamValue, settings.cashoutRate)), 0)
   const soldDrops = drops.filter(d => d.sold).length
 
-  // Calculate invested cost (always fixed for Prime accounts)
-  const investedCost = PRIME_COST_BRL
+  // Invested cost — use the account's own recorded cost, falling back to
+  // the fixed Prime price for accounts created before the field existed.
+  const investedCost = account.cost > 0 ? account.cost : PRIME_COST_BRL
 
   const roiPercent = calcROIPercent(totalCashout, investedCost)
   const paybackMultiplier = calcPaybackMultiplier(totalCashout, investedCost)
@@ -119,7 +120,7 @@ export function calcDashboardStats(
 
   const totalSteamValueAllTime = drops.reduce((s, d) => s + d.steamValue, 0)
   const totalCashoutAllTime = drops.reduce((s, d) => s + (d.cashoutValue ?? calcCashout(d.steamValue, settings.cashoutRate)), 0)
-  const totalInvestedAllTime = accounts.reduce((s) => s + PRIME_COST_BRL, 0)
+  const totalInvestedAllTime = accounts.reduce((s, a) => s + (a.cost > 0 ? a.cost : PRIME_COST_BRL), 0)
 
   const overallROI = calcROIPercent(totalCashoutAllTime, totalInvestedAllTime)
 
