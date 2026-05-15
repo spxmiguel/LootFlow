@@ -189,9 +189,8 @@ export function useAuth() {
   }
 
   // ── Login Google ─────────────────────────────────────────────────────
-  // Strategy: always try popup first (works on modern mobile browsers
-  // when triggered by a direct user gesture). Fall back to redirect only
-  // if the popup is explicitly blocked by the browser.
+  // Mobile browsers block cross-origin popups — use redirect directly.
+  // Desktop: popup first, fall back to redirect on failure.
   const loginGoogle = async (): Promise<LoginResult> => {
     if (!FIREBASE_ENABLED) {
       toast.error('Firebase não configurado.')
@@ -201,6 +200,19 @@ export function useAuth() {
     try {
       const { auth } = initFirebase(getActiveFirebaseConfig())
       const provider = getGoogleProvider()
+
+      const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        window.matchMedia?.('(pointer: coarse)').matches
+
+      if (isMobile) {
+        setRedirectPending()
+        signInWithRedirect(auth, provider).catch(e => {
+          clearRedirectPending()
+          logger.error('[Auth] redirect error:', e)
+          toast.error('Não consegui abrir o login do Google.')
+        })
+        return 'redirect'
+      }
 
       try {
         const result = await signInWithPopup(auth, provider)
