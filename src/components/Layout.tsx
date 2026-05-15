@@ -164,9 +164,11 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
             <>
               <button onClick={() => setProfileOpen(true)} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity">
                 <p className="text-xs font-body font-medium text-slate-300 truncate">{displayName}</p>
-                <p className="text-[10px] text-slate-600 truncate">
-                  {user?.isAnonymous ? 'Modo offline' : showEmail ? email : 'Conta Google'}
-                </p>
+                {(user?.isAnonymous || showEmail) && (
+                  <p className="text-[10px] text-slate-600 truncate">
+                    {user?.isAnonymous ? 'Modo offline' : email}
+                  </p>
+                )}
               </button>
               <button onClick={logout} className="text-slate-600 hover:text-loss transition-colors p-1" title="Sair">
                 <LogOut className="w-3.5 h-3.5" />
