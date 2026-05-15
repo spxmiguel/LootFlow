@@ -30,8 +30,8 @@ export function PWAInstallPrompt() {
     setIos(isIosDevice)
 
     if (isIosDevice) {
-      // iOS doesn't fire beforeinstallprompt — show manual guide after 30s
-      const t = setTimeout(() => setShow(true), 30_000)
+      // iOS doesn't fire beforeinstallprompt — show guide after a short delay
+      const t = setTimeout(() => setShow(true), 2_000)
       return () => clearTimeout(t)
     }
 
@@ -61,7 +61,7 @@ export function PWAInstallPrompt() {
   if (!show) return null
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm">
+    <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm lg:bottom-4">
       <div className="relative bg-[#0d1117] border border-white/[0.12] rounded-2xl shadow-2xl shadow-black/60 p-4">
         <button
           onClick={dismiss}

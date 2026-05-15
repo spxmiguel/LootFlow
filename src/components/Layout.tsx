@@ -200,7 +200,7 @@ function MobileHeader() {
   const { user, logout } = useAuth()
 
   return (
-    <header className="lg:hidden flex items-center justify-between px-4 h-16 border-b border-white/[0.09] bg-[#07090f]/92 backdrop-blur-xl sticky top-0 z-30">
+    <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#07090f]/92 backdrop-blur-xl sticky top-0 z-30 pt-[env(safe-area-inset-top)] h-[calc(4rem+env(safe-area-inset-top))]">
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shadow-glow">
           <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
@@ -327,7 +327,7 @@ export function Layout({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0 }}
               exit={settings.theme.animations ? { opacity: 0, y: -8 } : {}}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="h-full pb-24 lg:pb-0"
+              className="h-full pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0"
             >
               {children}
             </motion.div>
