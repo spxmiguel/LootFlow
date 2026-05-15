@@ -23,6 +23,71 @@ function detectItemType(name: string): ItemType {
   return 'other'
 }
 
+// ─── Bilingual search ─────────────────────────────────────────────────────────
+
+// Portuguese keywords that map to an item type — checked first so "caixa" shows
+// all cases even if the word "caixa" isn't in the item name.
+const TYPE_PT_ALIASES: Record<ItemType, string[]> = {
+  case:    ['caixa', 'caixas', 'pacote', 'pacotes'],
+  weapon:  ['arma', 'armas', 'faca', 'facas', 'luva', 'luvas', 'pele', 'peles'],
+  sticker: ['adesivo', 'adesivos', 'grafite', 'grafiti', 'remendo', 'remendos', 'kit de música', 'kit musica'],
+  other:   ['outros', 'outro'],
+}
+
+// Portuguese → English word replacements for free-text name search.
+// Applied to the query before matching against item names.
+const PT_TO_EN_WORDS: [string, string][] = [
+  ['pesadelos', 'nightmares'], ['pesadelo', 'nightmare'],
+  ['sonhos', 'dreams'], ['sonho', 'dream'],
+  ['sombra', 'shadow'], ['sombras', 'shadows'],
+  ['fogo', 'fire'], ['gelo', 'ice'],
+  ['cobra', 'snake'], ['lobo', 'wolf'],
+  ['leão', 'lion'], ['leao', 'lion'],
+  ['dragão', 'dragon'], ['dragao', 'dragon'],
+  ['sangue', 'blood'], ['água', 'water'], ['agua', 'water'],
+  ['fantasma', 'ghost'], ['fantasmas', 'ghosts'],
+  ['inferno', 'inferno'], ['lendário', 'legendary'], ['lendario', 'legendary'],
+  ['floresta', 'forest'], ['deserto', 'desert'],
+  ['horizonte', 'horizon'], ['anarchy', 'anarchy'],
+  ['azul', 'blue'], ['vermelho', 'red'], ['verde', 'green'],
+  ['roxo', 'purple'], ['amarelo', 'yellow'], ['laranja', 'orange'],
+  ['preto', 'black'], ['branco', 'white'],
+  ['caixa', 'case'], ['caixas', 'case'],
+  ['arma', 'weapon'], ['armas', 'weapon'],
+  ['adesivo', 'sticker'], ['adesivos', 'sticker'],
+  ['grafite', 'graffiti'], ['grafiti', 'graffiti'],
+  ['luva', 'glove'], ['luvas', 'gloves'],
+  ['faca', 'knife'], ['facas', 'knife'],
+]
+
+function normalizeQueryPT(query: string): string {
+  let q = query.toLowerCase()
+  for (const [pt, en] of PT_TO_EN_WORDS) {
+    if (q === pt) return en
+    q = q.replace(new RegExp(`\\b${pt}\\b`, 'g'), en)
+  }
+  return q
+}
+
+function matchesSearch(itemName: string, itemType: ItemType, query: string): boolean {
+  const q = query.toLowerCase().trim()
+  if (!q) return true
+
+  // Check PT type aliases (e.g. "caixa" → all cases)
+  for (const [type, aliases] of Object.entries(TYPE_PT_ALIASES) as [ItemType, string[]][]) {
+    if (aliases.includes(q) && itemType === type) return true
+  }
+
+  const lower = itemName.toLowerCase()
+  // Direct name match
+  if (lower.includes(q)) return true
+  // PT→EN translated query match
+  const normalized = normalizeQueryPT(q)
+  if (normalized !== q && lower.includes(normalized)) return true
+
+  return false
+}
+
 // ─── Steam Item Picker ────────────────────────────────────────────────────────
 
 interface ItemPickerProps {
@@ -484,8 +549,9 @@ export default function Drops() {
       if (filterAccount !== 'all' && d.accountId !== filterAccount) return false
       if (filterStatus === 'sold' && !d.sold) return false
       if (filterStatus === 'unsold' && d.sold) return false
-      if (search && !d.item.name.toLowerCase().includes(search.toLowerCase())) return false
-      if (filterType !== 'all' && detectItemType(d.item.name) !== filterType) return false
+      const type = detectItemType(d.item.name)
+      if (search && !matchesSearch(d.item.name, type, search)) return false
+      if (filterType !== 'all' && type !== filterType) return false
       return true
     })
   }, [drops, filterAccount, filterStatus, search, filterType])

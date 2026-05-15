@@ -102,7 +102,7 @@ export function Dashboard() {
         <StatCard
           label="Cashout Total"
           value={formatCurrencyCompact(stats.totalCashoutAllTime)}
-          sub={`${formatCurrencyCompact(stats.totalSteamValueAllTime)} Steam`}
+          sub={`${formatCurrencyCompact(stats.totalSteamValueAllTime)} bruto`}
           subColor="text-slate-500"
           icon={<DollarSign className="w-5 h-5 text-profit" />}
           iconBg="bg-profit/10"
