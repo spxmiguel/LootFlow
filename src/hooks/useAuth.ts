@@ -241,7 +241,7 @@ export function useAuth() {
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string }
       logger.error('[Auth]', err?.code, err?.message)
-      toast.error('Erro ao fazer login com Google. Tente novamente.')
+      toast.error(`Erro ao fazer login (${err?.code ?? 'desconhecido'}). Tente novamente.`)
       return 'error'
     }
   }
