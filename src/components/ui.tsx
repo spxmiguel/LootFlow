@@ -124,7 +124,7 @@ export function StatCard({ label, value, sub, subColor, icon, iconBg, delay = 0,
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs text-slate-500 font-body uppercase tracking-wider mb-2">{label}</p>
-            <p className="font-mono text-2xl font-medium text-slate-100 leading-none truncate">{value}</p>
+            <p className="font-mono text-xl sm:text-2xl font-medium text-slate-100 leading-none">{value}</p>
             {sub && (
               <p className={cn('text-xs mt-1.5 font-body', subColor ?? 'text-slate-500')}>{sub}</p>
             )}

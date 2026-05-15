@@ -3,13 +3,14 @@ import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
   Shield, RotateCcw, Check, AlertTriangle, Zap, ChevronRight,
-  RefreshCw, Lock, Info, ExternalLink,
+  RefreshCw, Lock, Info, ExternalLink, Wifi, WifiOff,
 } from 'lucide-react'
 import { LegalModal, type LegalType } from '../components/LegalModal'
 import { useStore } from '../store'
 import { exportDropsCSV, exportDropsXLSX, exportBackupJSON } from '../lib/export'
 import { storage } from '../lib/storage'
 import { clearSteamCache, getSteamCacheStats } from '../lib/steam'
+import { firestoreSaveDoc, firestoreDeleteDoc, isFirebaseReady } from '../lib/firebase'
 import { formatCurrency } from '../lib/utils'
 import { Button, Card, Input, Toggle } from '../components/ui'
 import toast from 'react-hot-toast'
@@ -70,9 +71,37 @@ export default function Settings() {
   const [deleteConfirm, setDeleteConfirm] = useState<'drops' | 'accounts' | 'goals' | 'settings' | null>(null)
   const [legalModal, setLegalModal] = useState<LegalType | null>(null)
   const [cacheStats, setCacheStats] = useState<{ entries: number; sizeKB: number } | null>(null)
+  const [syncTestState, setSyncTestState] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
   const importRef = useRef<HTMLInputElement>(null)
 
   // ── Handlers ──
+
+  async function handleTestSync() {
+    const { user } = useStore.getState()
+    if (!user || user.provider !== 'google') {
+      toast.error('Faça login com Google primeiro.')
+      return
+    }
+    if (!isFirebaseReady()) {
+      toast.error('Firebase não inicializado.')
+      return
+    }
+    setSyncTestState('loading')
+    try {
+      await firestoreSaveDoc(user.uid, '_test', 'ping', { ts: Date.now() })
+      await firestoreDeleteDoc(user.uid, '_test', 'ping')
+      setSyncTestState('ok')
+      toast.success('Firestore acessível! Sync deve funcionar normalmente.')
+    } catch (e: unknown) {
+      setSyncTestState('fail')
+      const code = (e as { code?: string })?.code ?? ''
+      if (code === 'permission-denied') {
+        toast.error('PERMISSION_DENIED — configure as Security Rules no Firebase Console.', { duration: 8000 })
+      } else {
+        toast.error(`Erro: ${code || String(e)}`, { duration: 8000 })
+      }
+    }
+  }
 
   function handleCashoutRate(val: number) {
     updateSettings({ cashoutRate: Math.min(100, Math.max(0, val)) })
@@ -416,12 +445,47 @@ export default function Settings() {
           className="lg:col-span-2"
         >
           <Section icon={Database} color="blue" title="Firebase" subtitle="Sincronização na nuvem">
-            <div className="flex items-start gap-3 p-3 bg-profit/5 border border-profit/20 rounded-xl">
-              <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-slate-400">
-                <p className="text-profit font-semibold mb-1">Firebase configurado ✓</p>
-                <p>Login com Google disponível na tela inicial. Seus dados sincronizam automaticamente entre dispositivos quando logado com conta Google.</p>
-                
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 bg-profit/5 border border-profit/20 rounded-xl">
+                <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-slate-400">
+                  <p className="text-profit font-semibold mb-1">Firebase configurado ✓</p>
+                  <p>Login com Google disponível. Dados sincronizam entre dispositivos quando logado com Google.</p>
+                </div>
+              </div>
+
+              {/* Sync test */}
+              <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                <div className="min-w-0">
+                  <p className="text-sm text-white">Testar conexão Firestore</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {syncTestState === 'ok' && <span className="text-profit">Acessível — sync funcionando</span>}
+                    {syncTestState === 'fail' && <span className="text-loss">Falhou — veja o toast acima</span>}
+                    {syncTestState === 'idle' && 'Verifica se o Firestore está acessível'}
+                    {syncTestState === 'loading' && 'Testando…'}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={syncTestState === 'ok' ? Wifi : syncTestState === 'fail' ? WifiOff : RefreshCw}
+                  onClick={handleTestSync}
+                  disabled={syncTestState === 'loading'}
+                >
+                  {syncTestState === 'loading' ? 'Testando…' : 'Testar'}
+                </Button>
+              </div>
+
+              {/* Rules hint */}
+              <div className="p-3 rounded-xl bg-[#111827]/40 border border-white/[0.06] text-xs text-slate-500 space-y-1.5">
+                <p className="text-slate-400 font-medium">Se o teste falhar com PERMISSION_DENIED:</p>
+                <p>1. Firebase Console → Firestore → <strong className="text-slate-300">Rules</strong></p>
+                <p className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 leading-relaxed text-slate-400">
+                  {'match /users/{uid}/{d=**} {'}<br />
+                  {'  allow read, write: if request.auth.uid == uid;'}<br />
+                  {'}'}
+                </p>
+                <p>2. Firebase Console → Authentication → <strong className="text-slate-300">Settings → Authorized domains</strong> → adiciona <code className="text-primary">spxmiguel.github.io</code></p>
               </div>
             </div>
           </Section>
