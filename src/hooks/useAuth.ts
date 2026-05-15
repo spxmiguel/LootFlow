@@ -218,11 +218,13 @@ export function useAuth() {
           return 'cancelled'
         }
 
-        // Popup explicitly blocked by the browser → use redirect
+        // Popup explicitly blocked or internally failed (e.g. third-party cookies
+        // blocked by browser) → use redirect
         if (
           code === 'auth/popup-blocked' ||
           code === 'auth/operation-not-supported-in-this-environment' ||
-          code === 'auth/web-storage-unsupported'
+          code === 'auth/web-storage-unsupported' ||
+          code === 'auth/internal-error'
         ) {
           logger.log('[Auth] Popup blocked, falling back to redirect…')
           setRedirectPending()
