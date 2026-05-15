@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger'
+import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { CSAccount, Drop, Goal, AppSettings, AppUser, Page, ModalType } from '../lib/types'
@@ -77,6 +78,8 @@ interface AppState {
 
 // ─── Firestore Sync Helper ────────────────────────────────────────────────────
 
+let syncErrorToastShown = false
+
 function syncToFirestore(
   user: AppUser | null,
   collection: string,
@@ -86,7 +89,13 @@ function syncToFirestore(
 ) {
   if (!enabled) return
   if (user?.provider === 'google' && isFirebaseReady()) {
-    firestoreSaveDoc(user.uid, collection, docId, data).catch(logger.error)
+    firestoreSaveDoc(user.uid, collection, docId, data).catch(e => {
+      logger.error(`[Sync] ${collection}/${docId}:`, e)
+      if (!syncErrorToastShown) {
+        syncErrorToastShown = true
+        toast.error('Falha ao salvar na nuvem. Verifique as regras do Firestore.', { duration: 6000 })
+      }
+    })
   }
 }
 
@@ -352,17 +361,32 @@ export const useStore = create<AppState>()(
         settings: storage.loadSettings(),
       }
 
-      const [cloudAccounts, cloudDrops, cloudGoals, cloudSettings] = await Promise.all([
-        firestoreLoadCollection<CSAccount>(user.uid, 'accounts'),
-        firestoreLoadCollection<Drop>(user.uid, 'drops'),
-        firestoreLoadCollection<Goal>(user.uid, 'goals'),
-        firestoreLoadCollection<AppSettings & { id?: string }>(user.uid, 'settings'),
-      ])
+      let cloudAccounts: CSAccount[]
+      let cloudDrops: Drop[]
+      let cloudGoals: Goal[]
+      let cloudSettings: Array<AppSettings & { id?: string }>
+
+      try {
+        ;[cloudAccounts, cloudDrops, cloudGoals, cloudSettings] = await Promise.all([
+          firestoreLoadCollection<CSAccount>(user.uid, 'accounts'),
+          firestoreLoadCollection<Drop>(user.uid, 'drops'),
+          firestoreLoadCollection<Goal>(user.uid, 'goals'),
+          firestoreLoadCollection<AppSettings & { id?: string }>(user.uid, 'settings'),
+        ])
+      } catch (e) {
+        logger.error('[Store] Firestore load failed:', e)
+        // Fall back to local data and let the caller show an error toast
+        set(localSnapshot)
+        throw e
+      }
 
       const cloudIsEmpty = cloudAccounts.length === 0 && cloudDrops.length === 0 && cloudGoals.length === 0
       if (cloudIsEmpty && (localSnapshot.accounts.length > 0 || localSnapshot.drops.length > 0 || localSnapshot.goals.length > 0)) {
         set(localSnapshot)
-        await syncLocalSnapshotToFirestore(user, localSnapshot)
+        await syncLocalSnapshotToFirestore(user, localSnapshot).catch(e => {
+          logger.error('[Store] Initial upload to Firestore failed:', e)
+          throw e
+        })
         return
       }
 

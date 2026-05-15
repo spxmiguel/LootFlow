@@ -3,7 +3,7 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth'
 import {
   getFirestore, collection, doc, getDocs, setDoc,
-  deleteDoc, onSnapshot, type Firestore, enableNetwork, disableNetwork,
+  deleteDoc, type Firestore,
 } from 'firebase/firestore'
 import type { FirebaseConfig } from './types'
 
@@ -50,32 +50,25 @@ export function getGoogleProvider(): GoogleAuthProvider {
 
 // ─── Firestore Helpers ────────────────────────────────────────────────────────
 
+// Throws on error so callers can detect Firestore access failures (e.g. missing rules).
 export async function firestoreLoadCollection<T>(
   userId: string,
   collectionName: string,
 ): Promise<T[]> {
-  if (!db) return []
-  try {
-    const snap = await getDocs(collection(db, 'users', userId, collectionName))
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as T))
-  } catch (e) {
-    logger.error(`[Firestore] Load ${collectionName}:`, e)
-    return []
-  }
+  if (!db) throw new Error('Firestore not initialized')
+  const snap = await getDocs(collection(db, 'users', userId, collectionName))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as T))
 }
 
+// Throws on error so callers can detect write failures.
 export async function firestoreSaveDoc(
   userId: string,
   collectionName: string,
   docId: string,
   data: Record<string, unknown>,
 ): Promise<void> {
-  if (!db) return
-  try {
-    await setDoc(doc(db, 'users', userId, collectionName, docId), data, { merge: true })
-  } catch (e) {
-    logger.error(`[Firestore] Save doc ${collectionName}/${docId}:`, e)
-  }
+  if (!db) throw new Error('Firestore not initialized')
+  await setDoc(doc(db, 'users', userId, collectionName, docId), data, { merge: true })
 }
 
 export async function firestoreDeleteDoc(
@@ -87,7 +80,7 @@ export async function firestoreDeleteDoc(
   try {
     await deleteDoc(doc(db, 'users', userId, collectionName, docId))
   } catch (e) {
-    logger.error(`[Firestore] Delete doc ${collectionName}/${docId}:`, e)
+    logger.error(`[Firestore] Delete ${collectionName}/${docId}:`, e)
   }
 }
 

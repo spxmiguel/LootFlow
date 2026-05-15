@@ -88,7 +88,7 @@ export function useAuth() {
                 .catch(e => {
                   logger.error('[Auth] cloud hydration error after redirect:', e)
                   hydrate()
-                  toast.error('Login feito, mas sincronização falhou. Tente reabrir o app.')
+                  toast.error('Sincronização falhou. Verifique as regras do Firestore e os domínios autorizados no Firebase Console.', { duration: 8000 })
                 })
                 .finally(finishReady)
             } else {
@@ -125,6 +125,7 @@ export function useAuth() {
             .catch(e => {
               logger.error('[Auth] cloud hydration error:', e)
               hydrate()
+              toast.error('Sincronização falhou. Verifique as regras do Firestore e os domínios autorizados no Firebase Console.', { duration: 8000 })
             })
             .finally(finishReady)
         })

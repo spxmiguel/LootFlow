@@ -1,15 +1,26 @@
 import { useState, useMemo, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import {
-  Plus, ChevronLeft, ChevronRight, Search, X, Package,
-  Trash2, DollarSign, AlertCircle, Calendar, HelpCircle, Zap,
+  Plus, Search, X, Package,
+  Trash2, DollarSign, AlertCircle, Calendar, HelpCircle, Zap, Filter,
 } from 'lucide-react'
 import { useStore } from '../store'
-import { formatCurrency, getCurrentWeekId, getWeekLabel, getPreviousWeeks, getWeekIdForDate } from '../lib/utils'
+import { formatCurrency, getCurrentWeekId, getWeekLabel, getWeekIdForDate } from '../lib/utils'
 import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
 import type { Drop, SteamItem } from '../lib/types'
+
+// ─── Item type detection ──────────────────────────────────────────────────────
+
+type ItemType = 'weapon' | 'case' | 'sticker' | 'other'
+
+function detectItemType(name: string): ItemType {
+  if (name.toLowerCase().includes('case') || name.toLowerCase().includes('package')) return 'case'
+  if (name.startsWith('Sticker') || name.startsWith('Sealed Graffiti') || name.startsWith('Patch') || name.startsWith('Music Kit')) return 'sticker'
+  if (name.includes(' | ')) return 'weapon'
+  return 'other'
+}
 
 // ─── Steam Item Picker ────────────────────────────────────────────────────────
 
@@ -301,7 +312,6 @@ function DropModal({ onSave, onClose }: DropModalProps) {
               onItemChange={setItem1}
               onValueChange={setValue1}
               cashoutRate={settings.cashoutRate}
-              
             />
             {slotsLeft >= 2 && existingDrops.length === 0 && (
               <ItemPicker
@@ -312,7 +322,6 @@ function DropModal({ onSave, onClose }: DropModalProps) {
                 onItemChange={setItem2}
                 onValueChange={setValue2}
                 cashoutRate={settings.cashoutRate}
-                
               />
             )}
           </>
@@ -385,12 +394,12 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
     <Card className="p-4">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: accountColor }} />
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: accountColor }} />
           <span className="text-xs text-slate-400">{accountName}</span>
           <span className="text-[10px] bg-[#1a2235] text-slate-500 px-1.5 py-0.5 rounded-md">Drop {drop.dropNumber}</span>
           {drop.sold && <span className="text-[10px] bg-profit/20 text-profit px-1.5 py-0.5 rounded-full">Vendido</span>}
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-shrink-0">
           {!drop.sold && (
             <button onClick={onSell}
               className="text-[11px] text-slate-500 hover:text-profit hover:bg-profit/10 px-2 py-1 rounded-lg transition-colors">
@@ -423,39 +432,110 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
   )
 }
 
+// ─── Week Divider ─────────────────────────────────────────────────────────────
+
+function WeekDivider({ weekId, cashout, count, isCurrentWeek }: {
+  weekId: string; cashout: number; count: number; isCurrentWeek: boolean
+}) {
+  const label = weekId === 'unknown'
+    ? 'Sem data'
+    : isCurrentWeek
+    ? `Esta semana · ${getWeekLabel(weekId)}`
+    : getWeekLabel(weekId)
+
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <div className="h-px flex-1 bg-white/[0.06]" />
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="text-xs font-semibold text-slate-400">{label}</span>
+        {cashout > 0 && weekId !== 'unknown' && (
+          <span className="text-xs text-profit font-mono">{formatCurrency(cashout)}</span>
+        )}
+        <span className="text-[10px] text-slate-600">{count} drop{count !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="h-px flex-1 bg-white/[0.06]" />
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
+
+type FilterStatus = 'all' | 'sold' | 'unsold'
+type FilterType = 'all' | 'weapon' | 'case' | 'sticker' | 'other'
 
 export default function Drops() {
   const { accounts, drops, settings, addDrop, deleteDrop, markDropSold } = useStore()
-  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeekId())
-  const [filterAccount, setFilterAccount] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [sellingDrop, setSellingDrop] = useState<Drop | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
 
-  const weeks = getPreviousWeeks(8)
-  const weekIdx = weeks.indexOf(selectedWeek)
+  const [search, setSearch] = useState('')
+  const [filterAccount, setFilterAccount] = useState('all')
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [filterType, setFilterType] = useState<FilterType>('all')
+
   const currentWid = getCurrentWeekId()
 
-  const filteredDrops = useMemo(() =>
-    drops
-      .filter(d => d.weekId === selectedWeek && (filterAccount === 'all' || d.accountId === filterAccount))
-      .sort((a, b) => a.accountId.localeCompare(b.accountId) || a.dropNumber - b.dropNumber),
-    [drops, selectedWeek, filterAccount]
-  )
+  const hasActiveFilters = search || filterAccount !== 'all' || filterStatus !== 'all' || filterType !== 'all'
 
-  const weekCashout = filteredDrops.reduce((s, d) => s + (d.cashoutValue ?? d.steamValue * settings.cashoutRate / 100), 0)
+  const filtered = useMemo(() => {
+    return drops.filter(d => {
+      if (filterAccount !== 'all' && d.accountId !== filterAccount) return false
+      if (filterStatus === 'sold' && !d.sold) return false
+      if (filterStatus === 'unsold' && d.sold) return false
+      if (search && !d.item.name.toLowerCase().includes(search.toLowerCase())) return false
+      if (filterType !== 'all' && detectItemType(d.item.name) !== filterType) return false
+      return true
+    })
+  }, [drops, filterAccount, filterStatus, search, filterType])
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, Drop[]>()
+    filtered.forEach(d => {
+      if (!map.has(d.weekId)) map.set(d.weekId, [])
+      map.get(d.weekId)!.push(d)
+    })
+    return [...map.entries()]
+      .sort(([a], [b]) => {
+        if (a === 'unknown') return 1
+        if (b === 'unknown') return -1
+        return b.localeCompare(a)
+      })
+      .map(([weekId, wdrops]) => ({
+        weekId,
+        drops: wdrops.sort((a, b) => a.accountId.localeCompare(b.accountId) || a.dropNumber - b.dropNumber),
+        cashout: wdrops.reduce((s, d) => s + (d.cashoutValue ?? d.steamValue * settings.cashoutRate / 100), 0),
+      }))
+  }, [filtered, settings.cashoutRate])
+
+  const totalCashout = useMemo(
+    () => drops.reduce((s, d) => s + (d.cashoutValue ?? d.steamValue * settings.cashoutRate / 100), 0),
+    [drops, settings.cashoutRate]
+  )
 
   function handleSaveDrops(newDrops: Array<Omit<Drop, 'id' | 'createdAt'>>) {
     newDrops.forEach(d => addDrop(d))
     setShowModal(false)
   }
 
+  function clearFilters() {
+    setSearch('')
+    setFilterAccount('all')
+    setFilterStatus('all')
+    setFilterType('all')
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-5 pb-10 max-w-7xl mx-auto">
+
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-white">Drops</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{drops.length} drops no total</p>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {drops.length} drops · cashout total{' '}
+            <span className="text-profit font-mono">{formatCurrency(totalCashout)}</span>
+          </p>
         </div>
         <Button icon={Plus} size="sm" onClick={() => setShowModal(true)} className="shrink-0">
           <span className="hidden sm:inline">Registrar Drops</span>
@@ -463,67 +543,134 @@ export default function Drops() {
         </Button>
       </div>
 
-      {/* Week navigation */}
-      <div className="rounded-2xl border border-white/[0.08] bg-[#0c1018] p-3">
-        <div className="grid grid-cols-[36px_1fr_36px] items-center gap-2">
+      {/* Search + filter toggle */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por item..."
+              className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#0c1018] text-slate-200 text-sm pl-9 pr-9 focus:outline-none focus:border-primary/60 placeholder:text-slate-600 transition-colors"
+            />
+            {search && (
+              <button onClick={() => setSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-500 hover:text-white transition-colors">
+                <X size={13} />
+              </button>
+            )}
+          </div>
           <button
-            onClick={() => weekIdx < weeks.length - 1 && setSelectedWeek(weeks[weekIdx + 1])}
-            disabled={weekIdx >= weeks.length - 1}
-            className="h-9 rounded-xl text-slate-500 hover:text-white hover:bg-[#1a2235] disabled:opacity-30 transition-colors"
+            onClick={() => setShowFilters(v => !v)}
+            className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-all ${
+              showFilters || (hasActiveFilters && !search)
+                ? 'border-primary/60 bg-primary/10 text-primary'
+                : 'border-white/[0.1] bg-[#0c1018] text-slate-400 hover:text-slate-200 hover:border-white/[0.2]'
+            }`}
           >
-            <ChevronLeft size={16} className="mx-auto" />
-          </button>
-          <span className="min-w-0 text-center text-sm font-medium text-white">
-            {selectedWeek === currentWid ? `Esta semana · ${getWeekLabel(selectedWeek)}` : getWeekLabel(selectedWeek)}
-          </span>
-          <button
-            onClick={() => weekIdx > 0 && setSelectedWeek(weeks[weekIdx - 1])}
-            disabled={weekIdx <= 0}
-            className="h-9 rounded-xl text-slate-500 hover:text-white hover:bg-[#1a2235] disabled:opacity-30 transition-colors"
-          >
-            <ChevronRight size={16} className="mx-auto" />
+            <Filter size={14} />
+            <span className="hidden sm:inline">Filtros</span>
+            {hasActiveFilters && (
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+            )}
           </button>
         </div>
-        <select
-          value={filterAccount}
-          onChange={e => setFilterAccount(e.target.value)}
-          className="mt-3 h-10 w-full px-3 text-sm rounded-xl bg-[#111827] border border-white/[0.1] text-slate-300 focus:outline-none sm:mt-0 sm:ml-2 sm:h-8 sm:w-auto sm:text-xs"
-        >
-          <option value="all">Todas as contas</option>
-          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-        {filteredDrops.length > 0 && (
-          <span className="mt-3 block text-xs text-slate-500 sm:mt-0 sm:ml-auto sm:inline">
-            Cashout: <span className="text-profit font-mono">{formatCurrency(weekCashout)}</span>
-          </span>
+
+        {/* Expanded filters */}
+        {showFilters && (
+          <div className="rounded-xl border border-white/[0.08] bg-[#0c1018] p-3 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <select
+                value={filterAccount}
+                onChange={e => setFilterAccount(e.target.value)}
+                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.1] text-slate-300 focus:outline-none focus:border-primary/60"
+              >
+                <option value="all">Todas as contas</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value as FilterStatus)}
+                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.1] text-slate-300 focus:outline-none focus:border-primary/60"
+              >
+                <option value="all">Qualquer status</option>
+                <option value="unsold">Não vendido</option>
+                <option value="sold">Vendido</option>
+              </select>
+
+              <select
+                value={filterType}
+                onChange={e => setFilterType(e.target.value as FilterType)}
+                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.1] text-slate-300 focus:outline-none focus:border-primary/60"
+              >
+                <option value="all">Qualquer tipo</option>
+                <option value="weapon">Armas</option>
+                <option value="case">Caixas</option>
+                <option value="sticker">Sticker / Graffiti</option>
+                <option value="other">Outros</option>
+              </select>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="flex items-center justify-between pt-0.5">
+                <p className="text-xs text-slate-500">
+                  {filtered.length} de {drops.length} drops
+                </p>
+                <button onClick={clearFilters} className="text-xs text-primary hover:underline">
+                  Limpar filtros
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Drops */}
-      {filteredDrops.length === 0 ? (
+      {/* Content */}
+      {drops.length === 0 ? (
         <Empty
           icon={Package}
-          title="Nenhum drop nessa semana"
+          title="Nenhum drop ainda"
           description="Registre os itens recebidos. Você pode registrar até 2 por conta por semana."
           action={{ label: 'Registrar Drops', onClick: () => setShowModal(true) }}
         />
+      ) : grouped.length === 0 ? (
+        <Empty
+          icon={Search}
+          title="Nenhum drop encontrado"
+          description="Nenhum drop corresponde aos filtros ativos."
+          action={{ label: 'Limpar filtros', onClick: clearFilters }}
+        />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {filteredDrops.map(drop => {
-            const acct = accounts.find(a => a.id === drop.accountId)
-            return (
-              <DropCard
-                key={drop.id}
-                drop={drop}
-                accountName={acct?.name ?? '?'}
-                accountColor={acct?.color ?? '#64748b'}
-                cashoutRate={settings.cashoutRate}
-                
-                onDelete={() => deleteDrop(drop.id)}
-                onSell={() => setSellingDrop(drop)}
+        <div className="space-y-6">
+          {grouped.map(({ weekId, drops: wdrops, cashout }) => (
+            <div key={weekId}>
+              <WeekDivider
+                weekId={weekId}
+                cashout={cashout}
+                count={wdrops.length}
+                isCurrentWeek={weekId === currentWid}
               />
-            )
-          })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
+                {wdrops.map(drop => {
+                  const acct = accounts.find(a => a.id === drop.accountId)
+                  return (
+                    <DropCard
+                      key={drop.id}
+                      drop={drop}
+                      accountName={acct?.name ?? '?'}
+                      accountColor={acct?.color ?? '#64748b'}
+                      cashoutRate={settings.cashoutRate}
+                      onDelete={() => deleteDrop(drop.id)}
+                      onSell={() => setSellingDrop(drop)}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
