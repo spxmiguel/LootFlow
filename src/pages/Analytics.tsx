@@ -203,7 +203,7 @@ export default function Analytics() {
               </tr>
             </thead>
             <tbody>
-              {accountStats.sort((a,b) => b.roiPercent - a.roiPercent).map(as => (
+              {[...accountStats].sort((a,b) => b.roiPercent - a.roiPercent).map(as => (
                 <tr key={as.account.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">

@@ -43,7 +43,8 @@ function buildDropRows(
 ) {
   const accountMap = new Map(accounts.map(a => [a.id, a]))
 
-  return drops
+  // Copy before sorting — Array.sort mutates, and `drops` is live store state.
+  return [...drops]
     .sort((a, b) => b.weekId.localeCompare(a.weekId))
     .map(drop => {
       const account = accountMap.get(drop.accountId)
@@ -53,7 +54,7 @@ function buildDropRows(
         Conta: account?.name ?? 'Desconhecida',
         'Drop #': drop.dropNumber,
         Item: drop.item.name,
-        'Valor Steam (R$)': drop.steamValue.toFixed(2),
+        'Valor Bruto (R$)': drop.steamValue.toFixed(2),
         'Valor Cashout (R$)': cashout.toFixed(2),
         Vendido: drop.sold ? 'Sim' : 'Não',
         'Data Venda': drop.soldAt ? formatDate(drop.soldAt) : '',
@@ -86,7 +87,7 @@ export function exportDropsXLSX(
     Nome: a.name,
     'Steam ID': a.steamId ?? '',
     Ativa: a.active ? 'Sim' : 'Não',
-    'Custo (R$)': PRIME_COST_BRL.toFixed(2),
+    'Custo (R$)': (a.cost > 0 ? a.cost : PRIME_COST_BRL).toFixed(2),
     'Tipo Custo': 'Prime',
     'Criada em': formatDate(a.createdAt),
     Nota: a.note ?? '',
