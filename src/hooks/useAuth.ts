@@ -12,6 +12,8 @@ import type { AppUser } from '../lib/types'
 import toast from 'react-hot-toast'
 
 const SESSION_KEY = 'lootflow_session'
+const REDIRECT_PENDING_KEY = 'lootflow_google_pending'
+
 let authListenerStarted = false
 let redirectHandled = false
 
@@ -21,10 +23,12 @@ type LoginResult = 'success' | 'redirect' | 'cancelled' | 'error'
 function makeAppUser(fbUser: import('firebase/auth').User): AppUser {
   const providerProfile = fbUser.providerData.find(p => p.providerId === 'google.com')
   return {
-    uid: fbUser.uid, email: fbUser.email,
+    uid: fbUser.uid,
+    email: fbUser.email,
     displayName: fbUser.displayName ?? providerProfile?.displayName,
     photoURL: fbUser.photoURL ?? providerProfile?.photoURL,
-    isAnonymous: false, provider: 'google',
+    isAnonymous: false,
+    provider: 'google',
   }
 }
 
@@ -32,21 +36,16 @@ function saveSession(mode: 'local' | 'firebase', user: AppUser) {
   try { localStorage.setItem(SESSION_KEY, JSON.stringify({ mode, user })) } catch {}
 }
 
-function savePendingGoogleLogin() {
-  try { sessionStorage.setItem('lootflow_google_pending', '1') } catch {}
+function setRedirectPending() {
+  try { sessionStorage.setItem(REDIRECT_PENDING_KEY, '1') } catch {}
 }
 
-function clearPendingGoogleLogin() {
-  try { sessionStorage.removeItem('lootflow_google_pending') } catch {}
+function clearRedirectPending() {
+  try { sessionStorage.removeItem(REDIRECT_PENDING_KEY) } catch {}
 }
 
-function shouldUseRedirectLogin(): boolean {
-  if (typeof window === 'undefined') return false
-  const ua = window.navigator.userAgent.toLowerCase()
-  const isTouch = window.matchMedia?.('(pointer: coarse)').matches ?? false
-  const isSmallScreen = window.matchMedia?.('(max-width: 768px)').matches ?? false
-  const isMobileUA = /android|iphone|ipad|ipod|mobile/.test(ua)
-  return isTouch || isSmallScreen || isMobileUA
+function isRedirectPending(): boolean {
+  try { return sessionStorage.getItem(REDIRECT_PENDING_KEY) === '1' } catch { return false }
 }
 
 export function useAuth() {
@@ -60,67 +59,82 @@ export function useAuth() {
   const hydrateCloud = useStore(s => s.hydrateCloud)
 
   useEffect(() => {
-    const finishReady = () => {
+    const finishReady = () => setAuthReady(true)
+
+    if (!FIREBASE_ENABLED) {
+      finishReady()
+      return
+    }
+
+    try {
+      const { auth } = initFirebase(FIREBASE_CONFIG)
+
+      // ── Redirect result ────────────────────────────────────────────────
+      // Must be processed before registering onAuthStateChanged, so the
+      // listener knows whether to wait or finalize immediately.
+      if (!redirectHandled) {
+        redirectHandled = true
+
+        getRedirectResult(auth)
+          .then(result => {
+            if (result?.user) {
+              clearRedirectPending()
+              const appUser = makeAppUser(result.user)
+              setUser(appUser)
+              setAuthMode('firebase')
+              saveSession('firebase', appUser)
+              hydrateCloud(appUser)
+                .then(() => toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`))
+                .catch(e => {
+                  logger.error('[Auth] cloud hydration error after redirect:', e)
+                  hydrate()
+                  toast.error('Login feito, mas sincronização falhou. Tente reabrir o app.')
+                })
+                .finally(finishReady)
+            } else {
+              // No pending redirect → clear flag and let onAuthStateChanged decide
+              clearRedirectPending()
+            }
+          })
+          .catch(e => {
+            logger.error('[Auth] getRedirectResult error:', e)
+            clearRedirectPending()
+          })
+      }
+
+      // ── Auth state listener ────────────────────────────────────────────
+      if (!authListenerStarted) {
+        authListenerStarted = true
+
+        onAuthStateChanged(auth, fbUser => {
+          if (!fbUser) {
+            // If a redirect is still in flight, don't finalize yet —
+            // getRedirectResult above will set the user when it resolves.
+            if (isRedirectPending()) return
+            clearRedirectPending()
+            finishReady()
+            return
+          }
+
+          clearRedirectPending()
+          const appUser = makeAppUser(fbUser)
+          setUser(appUser)
+          setAuthMode('firebase')
+          saveSession('firebase', appUser)
+          hydrateCloud(appUser)
+            .catch(e => {
+              logger.error('[Auth] cloud hydration error:', e)
+              hydrate()
+            })
+            .finally(finishReady)
+        })
+      }
+    } catch (e) {
+      logger.error('[Auth] Firebase init error:', e)
       setAuthReady(true)
     }
 
-    // ── PASSO 1: Checar Firebase/redirect do Google ────────────────────
-    if (FIREBASE_ENABLED) {
-      try {
-        const { auth } = initFirebase(FIREBASE_CONFIG)
-
-        // getRedirectResult só retorna algo se o usuário acabou de voltar de redirect.
-        if (!redirectHandled) {
-          redirectHandled = true
-          getRedirectResult(auth).then(result => {
-          if (result?.user) {
-            clearPendingGoogleLogin()
-            const appUser = makeAppUser(result.user)
-            setUser(appUser)
-            setAuthMode('firebase')
-            saveSession('firebase', appUser)
-            hydrateCloud(appUser)
-              .then(() => toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`))
-              .catch(e => {
-                logger.error('[Auth] cloud hydration error:', e)
-                hydrate()
-                toast.error('Login feito, mas não consegui sincronizar a nuvem agora.')
-              })
-          }
-          }).catch(e => {
-            logger.error('[Auth] redirect result error:', e)
-          })
-        }
-
-        // Listener é a fonte confiável depois de redirect/reload.
-        if (!authListenerStarted) {
-          authListenerStarted = true
-          onAuthStateChanged(auth, (fbUser) => {
-            if (!fbUser) {
-              clearPendingGoogleLogin()
-              finishReady()
-              return
-            }
-            clearPendingGoogleLogin()
-            const appUser = makeAppUser(fbUser)
-            setUser(appUser)
-            setAuthMode('firebase')
-            saveSession('firebase', appUser)
-            hydrateCloud(appUser).catch(e => {
-              logger.error('[Auth] cloud hydration error:', e)
-              hydrate()
-            }).finally(finishReady)
-          })
-        }
-      } catch (e) {
-        logger.error('[Auth] Firebase init error:', e)
-        finishReady()
-      }
-    } else {
-      finishReady()
-    }
-
-    // ── PASSO 2: Restaurar sessão do localStorage ───────────────────────
+    // ── Restore saved session (local or Google) ────────────────────────
     try {
       const raw = localStorage.getItem(SESSION_KEY)
       if (!raw) return
@@ -131,13 +145,12 @@ export function useAuth() {
         setUser(session.user)
         setAuthMode('local')
         hydrate()
-        finishReady()
+        setAuthReady(true)
         return
       }
 
       if (session.mode === 'firebase' && FIREBASE_ENABLED) {
-        // Restaura imediatamente com dados salvos (UX rápida)
-        // O onAuthStateChanged acima vai verificar o token assincronamente
+        // Restore immediately for fast UX; Firebase listener validates token
         setUser(session.user)
         setAuthMode('firebase')
         hydrate()
@@ -147,13 +160,11 @@ export function useAuth() {
       localStorage.removeItem(SESSION_KEY)
     }
 
-    const fallback = window.setTimeout(finishReady, 2500)
-    return () => {
-      window.clearTimeout(fallback)
-    }
+    const fallback = window.setTimeout(setAuthReady, 3000, true)
+    return () => window.clearTimeout(fallback)
   }, [hydrate, hydrateCloud, setAuthMode, setAuthReady, setUser])
 
-  // ── Login Local (convidado) ───────────────────────────────────────────
+  // ── Login Local ──────────────────────────────────────────────────────
   const loginLocal = () => {
     const localUser: AppUser = {
       uid: 'local', displayName: 'Usuário Local',
@@ -166,28 +177,20 @@ export function useAuth() {
     toast.success('Modo offline ativado!')
   }
 
-  // ── Login Google ──────────────────────────────────────────────────────
+  // ── Login Google ─────────────────────────────────────────────────────
+  // Strategy: always try popup first (works on modern mobile browsers
+  // when triggered by a direct user gesture). Fall back to redirect only
+  // if the popup is explicitly blocked by the browser.
   const loginGoogle = async (): Promise<LoginResult> => {
     if (!FIREBASE_ENABLED) {
       toast.error('Firebase não configurado.')
       return 'error'
     }
+
     try {
       const { auth } = initFirebase(FIREBASE_CONFIG)
       const provider = getGoogleProvider()
 
-      if (shouldUseRedirectLogin()) {
-        logger.log('[Auth] Mobile/touch environment, using redirect...')
-        savePendingGoogleLogin()
-        signInWithRedirect(auth, provider).catch(e => {
-          clearPendingGoogleLogin()
-          logger.error('[Auth] redirect start error:', e)
-          toast.error('Não consegui abrir o login do Google.')
-        })
-        return 'redirect'
-      }
-
-      // Tenta popup primeiro — funciona em desktop e alguns mobiles
       try {
         const result = await signInWithPopup(auth, provider)
         const appUser = makeAppUser(result.user)
@@ -199,24 +202,27 @@ export function useAuth() {
         return 'success'
       } catch (popupErr: unknown) {
         const code = (popupErr as { code?: string })?.code
-        if (code === 'auth/popup-closed-by-user') return 'cancelled'
-        // Popup bloqueado ou falhou → usa redirect (mobile-friendly)
+
+        if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+          return 'cancelled'
+        }
+
+        // Popup explicitly blocked by the browser → use redirect
         if (
           code === 'auth/popup-blocked' ||
           code === 'auth/operation-not-supported-in-this-environment' ||
-          code === 'auth/cancelled-popup-request' ||
           code === 'auth/web-storage-unsupported'
         ) {
-          logger.log('[Auth] Popup blocked, using redirect...')
-          savePendingGoogleLogin()
+          logger.log('[Auth] Popup blocked, falling back to redirect…')
+          setRedirectPending()
           signInWithRedirect(auth, provider).catch(e => {
-            clearPendingGoogleLogin()
-            logger.error('[Auth] redirect start error:', e)
+            clearRedirectPending()
+            logger.error('[Auth] redirect error:', e)
             toast.error('Não consegui abrir o login do Google.')
           })
-          // Página vai recarregar. getRedirectResult no useEffect trata o retorno.
           return 'redirect'
         }
+
         throw popupErr
       }
     } catch (e: unknown) {
