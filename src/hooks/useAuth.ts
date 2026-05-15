@@ -5,8 +5,8 @@ import {
   signOut, onAuthStateChanged,
 } from 'firebase/auth'
 import { useStore } from '../store'
-import { initFirebase, getGoogleProvider, isFirebaseReady } from '../lib/firebase'
-import { FIREBASE_CONFIG, FIREBASE_ENABLED } from '../lib/config'
+import { initFirebase, getGoogleProvider, isFirebaseReady, firestoreDeleteAllUserData } from '../lib/firebase'
+import { FIREBASE_ENABLED, getActiveFirebaseConfig } from '../lib/config'
 import { storage } from '../lib/storage'
 import type { AppUser } from '../lib/types'
 import toast from 'react-hot-toast'
@@ -67,7 +67,7 @@ export function useAuth() {
     }
 
     try {
-      const { auth } = initFirebase(FIREBASE_CONFIG)
+      const { auth } = initFirebase(getActiveFirebaseConfig())
 
       // ── Redirect result ────────────────────────────────────────────────
       // Must be processed before registering onAuthStateChanged, so the
@@ -191,7 +191,7 @@ export function useAuth() {
     }
 
     try {
-      const { auth } = initFirebase(FIREBASE_CONFIG)
+      const { auth } = initFirebase(getActiveFirebaseConfig())
       const provider = getGoogleProvider()
 
       try {
@@ -240,7 +240,7 @@ export function useAuth() {
   const logout = () => {
     if (authMode === 'firebase' && isFirebaseReady()) {
       try {
-        const { auth } = initFirebase(FIREBASE_CONFIG)
+        const { auth } = initFirebase(getActiveFirebaseConfig())
         signOut(auth).catch(() => {})
       } catch {}
     }
@@ -249,5 +249,30 @@ export function useAuth() {
     toast.success('Até mais!')
   }
 
-  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, logout }
+  // ── Delete Account ────────────────────────────────────────────────────
+  // Apaga todos os dados do Firestore do usuário, limpa o localStorage
+  // e faz logout. Não deleta a conta Google em si (requer reauth).
+  const deleteAccount = async (): Promise<'success' | 'error'> => {
+    try {
+      if (user?.provider === 'google' && isFirebaseReady()) {
+        await firestoreDeleteAllUserData(user.uid)
+      }
+      useStore.getState().reset()
+      if (isFirebaseReady()) {
+        try {
+          const { auth } = initFirebase(getActiveFirebaseConfig())
+          await signOut(auth)
+        } catch {}
+      }
+      setUser(null)
+      toast.success('Conta e todos os dados apagados.')
+      return 'success'
+    } catch (e) {
+      logger.error('[Auth] deleteAccount error:', e)
+      toast.error('Erro ao apagar dados. Tente novamente.')
+      return 'error'
+    }
+  }
+
+  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, logout, deleteAccount }
 }

@@ -3,14 +3,15 @@ import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
   Shield, RotateCcw, Check, AlertTriangle, Zap, ChevronRight,
-  RefreshCw, Lock, Info, ExternalLink, Wifi, WifiOff,
+  RefreshCw, Lock, Info, ExternalLink, ChevronDown, UserX,
 } from 'lucide-react'
 import { LegalModal, type LegalType } from '../components/LegalModal'
 import { useStore } from '../store'
+import { useAuth } from '../hooks/useAuth'
 import { exportDropsCSV, exportDropsXLSX, exportBackupJSON } from '../lib/export'
 import { storage } from '../lib/storage'
 import { clearSteamCache, getSteamCacheStats } from '../lib/steam'
-import { firestoreSaveDoc, firestoreDeleteDoc, isFirebaseReady } from '../lib/firebase'
+import { CUSTOM_FIREBASE_KEY, getCustomFirebaseConfig, isUsingCustomFirebase, FIREBASE_CONFIG } from '../lib/config'
 import { formatCurrency } from '../lib/utils'
 import { Button, Card, Input, Toggle } from '../components/ui'
 import toast from 'react-hot-toast'
@@ -67,40 +68,60 @@ export default function Settings() {
     updateSettings, updateTheme, reset,
     clearDrops, clearAccounts, clearGoals, resetSettingsToDefault,
   } = useStore()
+  const { user, deleteAccount } = useAuth()
+
   const [resetConfirm, setResetConfirm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<'drops' | 'accounts' | 'goals' | 'settings' | null>(null)
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(0)
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const [legalModal, setLegalModal] = useState<LegalType | null>(null)
   const [cacheStats, setCacheStats] = useState<{ entries: number; sizeKB: number } | null>(null)
-  const [syncTestState, setSyncTestState] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
+  const [showCustomFirebase, setShowCustomFirebase] = useState(false)
+  const [showFirebaseTutorial, setShowFirebaseTutorial] = useState(false)
+  const [customFbForm, setCustomFbForm] = useState(() => {
+    const c = getCustomFirebaseConfig()
+    return {
+      apiKey: c?.apiKey ?? '',
+      authDomain: c?.authDomain ?? '',
+      projectId: c?.projectId ?? '',
+      storageBucket: c?.storageBucket ?? '',
+      messagingSenderId: c?.messagingSenderId ?? '',
+      appId: c?.appId ?? '',
+    }
+  })
   const importRef = useRef<HTMLInputElement>(null)
 
   // ── Handlers ──
 
-  async function handleTestSync() {
-    const { user } = useStore.getState()
-    if (!user || user.provider !== 'google') {
-      toast.error('Faça login com Google primeiro.')
+  async function handleDeleteAccount() {
+    if (deleteAccountConfirm < 2) {
+      setDeleteAccountConfirm(c => c + 1)
       return
     }
-    if (!isFirebaseReady()) {
-      toast.error('Firebase não inicializado.')
+    setDeletingAccount(true)
+    await deleteAccount()
+    setDeletingAccount(false)
+    setDeleteAccountConfirm(0)
+  }
+
+  function handleSaveCustomFirebase() {
+    const { apiKey, authDomain, projectId, appId } = customFbForm
+    if (!apiKey || !authDomain || !projectId || !appId) {
+      toast.error('Preencha pelo menos: API Key, Auth Domain, Project ID e App ID.')
       return
     }
-    setSyncTestState('loading')
     try {
-      await firestoreSaveDoc(user.uid, '_test', 'ping', { ts: Date.now() })
-      await firestoreDeleteDoc(user.uid, '_test', 'ping')
-      setSyncTestState('ok')
-      toast.success('Firestore acessível! Sync deve funcionar normalmente.')
-    } catch (e: unknown) {
-      setSyncTestState('fail')
-      const code = (e as { code?: string })?.code ?? ''
-      if (code === 'permission-denied') {
-        toast.error('PERMISSION_DENIED — configure as Security Rules no Firebase Console.', { duration: 8000 })
-      } else {
-        toast.error(`Erro: ${code || String(e)}`, { duration: 8000 })
-      }
+      localStorage.setItem(CUSTOM_FIREBASE_KEY, JSON.stringify(customFbForm))
+      toast.success('Firebase próprio salvo! Recarregue a página para ativar.')
+    } catch {
+      toast.error('Erro ao salvar configuração.')
     }
+  }
+
+  function handleClearCustomFirebase() {
+    localStorage.removeItem(CUSTOM_FIREBASE_KEY)
+    setCustomFbForm({ apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' })
+    toast.success('Firebase padrão restaurado. Recarregue a página.')
   }
 
   function handleCashoutRate(val: number) {
@@ -446,47 +467,90 @@ export default function Settings() {
         >
           <Section icon={Database} color="blue" title="Firebase" subtitle="Sincronização na nuvem">
             <div className="space-y-3">
+              {/* Status */}
               <div className="flex items-start gap-3 p-3 bg-profit/5 border border-profit/20 rounded-xl">
                 <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-slate-400">
-                  <p className="text-profit font-semibold mb-1">Firebase configurado ✓</p>
-                  <p>Login com Google disponível. Dados sincronizam entre dispositivos quando logado com Google.</p>
-                </div>
-              </div>
-
-              {/* Sync test */}
-              <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
-                <div className="min-w-0">
-                  <p className="text-sm text-white">Testar conexão Firestore</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {syncTestState === 'ok' && <span className="text-profit">Acessível — sync funcionando</span>}
-                    {syncTestState === 'fail' && <span className="text-loss">Falhou — veja o toast acima</span>}
-                    {syncTestState === 'idle' && 'Verifica se o Firestore está acessível'}
-                    {syncTestState === 'loading' && 'Testando…'}
+                  <p className="text-profit font-semibold mb-1">
+                    {isUsingCustomFirebase() ? 'Firebase próprio ativo ✓' : 'Firebase padrão ativo ✓'}
                   </p>
+                  <p>Login com Google disponível. Dados sincronizam entre dispositivos.</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={syncTestState === 'ok' ? Wifi : syncTestState === 'fail' ? WifiOff : RefreshCw}
-                  onClick={handleTestSync}
-                  disabled={syncTestState === 'loading'}
-                >
-                  {syncTestState === 'loading' ? 'Testando…' : 'Testar'}
-                </Button>
               </div>
 
-              {/* Rules hint */}
-              <div className="p-3 rounded-xl bg-[#111827]/40 border border-white/[0.06] text-xs text-slate-500 space-y-1.5">
-                <p className="text-slate-400 font-medium">Se o teste falhar com PERMISSION_DENIED:</p>
-                <p>1. Firebase Console → Firestore → <strong className="text-slate-300">Rules</strong></p>
-                <p className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 leading-relaxed text-slate-400">
-                  {'match /users/{uid}/{d=**} {'}<br />
-                  {'  allow read, write: if request.auth.uid == uid;'}<br />
-                  {'}'}
-                </p>
-                <p>2. Firebase Console → Authentication → <strong className="text-slate-300">Settings → Authorized domains</strong> → adiciona <code className="text-primary">spxmiguel.github.io</code></p>
-              </div>
+              {/* Custom Firebase toggle */}
+              <button
+                onClick={() => setShowCustomFirebase(v => !v)}
+                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06] hover:border-white/[0.12] transition-colors text-left"
+              >
+                <div>
+                  <p className="text-sm text-white">Usar Firebase próprio</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Para privacidade total — seus dados ficam no seu projeto Firebase</p>
+                </div>
+                <ChevronDown size={15} className={`text-slate-500 transition-transform ${showCustomFirebase ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showCustomFirebase && (
+                <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
+                  {/* Tutorial */}
+                  <button
+                    onClick={() => setShowFirebaseTutorial(v => !v)}
+                    className="w-full flex items-center justify-between text-xs text-primary hover:underline"
+                  >
+                    <span>Como criar meu Firebase?</span>
+                    <ChevronDown size={13} className={`transition-transform ${showFirebaseTutorial ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showFirebaseTutorial && (
+                    <div className="text-xs text-slate-500 space-y-1.5 p-3 bg-black/20 rounded-xl leading-relaxed">
+                      <p className="text-slate-300 font-semibold">Tutorial — Firebase gratuito em 5 passos:</p>
+                      <p>1. Acesse <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-primary underline">console.firebase.google.com</a> → "Criar projeto"</p>
+                      <p>2. Crie o projeto (desative Google Analytics se quiser)</p>
+                      <p>3. Clique em "Web" (&lt;/&gt;) → registre o app → copie o objeto <code className="text-slate-300">firebaseConfig</code></p>
+                      <p>4. No menu lateral: <strong className="text-slate-300">Build → Firestore Database</strong> → criar banco → "Modo produção"</p>
+                      <p>5. Em Firestore → <strong className="text-slate-300">Rules</strong>, cole:</p>
+                      <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth.uid == uid;\n    }\n  }\n}'}</pre>
+                      <p>6. Em Authentication → <strong className="text-slate-300">Get Started</strong> → ative "Google"</p>
+                      <p>7. Em Authentication → <strong className="text-slate-300">Settings → Authorized domains</strong> → adicione seu domínio (ex: <code className="text-slate-300">spxmiguel.github.io</code>)</p>
+                      <p>8. Cole os valores abaixo e salve.</p>
+                    </div>
+                  )}
+
+                  {/* Form */}
+                  <div className="space-y-2">
+                    {([
+                      ['apiKey', 'API Key *'],
+                      ['authDomain', 'Auth Domain * (ex: meu-projeto.firebaseapp.com)'],
+                      ['projectId', 'Project ID *'],
+                      ['appId', 'App ID *'],
+                      ['storageBucket', 'Storage Bucket (opcional)'],
+                      ['messagingSenderId', 'Messaging Sender ID (opcional)'],
+                    ] as const).map(([field, label]) => (
+                      <div key={field}>
+                        <label className="text-[10px] text-slate-500 block mb-1">{label}</label>
+                        <input
+                          type="text"
+                          value={customFbForm[field as keyof typeof customFbForm]}
+                          onChange={e => setCustomFbForm(f => ({ ...f, [field]: e.target.value }))}
+                          placeholder={FIREBASE_CONFIG[field as keyof typeof FIREBASE_CONFIG] ? '•'.repeat(8) : ''}
+                          className="w-full h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" onClick={handleSaveCustomFirebase} className="flex-1">
+                      Salvar e recarregar
+                    </Button>
+                    {isUsingCustomFirebase() && (
+                      <Button size="sm" variant="ghost" onClick={handleClearCustomFirebase}>
+                        Usar padrão
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </Section>
         </motion.div>
@@ -603,20 +667,45 @@ export default function Settings() {
           className="lg:col-span-2"
         >
           <Section icon={Shield} color="red" title="Zona de Perigo" subtitle="Ações irreversíveis">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white">Apagar todos os dados</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Remove contas, drops, metas e configurações. Não tem volta.
-                </p>
+            <div className="space-y-3">
+              {/* Reset local data */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm text-white">Apagar todos os dados locais</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Remove contas, drops, metas e configurações deste dispositivo.</p>
+                </div>
+                <Button
+                  variant="danger"
+                  icon={resetConfirm ? AlertTriangle : Trash2}
+                  onClick={handleReset}
+                  className="shrink-0"
+                >
+                  {resetConfirm ? 'Confirmar?' : 'Resetar'}
+                </Button>
               </div>
-              <Button
-                variant="danger"
-                icon={resetConfirm ? AlertTriangle : Trash2}
-                onClick={handleReset}
-              >
-                {resetConfirm ? 'Confirmar?' : 'Resetar Tudo'}
-              </Button>
+
+              {/* Delete account */}
+              {user && (
+                <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-loss/20 bg-loss/5">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Excluir conta permanentemente</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Apaga <strong className="text-slate-400">todos os dados do Firestore</strong> e locais. Conforme LGPD, art. 18.
+                      {deleteAccountConfirm === 1 && <span className="text-gold"> Clique mais uma vez para confirmar.</span>}
+                      {deleteAccountConfirm === 2 && <span className="text-loss"> Clique para confirmar definitivamente.</span>}
+                    </p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteAccountConfirm > 0 ? AlertTriangle : UserX}
+                    onClick={handleDeleteAccount}
+                    disabled={deletingAccount}
+                    className="shrink-0"
+                  >
+                    {deletingAccount ? 'Apagando…' : deleteAccountConfirm === 0 ? 'Excluir' : 'Confirmar?'}
+                  </Button>
+                </div>
+              )}
             </div>
           </Section>
         </motion.div>

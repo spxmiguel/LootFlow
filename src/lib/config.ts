@@ -15,6 +15,26 @@ export const FIREBASE_CONFIG = {
 
 export const FIREBASE_ENABLED = true
 
+export const CUSTOM_FIREBASE_KEY = 'lootflow_custom_firebase'
+
+export function getCustomFirebaseConfig(): typeof FIREBASE_CONFIG | null {
+  try {
+    const raw = localStorage.getItem(CUSTOM_FIREBASE_KEY)
+    if (!raw) return null
+    const c = JSON.parse(raw)
+    if (c.apiKey && c.authDomain && c.projectId && c.appId) return c
+  } catch {}
+  return null
+}
+
+export function getActiveFirebaseConfig(): typeof FIREBASE_CONFIG {
+  return getCustomFirebaseConfig() ?? FIREBASE_CONFIG
+}
+
+export function isUsingCustomFirebase(): boolean {
+  return getCustomFirebaseConfig() !== null
+}
+
 // Preço fixo usado no LootFlow para contas CS2 Prime.
 export const PRIME_COST_BRL = 74.99
 export const PRIME_COST_BRL_FALLBACK = PRIME_COST_BRL
