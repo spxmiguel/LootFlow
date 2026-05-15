@@ -111,3 +111,25 @@ html[data-glass='off'] .lf-card {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* ── iOS PWA / Mobile scroll fixes ── */
+body {
+  overscroll-behavior: none; /* prevent rubber-band on body in iOS PWA */
+  touch-action: pan-y;
+}
+
+/* Momentum scrolling for inner scroll containers */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* In standalone (PWA) mode, ensure body never bounces outside scroll area */
+@media all and (display-mode: standalone) {
+  html, body, #root {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+}
