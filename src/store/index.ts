@@ -98,13 +98,16 @@ function syncToFirestore(
         logger.error(`[Sync] ${collection}/${docId}:`, e)
         if (!syncErrorToastShown) {
           syncErrorToastShown = true
-          const isPermission = (e as { code?: string })?.code === 'permission-denied'
-          toast.error(
-            isPermission
+          const code = (e as { code?: string })?.code
+          const msg =
+            code === 'permission-denied'
               ? 'Sem permissão no Firestore. Configure as regras em Console Firebase → Firestore → Rules.'
-              : 'Falha ao salvar na nuvem. Verifique sua conexão e as regras do Firestore.',
-            { duration: 8000 },
-          )
+              : code === 'unauthenticated'
+                ? 'Sessão expirada. Saia e entre novamente com o Google.'
+                : code === 'unavailable'
+                  ? 'Firestore indisponível. Verifique sua conexão com a internet.'
+                  : `Falha ao salvar na nuvem${code ? ` (${code})` : ''}. Tente novamente.`
+          toast.error(msg, { duration: 8000 })
         }
       })
   }

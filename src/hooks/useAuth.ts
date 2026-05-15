@@ -226,11 +226,21 @@ export function useAuth() {
       }
 
       try {
-        // Save flag before opening popup so that if iOS kills the PWA while
-        // the popup is open, onAuthStateChanged won't finalize as "logged out"
-        // on restart — it will wait for Firebase to restore the auth state.
+        // Save flag before opening popup so that if iOS kills the app while
+        // the popup is open, onAuthStateChanged won't finalize as "logged out".
         try { localStorage.setItem(POPUP_PENDING_KEY, '1') } catch {}
-        const result = await signInWithPopup(auth, provider)
+
+        // Safari can leave a blocked popup "open" without ever throwing, which
+        // makes signInWithPopup hang forever (spinner stuck). Race a timeout so
+        // we can recover via redirect instead of leaving the user stuck.
+        const POPUP_TIMEOUT = Symbol('popup-timeout')
+        const result = await Promise.race([
+          signInWithPopup(auth, provider),
+          new Promise<typeof POPUP_TIMEOUT>(resolve =>
+            window.setTimeout(() => resolve(POPUP_TIMEOUT), 20_000),
+          ),
+        ])
+        if (result === POPUP_TIMEOUT) throw { code: 'auth/popup-blocked' }
         localStorage.removeItem(POPUP_PENDING_KEY)
         const appUser = makeAppUser(result.user)
         setUser(appUser)
