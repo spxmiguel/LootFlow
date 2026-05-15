@@ -14,8 +14,9 @@ export function cn(...inputs: ClassValue[]) {
 export function getWeekIdForDate(date: Date = new Date()): string {
   const d = new Date(date)
   const day = d.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-  // Days back to most recent Tuesday
-  const daysBack = (day + 5) % 7
+  // Days back to most recent Tuesday.
+  // Sun=5, Mon=6, Tue=0, Wed=1, Thu=2, Fri=3, Sat=4
+  const daysBack = day === 0 ? 5 : (day - 2 + 7) % 7
   d.setDate(d.getDate() - daysBack)
   d.setHours(0, 0, 0, 0)
   return d.toISOString().slice(0, 10)
@@ -33,8 +34,12 @@ export function getWeekRange(weekId: string): { start: Date; end: Date } {
 }
 
 export function getWeekLabel(weekId: string): string {
-  const { start, end } = getWeekRange(weekId)
-  return `${format(start, 'dd/MM', { locale: ptBR })} – ${format(end, 'dd/MM/yy', { locale: ptBR })}`
+  try {
+    const { start, end } = getWeekRange(weekId)
+    return `${format(start, 'dd/MM', { locale: ptBR })} – ${format(end, 'dd/MM/yy', { locale: ptBR })}`
+  } catch {
+    return weekId
+  }
 }
 
 export function getPreviousWeeks(count: number): string[] {
@@ -52,19 +57,21 @@ export function getPreviousWeeks(count: number): string[] {
 
 // Sempre em R$ — Steam Market é consultado com currency=7 (BRL)
 export function formatCurrency(value: number, _currency?: string): string {
+  const safe = value == null || isNaN(value) ? 0 : value
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value ?? 0)
+  }).format(safe)
 }
 
 export function formatCurrencyCompact(value: number, _currency?: string): string {
-  if (Math.abs(value) >= 1000) {
-    return `R$ ${(value / 1000).toFixed(1)}k`
+  const safe = value == null || isNaN(value) ? 0 : value
+  if (Math.abs(safe) >= 1000) {
+    return `R$ ${(safe / 1000).toFixed(1)}k`
   }
-  return formatCurrency(value)
+  return formatCurrency(safe)
 }
 
 // Steam API retorna preços formatados em BRL: "R$ 52,40", "R$52,40", "52,40"

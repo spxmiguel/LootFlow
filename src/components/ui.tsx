@@ -1,4 +1,4 @@
-import React, { forwardRef, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
+import React, { forwardRef, useEffect, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -288,6 +288,18 @@ interface ModalProps {
 
 export function Modal({ open = true, onClose, title, children, width, size, footer }: ModalProps) {
   const widthClass = width ?? (size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-2xl' : 'max-w-lg')
+
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open, onClose])
   return (
     <AnimatePresence>
       {open && (

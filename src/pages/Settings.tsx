@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
@@ -90,6 +90,11 @@ export default function Settings() {
     }
   })
   const importRef = useRef<HTMLInputElement>(null)
+  const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (deleteConfirmTimerRef.current) clearTimeout(deleteConfirmTimerRef.current)
+  }, [])
 
   // ── Handlers ──
 
@@ -198,9 +203,11 @@ export default function Settings() {
   function handleSelectiveDelete(type: 'drops' | 'accounts' | 'goals' | 'settings') {
     if (deleteConfirm !== type) {
       setDeleteConfirm(type)
-      setTimeout(() => setDeleteConfirm(null), 4000)
+      if (deleteConfirmTimerRef.current) clearTimeout(deleteConfirmTimerRef.current)
+      deleteConfirmTimerRef.current = setTimeout(() => setDeleteConfirm(null), 4000)
       return
     }
+    if (deleteConfirmTimerRef.current) { clearTimeout(deleteConfirmTimerRef.current); deleteConfirmTimerRef.current = null }
     setDeleteConfirm(null)
     if (type === 'drops') { clearDrops(); toast.success('Drops apagados') }
     else if (type === 'accounts') { clearAccounts(); toast.success('Contas apagadas') }

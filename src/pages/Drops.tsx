@@ -16,8 +16,9 @@ import type { Drop, SteamItem } from '../lib/types'
 type ItemType = 'weapon' | 'case' | 'sticker' | 'other'
 
 function detectItemType(name: string): ItemType {
-  if (name.toLowerCase().includes('case') || name.toLowerCase().includes('package')) return 'case'
-  if (name.startsWith('Sticker') || name.startsWith('Sealed Graffiti') || name.startsWith('Patch') || name.startsWith('Music Kit')) return 'sticker'
+  const lower = name.toLowerCase()
+  if (lower.includes('case') || lower.includes('package')) return 'case'
+  if (lower.startsWith('sticker') || lower.startsWith('sealed graffiti') || lower.startsWith('patch') || lower.startsWith('music kit')) return 'sticker'
   if (name.includes(' | ')) return 'weapon'
   return 'other'
 }
@@ -181,7 +182,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
     : 'unknown'
 
   const existingDrops = drops.filter(d => d.accountId === accountId && d.weekId === weekId)
-  const slotsLeft = weekId === 'unknown' ? 2 : 2 - existingDrops.length
+  const slotsLeft = 2 - existingDrops.length
 
   function handleSave() {
     setError('')

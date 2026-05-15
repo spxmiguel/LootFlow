@@ -245,6 +245,7 @@ export function useAuth() {
       } catch {}
     }
     localStorage.removeItem(SESSION_KEY)
+    clearRedirectPending()
     setUser(null)
     toast.success('Até mais!')
   }
@@ -258,6 +259,7 @@ export function useAuth() {
         await firestoreDeleteAllUserData(user.uid)
       }
       useStore.getState().reset()
+      clearRedirectPending()
       if (isFirebaseReady()) {
         try {
           const { auth } = initFirebase(getActiveFirebaseConfig())
