@@ -45,7 +45,7 @@ function GoalForm({ initial, onSave, onClose }: {
     <Modal open onClose={onClose} title={initial ? 'Editar Meta' : 'Nova Meta'} size="md">
       <div className="space-y-4">
         <Input label="Nome *" value={name} onChange={e => setName(e.target.value)}
-          placeholder="Ex: R$ 500 de cashout" error={errors.name} />
+          placeholder="Ex: R$ 500 de cashout" error={errors.name} maxLength={80} />
 
         <div>
           <label className="text-xs text-slate-400 block mb-2">Tipo</label>

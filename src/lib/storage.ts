@@ -84,6 +84,22 @@ export const storage = {
     version: '1.0',
   }),
 
+  // Validates the shape of an imported backup and throws if invalid.
+  validateImport(data: unknown): data is { accounts?: unknown[]; drops?: unknown[]; goals?: unknown[]; settings?: unknown } {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Formato inválido')
+    const d = data as Record<string, unknown>
+    if (d.accounts !== undefined && !Array.isArray(d.accounts)) throw new Error('Campo "accounts" inválido')
+    if (d.drops !== undefined && !Array.isArray(d.drops)) throw new Error('Campo "drops" inválido')
+    if (d.goals !== undefined && !Array.isArray(d.goals)) throw new Error('Campo "goals" inválido')
+    if (d.settings !== undefined && (typeof d.settings !== 'object' || Array.isArray(d.settings))) throw new Error('Campo "settings" inválido')
+    if (!d.accounts && !d.drops && !d.goals && !d.settings) throw new Error('Backup vazio ou sem dados reconhecidos')
+    // Enforce max item counts to prevent DoS
+    if (Array.isArray(d.accounts) && d.accounts.length > 50) throw new Error('Muitas contas (máx 50)')
+    if (Array.isArray(d.drops) && d.drops.length > 5000) throw new Error('Muitos drops (máx 5000)')
+    if (Array.isArray(d.goals) && d.goals.length > 200) throw new Error('Muitas metas (máx 200)')
+    return true
+  },
+
   importAll: (data: { accounts?: CSAccount[]; drops?: Drop[]; goals?: Goal[]; settings?: AppSettings }) => {
     if (data.accounts) saveAccounts(data.accounts)
     if (data.drops) saveDrops(data.drops)

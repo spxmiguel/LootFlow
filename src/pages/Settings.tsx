@@ -115,6 +115,18 @@ export default function Settings() {
       toast.error('Preencha pelo menos: API Key, Auth Domain, Project ID e App ID.')
       return
     }
+    if (!authDomain.includes('.') || authDomain.includes('<') || authDomain.includes('>')) {
+      toast.error('Auth Domain inválido (ex: meu-projeto.firebaseapp.com)')
+      return
+    }
+    if (!/^[a-z0-9-]+$/.test(projectId)) {
+      toast.error('Project ID inválido — use apenas letras minúsculas, números e hífens.')
+      return
+    }
+    if (!appId.startsWith('1:')) {
+      toast.error('App ID inválido — deve começar com "1:" (ex: 1:123456:web:abc123)')
+      return
+    }
     try {
       localStorage.setItem(CUSTOM_FIREBASE_KEY, JSON.stringify(customFbForm))
       toast.success('Firebase próprio salvo! Recarregue a página para ativar.')
@@ -163,18 +175,33 @@ export default function Settings() {
   function handleImportJSON(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Arquivo muito grande (máx 5 MB)')
+      return
+    }
+    if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+      toast.error('Apenas arquivos .json são aceitos')
+      return
+    }
+
     const reader = new FileReader()
+    reader.onerror = () => toast.error('Erro ao ler o arquivo')
     reader.onload = (ev) => {
       try {
-        const data = JSON.parse(ev.target?.result as string)
+        const raw = ev.target?.result
+        if (typeof raw !== 'string') throw new Error('Leitura inválida')
+        const data = JSON.parse(raw)
+        storage.validateImport(data)
         storage.importAll(data)
-        window.location.reload()
-      } catch {
-        toast.error('Arquivo inválido')
+        toast.success('Backup importado com sucesso!')
+        setTimeout(() => window.location.reload(), 800)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Arquivo inválido')
       }
     }
     reader.readAsText(file)
-    e.target.value = ''
   }
 
   function handleClearCache() {

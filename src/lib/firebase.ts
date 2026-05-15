@@ -87,12 +87,14 @@ export async function firestoreDeleteDoc(
 export async function firestoreDeleteAllUserData(userId: string): Promise<void> {
   if (!db) return
   const cols = ['accounts', 'drops', 'goals', 'settings', '_test']
-  await Promise.all(cols.map(async col => {
-    try {
-      const snap = await getDocs(collection(db!, 'users', userId, col))
-      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)))
-    } catch {}
+  const results = await Promise.allSettled(cols.map(async col => {
+    const snap = await getDocs(collection(db!, 'users', userId, col))
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)))
   }))
+  const failed = results.filter(r => r.status === 'rejected')
+  if (failed.length > 0) {
+    throw new Error(`Falha ao apagar ${failed.length}/${cols.length} coleções do Firestore`)
+  }
 }
 
 export { GoogleAuthProvider }

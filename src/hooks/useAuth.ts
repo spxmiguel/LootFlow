@@ -17,7 +17,9 @@ const REDIRECT_PENDING_KEY = 'lootflow_google_pending'
 let authListenerStarted = false
 let redirectHandled = false
 
-interface StoredSession { mode: 'local' | 'firebase'; user: AppUser }
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+
+interface StoredSession { mode: 'local' | 'firebase'; user: AppUser; savedAt?: number }
 type LoginResult = 'success' | 'redirect' | 'cancelled' | 'error'
 
 function makeAppUser(fbUser: import('firebase/auth').User): AppUser {
@@ -33,7 +35,7 @@ function makeAppUser(fbUser: import('firebase/auth').User): AppUser {
 }
 
 function saveSession(mode: 'local' | 'firebase', user: AppUser) {
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ mode, user })) } catch {}
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ mode, user, savedAt: Date.now() })) } catch {}
 }
 
 function setRedirectPending() {
@@ -141,6 +143,12 @@ export function useAuth() {
       if (!raw) return
 
       const session = JSON.parse(raw) as StoredSession
+
+      // Expire sessions older than 30 days
+      if (session.savedAt && Date.now() - session.savedAt > SESSION_MAX_AGE_MS) {
+        localStorage.removeItem(SESSION_KEY)
+        return
+      }
 
       if (session.mode === 'local') {
         setUser(session.user)

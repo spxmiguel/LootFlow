@@ -305,11 +305,17 @@ export const useStore = create<AppState>()(
     },
 
     clearAccounts: () => {
-      const { user, settings, accounts: current } = get()
+      const { user, settings, accounts: current, drops } = get()
       const sync = settings.firebaseSyncEnabled !== false
-      set({ accounts: [] })
+      // LGPD: cascade-delete all drops belonging to the cleared accounts
+      const accountIds = new Set(current.map(a => a.id))
+      const survivingDrops = drops.filter(d => !accountIds.has(d.accountId))
+      const orphanedDrops = drops.filter(d => accountIds.has(d.accountId))
+      set({ accounts: [], drops: survivingDrops })
       storage.saveAccounts([])
+      storage.saveDrops(survivingDrops)
       current.forEach(a => deleteFromFirestore(user, 'accounts', a.id, sync))
+      orphanedDrops.forEach(d => deleteFromFirestore(user, 'drops', d.id, sync))
     },
 
     clearGoals: () => {

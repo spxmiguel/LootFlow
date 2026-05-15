@@ -135,7 +135,9 @@ export function parsePriceWithCurrency(priceStr: string | undefined): ParsedPric
   }
 
   const amount = parseFloat(normalized)
-  return { amount: isNaN(amount) ? 0 : amount, currency }
+  // Sanity cap: no CS2 item costs more than R$50,000
+  const safe = isNaN(amount) ? 0 : Math.min(amount, 50_000)
+  return { amount: safe, currency }
 }
 
 /**
@@ -214,11 +216,13 @@ export async function searchSteamMarket(
     const res = await fetchWithProxy(url)
     const data = await res.json()
 
-    if (!data?.results?.length) return []
+    if (!data || typeof data !== 'object' || !Array.isArray(data.results) || !data.results.length) return []
 
     // Processa todos em paralelo (cada um pode precisar conversão de câmbio)
     const results: SteamSearchResult[] = await Promise.all(
-      (data.results as RawSteamSearchItem[]).map(async (item) => {
+      (data.results as RawSteamSearchItem[]).filter(item =>
+        item && typeof item === 'object' && typeof item.name === 'string' && typeof item.hash_name === 'string'
+      ).map(async (item) => {
         // Constrói image URL com fallbacks defensivos
         const iconHash =
           item.asset_description?.icon_url ??
@@ -304,15 +308,27 @@ export async function getSteamItemPrice(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Allowed Steam image CDN domains — reject any external URL not on this list.
+const STEAM_CDN_PREFIXES = [
+  'https://community.fastly.steamstatic.com/',
+  'https://community.akamai.steamstatic.com/',
+  'https://cdn.cloudflare.steamstatic.com/',
+  'https://steamcommunity-a.akamaihd.net/',
+]
+
 /**
  * Constrói a URL completa da imagem de um item.
- * Aceita tanto um hash de ícone (que vem da API) quanto uma URL completa.
- * Usa o CDN mais moderno (Fastly) que é mais rápido e estável.
+ * Aceita tanto um hash de ícone (vindo da API) quanto uma URL completa.
+ * URLs externas são validadas contra a lista de CDNs Steam permitidos.
  */
 export function buildSteamImageUrl(iconUrlOrHash: string, size = 128): string {
   if (!iconUrlOrHash) return ''
-  if (iconUrlOrHash.startsWith('http')) return iconUrlOrHash
-  // CDN moderno (Fastly) — mais rápido e confiável que akamaihd legado
+  if (iconUrlOrHash.startsWith('http')) {
+    const allowed = STEAM_CDN_PREFIXES.some(p => iconUrlOrHash.startsWith(p))
+    return allowed ? iconUrlOrHash : ''
+  }
+  // Validate hash: only alphanumeric + underscores/hyphens/slashes (Steam format)
+  if (!/^[a-zA-Z0-9_\-/]+$/.test(iconUrlOrHash)) return ''
   return `https://community.fastly.steamstatic.com/economy/image/${iconUrlOrHash}/${size}fx${size}f`
 }
 

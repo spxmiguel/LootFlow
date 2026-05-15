@@ -111,18 +111,21 @@ function AccountModal({
           onChange={e => f('name', e.target.value)}
           placeholder="ex: Conta Prime 1"
           error={errors.name}
+          maxLength={60}
         />
         <Input
           label="Steam ID / Username (opcional)"
           value={form.steamId}
           onChange={e => f('steamId', e.target.value)}
           placeholder="76561198..."
+          maxLength={64}
         />
         <Input
           label="Foto da conta (URL opcional)"
           value={form.avatarUrl}
           onChange={e => f('avatarUrl', e.target.value)}
           placeholder="https://..."
+          maxLength={500}
         />
         <Divider />
         <div className="flex items-center justify-between p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
