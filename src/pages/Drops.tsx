@@ -358,8 +358,17 @@ function DropModal({ onSave, onClose }: DropModalProps) {
   const total2 = parseFloat(value2) || 0
   const totalCashout = (total1 + total2) * settings.cashoutRate / 100
 
+  const footer = (
+    <div className="flex gap-3 w-full">
+      <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
+      <Button onClick={handleSave} className="flex-1" disabled={slotsLeft <= 0}>
+        Registrar
+      </Button>
+    </div>
+  )
+
   return (
-    <Modal open onClose={onClose} title="Registrar Drops da Semana" size="md">
+    <Modal open onClose={onClose} title="Registrar Drops da Semana" size="md" footer={footer}>
       <div className="space-y-4">
         {/* Conta */}
         <div>
@@ -486,13 +495,6 @@ function DropModal({ onSave, onClose }: DropModalProps) {
             <AlertCircle size={12} />{error}
           </p>
         )}
-
-        <div className="flex gap-3 pt-1">
-          <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
-          <Button onClick={handleSave} className="flex-1" disabled={slotsLeft <= 0}>
-            Registrar
-          </Button>
-        </div>
       </div>
     </Modal>
   )

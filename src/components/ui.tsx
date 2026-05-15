@@ -319,9 +319,10 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
               exit={{ opacity: 0, scale: 0.98, y: 16 }}
               transition={{ type: 'spring', stiffness: 400, damping: 35 }}
               className={cn(
-                'w-full pointer-events-auto',
+                'w-full pointer-events-auto flex flex-col',
                 'bg-[#0d1117] border border-white/[0.08] rounded-t-2xl shadow-modal sm:rounded-2xl',
-                'max-h-[92vh] sm:max-h-none',
+                // Leave room for bottom nav (~5.5rem) + safe area on mobile
+                'max-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))] sm:max-h-[90vh]',
                 widthClass,
               )}
             >
@@ -338,7 +339,7 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
               </div>
 
               {/* Body */}
-              <div className="px-5 py-5 max-h-[70vh] overflow-y-auto sm:px-6">{children}</div>
+              <div className="px-5 py-5 flex-1 min-h-0 overflow-y-auto sm:px-6">{children}</div>
 
               {/* Footer */}
               {footer && (
