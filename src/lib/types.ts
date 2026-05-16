@@ -78,11 +78,13 @@ export interface ProfileOverride {
 }
 
 export interface WhatsAppSettings {
-  phone: string;          // E.164 sem +, ex: "5511999999999"
+  phone: string;           // E.164 sem +, ex: "5511999999999" (opcional — sem número = sem mensagens)
   enabled: boolean;
-  quietStart: string;     // "HH:MM" — início do silêncio (BRT)
-  quietEnd: string;       // "HH:MM" — fim do silêncio (BRT)
-  remindDays: number[];   // dias da semana: 0=dom … 6=sáb
+  quietStart: string;      // "HH:MM" — início do silêncio (BRT)
+  quietEnd: string;        // "HH:MM" — fim do silêncio (BRT)
+  remindDays: number[];    // dias da semana: 0=dom … 6=sáb
+  encheSaco: boolean;      // modo agressivo: mais lembretes, tom mais urgente
+  weeklySummary: boolean;  // resumo da semana toda terça de manhã
 }
 
 export interface AppSettings {
@@ -95,6 +97,14 @@ export interface AppSettings {
   showOnboarding: boolean;
   profile?: ProfileOverride;
   whatsapp?: WhatsAppSettings;   // notificações via bot WhatsApp
+}
+
+// ─── Notificações (fila Firestore lida pelo bot) ─────────────────────────────
+
+export interface BotNotification {
+  type: 'test' | 'drop_registered' | 'weekly_summary'
+  createdAt: string   // ISO
+  payload?: Record<string, unknown>
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
@@ -14,6 +14,7 @@ import { clearSteamCache, getSteamCacheStats } from '../lib/steam'
 import { CUSTOM_FIREBASE_KEY, getCustomFirebaseConfig, isUsingCustomFirebase, FIREBASE_CONFIG } from '../lib/config'
 import { formatCurrency } from '../lib/utils'
 import { Button, Card, Input, Toggle } from '../components/ui'
+import { firestoreQueueNotification } from '../lib/firebase'
 import toast from 'react-hot-toast'
 
 const SECTION_COLORS = {
@@ -61,6 +62,188 @@ const PRESET_COLORS = [
   '#4ade80', '#34d399', '#fb923c', '#fbbf24',
   '#f87171', '#e879f9', '#ffffff',
 ]
+
+// ─── WhatsApp Section ─────────────────────────────────────────────────────────
+
+function WhatsAppSection() {
+  const { settings, updateSettings } = useStore()
+  const { user } = useAuth()
+  const [testing, setTesting] = useState(false)
+
+  const wa = settings.whatsapp
+  const phone = wa?.phone ?? ''
+  const enabled = wa?.enabled ?? false
+  const quietStart = wa?.quietStart ?? '22:00'
+  const quietEnd = wa?.quietEnd ?? '08:00'
+  const remindDays = wa?.remindDays ?? [2, 3, 4]
+  const encheSaco = wa?.encheSaco ?? false
+  const weeklySummary = wa?.weeklySummary ?? true
+
+  const updateWA = useCallback((patch: Partial<NonNullable<typeof wa>>) => {
+    updateSettings({
+      whatsapp: {
+        phone, enabled, quietStart, quietEnd, remindDays, encheSaco, weeklySummary,
+        ...wa,
+        ...patch,
+      },
+    })
+  }, [wa, phone, enabled, quietStart, quietEnd, remindDays, encheSaco, weeklySummary, updateSettings])
+
+  async function handleTest() {
+    if (!user?.uid) { toast.error('Você precisa estar logado'); return }
+    if (!phone) { toast.error('Adicione seu número primeiro'); return }
+    setTesting(true)
+    try {
+      await firestoreQueueNotification(user.uid, 'test')
+      toast.success('Solicitação enviada! O bot vai te mandar uma mensagem em segundos.')
+    } catch {
+      toast.error('Erro ao enviar solicitação. Verifique o Firebase.')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+  const hasPhone = phone.length >= 12
+  const botStatus = !hasPhone
+    ? { label: '📱 Número não configurado', color: 'text-slate-500' }
+    : !enabled
+    ? { label: '⏸ Lembretes desativados', color: 'text-slate-500' }
+    : { label: '✅ Ativo — aguardando bot no VPS', color: 'text-profit' }
+
+  return (
+    <Section icon={MessageCircle} color="green" title="Notificações WhatsApp" subtitle="Lembretes automáticos de drop via bot">
+      <div className="space-y-5">
+
+        {/* Info */}
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
+          <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
+          <div className="text-[11px] text-slate-500 leading-relaxed space-y-1">
+            <p>Requer o bot <span className="text-slate-300 font-medium">lootflow-bot</span> rodando no VPS (Oracle Cloud Free Tier).</p>
+            <p>O número do WhatsApp que você coloca aqui é o SEU número — onde você vai <span className="text-slate-300">receber</span> as mensagens. O bot usa um número dedicado pra enviar.</p>
+          </div>
+        </div>
+
+        {/* Toggle principal + status */}
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
+          <div>
+            <p className="text-sm text-white font-medium">Ativar lembretes</p>
+            <p className={`text-[11px] mt-0.5 ${botStatus.color}`}>{botStatus.label}</p>
+          </div>
+          <Toggle value={enabled} onChange={v => updateWA({ enabled: v })} />
+        </div>
+
+        {/* Número — opcional */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-1.5">
+            Seu número do WhatsApp <span className="text-slate-600">(opcional)</span>
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">+55</span>
+            <input
+              type="tel"
+              value={phone.startsWith('55') ? phone.slice(2) : phone}
+              onChange={e => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
+                updateWA({ phone: digits ? `55${digits}` : '' })
+              }}
+              placeholder="11 99999-9999"
+              className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+            />
+          </div>
+          <p className="text-[10px] text-slate-600 mt-1">DDD + número, somente dígitos. Deixe vazio para não receber mensagens.</p>
+        </div>
+
+        {/* Opções de mensagem */}
+        <div className="space-y-2">
+          <label className="text-xs text-slate-400 block">Tipos de mensagem</label>
+
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
+            <div>
+              <p className="text-sm text-white">Resumo semanal</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Toda terça: drops da semana, cashout e contas</p>
+            </div>
+            <Toggle value={weeklySummary} onChange={v => updateWA({ weeklySummary: v })} />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-loss/20">
+            <div>
+              <p className="text-sm text-white">Modo "enche o saco" 😤</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Lembretes mais frequentes e urgentes até você registrar</p>
+            </div>
+            <Toggle value={encheSaco} onChange={v => updateWA({ encheSaco: v })} />
+          </div>
+        </div>
+
+        {/* Dias de lembrete */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-2">Dias de lembrete</label>
+          <div className="flex gap-1.5 flex-wrap">
+            {DAY_LABELS.map((label, day) => {
+              const active = remindDays.includes(day)
+              return (
+                <button
+                  key={day}
+                  onClick={() => updateWA({
+                    remindDays: active
+                      ? remindDays.filter(d => d !== day)
+                      : [...remindDays, day].sort(),
+                  })}
+                  className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
+                    active
+                      ? 'bg-profit/10 border-profit/40 text-profit'
+                      : 'bg-[#111827] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Horário de silêncio */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-2">Horário de silêncio</label>
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <input type="time" value={quietStart}
+                onChange={e => updateWA({ quietStart: e.target.value })}
+                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+              />
+              <p className="text-[10px] text-slate-600 mt-1 text-center">início</p>
+            </div>
+            <span className="text-slate-600">→</span>
+            <div className="flex-1">
+              <input type="time" value={quietEnd}
+                onChange={e => updateWA({ quietEnd: e.target.value })}
+                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+              />
+              <p className="text-[10px] text-slate-600 mt-1 text-center">fim</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Botão de teste */}
+        <div className="pt-1 border-t border-white/[0.06]">
+          <Button
+            onClick={handleTest}
+            disabled={testing || !hasPhone}
+            variant="ghost"
+            size="sm"
+            className="w-full border border-white/[0.1] hover:border-profit/40 hover:text-profit"
+          >
+            {testing ? '⏳ Enviando...' : '📲 Enviar mensagem de teste'}
+          </Button>
+          <p className="text-[10px] text-slate-600 mt-1.5 text-center">
+            {hasPhone ? 'O bot precisa estar rodando no VPS para funcionar' : 'Configure seu número para testar'}
+          </p>
+        </div>
+      </div>
+    </Section>
+  )
+}
 
 export default function Settings() {
   const {
@@ -596,114 +779,7 @@ export default function Settings() {
           transition={{ delay: 0.27 }}
           className="lg:col-span-2"
         >
-          <Section icon={MessageCircle} color="green" title="Notificações WhatsApp" subtitle="Lembretes automáticos de drop via bot">
-            {(() => {
-              const wa = settings.whatsapp
-              const enabled = wa?.enabled ?? false
-              const phone = wa?.phone ?? ''
-              const quietStart = wa?.quietStart ?? '22:00'
-              const quietEnd = wa?.quietEnd ?? '08:00'
-              const remindDays = wa?.remindDays ?? [2, 3, 4]
-
-              const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
-              function updateWA(patch: Partial<typeof wa & {}>) {
-                updateSettings({ whatsapp: { phone, enabled, quietStart, quietEnd, remindDays, ...wa, ...patch } })
-              }
-
-              return (
-                <div className="space-y-4">
-                  {/* Info box */}
-                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
-                    <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Requer o bot <span className="text-slate-300">lootflow-bot</span> rodando no VPS.
-                      Configure seu número abaixo — o bot vai avisar quando faltar pegar drops.
-                    </p>
-                  </div>
-
-                  {/* Status badge */}
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
-                    <div>
-                      <p className="text-sm text-white">Ativar lembretes</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        {enabled && phone ? '✅ Bot configurado' : phone ? '⚠️ Configure o bot no VPS para ativar' : '📱 Adicione seu número primeiro'}
-                      </p>
-                    </div>
-                    <Toggle value={enabled} onChange={v => updateWA({ enabled: v })} />
-                  </div>
-
-                  {/* Telefone */}
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1.5">Número do WhatsApp</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 select-none">+55</span>
-                      <input
-                        type="tel"
-                        value={phone.startsWith('55') ? phone.slice(2) : phone}
-                        onChange={e => {
-                          const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
-                          updateWA({ phone: digits ? `55${digits}` : '' })
-                        }}
-                        placeholder="11 99999-9999"
-                        className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
-                      />
-                    </div>
-                    <p className="text-[10px] text-slate-600 mt-1">Somente dígitos — DDD + número</p>
-                  </div>
-
-                  {/* Dias de lembrete */}
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-2">Dias de lembrete</label>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {DAY_LABELS.map((label, day) => {
-                        const active = remindDays.includes(day)
-                        return (
-                          <button
-                            key={day}
-                            onClick={() => updateWA({
-                              remindDays: active
-                                ? remindDays.filter(d => d !== day)
-                                : [...remindDays, day].sort()
-                            })}
-                            className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
-                              active
-                                ? 'bg-profit/10 border-profit/40 text-profit'
-                                : 'bg-[#111827] border-white/[0.08] text-slate-500 hover:text-slate-300'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Horário silêncio */}
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-2">Horário de silêncio (sem mensagens)</label>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <input type="time" value={quietStart}
-                          onChange={e => updateWA({ quietStart: e.target.value })}
-                          className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
-                        />
-                        <p className="text-[10px] text-slate-600 mt-1 text-center">início</p>
-                      </div>
-                      <span className="text-slate-600 text-sm">→</span>
-                      <div className="flex-1">
-                        <input type="time" value={quietEnd}
-                          onChange={e => updateWA({ quietEnd: e.target.value })}
-                          className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
-                        />
-                        <p className="text-[10px] text-slate-600 mt-1 text-center">fim</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-          </Section>
+          <WhatsAppSection />
         </motion.div>
 
         {/* ── Privacidade ── */}

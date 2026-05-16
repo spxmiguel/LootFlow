@@ -102,4 +102,18 @@ export async function firestoreDeleteAllUserData(userId: string): Promise<void> 
   }
 }
 
+/** Enfileira uma notificação para o bot WhatsApp processar */
+export async function firestoreQueueNotification(
+  userId: string,
+  type: string,
+  payload?: Record<string, unknown>,
+): Promise<void> {
+  if (!db) return
+  const docId = `${type}_${Date.now()}`
+  await setDoc(
+    doc(db, 'users', userId, 'notifications', docId),
+    sanitize({ type, createdAt: new Date().toISOString(), ...(payload ?? {}) }),
+  )
+}
+
 export { GoogleAuthProvider }
