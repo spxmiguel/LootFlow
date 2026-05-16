@@ -77,6 +77,14 @@ export interface ProfileOverride {
   customPhotoURL?: string   // custom avatar URL provided by user
 }
 
+export interface WhatsAppSettings {
+  phone: string;          // E.164 sem +, ex: "5511999999999"
+  enabled: boolean;
+  quietStart: string;     // "HH:MM" — início do silêncio (BRT)
+  quietEnd: string;       // "HH:MM" — fim do silêncio (BRT)
+  remindDays: number[];   // dias da semana: 0=dom … 6=sáb
+}
+
 export interface AppSettings {
   cashoutRate: number;            // 0-100, e.g. 85 = 85% of Steam value
   currency: 'BRL';               // always BRL — Steam prices fetched in R$
@@ -86,6 +94,7 @@ export interface AppSettings {
   theme: ThemeConfig;
   showOnboarding: boolean;
   profile?: ProfileOverride;
+  whatsapp?: WhatsAppSettings;   // notificações via bot WhatsApp
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────

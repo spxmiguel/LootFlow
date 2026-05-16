@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
   Shield, RotateCcw, Check, AlertTriangle, Zap, ChevronRight,
-  RefreshCw, Lock, Info, ExternalLink, ChevronDown, UserX,
+  RefreshCw, Lock, Info, ExternalLink, ChevronDown, UserX, MessageCircle,
 } from 'lucide-react'
 import { LegalModal, type LegalType } from '../components/LegalModal'
 import { useStore } from '../store'
@@ -586,6 +586,123 @@ export default function Settings() {
                 </div>
               )}
             </div>
+          </Section>
+        </motion.div>
+
+        {/* ── WhatsApp ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.27 }}
+          className="lg:col-span-2"
+        >
+          <Section icon={MessageCircle} color="green" title="Notificações WhatsApp" subtitle="Lembretes automáticos de drop via bot">
+            {(() => {
+              const wa = settings.whatsapp
+              const enabled = wa?.enabled ?? false
+              const phone = wa?.phone ?? ''
+              const quietStart = wa?.quietStart ?? '22:00'
+              const quietEnd = wa?.quietEnd ?? '08:00'
+              const remindDays = wa?.remindDays ?? [2, 3, 4]
+
+              const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+              function updateWA(patch: Partial<typeof wa & {}>) {
+                updateSettings({ whatsapp: { phone, enabled, quietStart, quietEnd, remindDays, ...wa, ...patch } })
+              }
+
+              return (
+                <div className="space-y-4">
+                  {/* Info box */}
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
+                    <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Requer o bot <span className="text-slate-300">lootflow-bot</span> rodando no VPS.
+                      Configure seu número abaixo — o bot vai avisar quando faltar pegar drops.
+                    </p>
+                  </div>
+
+                  {/* Status badge */}
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
+                    <div>
+                      <p className="text-sm text-white">Ativar lembretes</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {enabled && phone ? '✅ Bot configurado' : phone ? '⚠️ Configure o bot no VPS para ativar' : '📱 Adicione seu número primeiro'}
+                      </p>
+                    </div>
+                    <Toggle value={enabled} onChange={v => updateWA({ enabled: v })} />
+                  </div>
+
+                  {/* Telefone */}
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-1.5">Número do WhatsApp</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 select-none">+55</span>
+                      <input
+                        type="tel"
+                        value={phone.startsWith('55') ? phone.slice(2) : phone}
+                        onChange={e => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
+                          updateWA({ phone: digits ? `55${digits}` : '' })
+                        }}
+                        placeholder="11 99999-9999"
+                        className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1">Somente dígitos — DDD + número</p>
+                  </div>
+
+                  {/* Dias de lembrete */}
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-2">Dias de lembrete</label>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {DAY_LABELS.map((label, day) => {
+                        const active = remindDays.includes(day)
+                        return (
+                          <button
+                            key={day}
+                            onClick={() => updateWA({
+                              remindDays: active
+                                ? remindDays.filter(d => d !== day)
+                                : [...remindDays, day].sort()
+                            })}
+                            className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
+                              active
+                                ? 'bg-profit/10 border-profit/40 text-profit'
+                                : 'bg-[#111827] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Horário silêncio */}
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-2">Horário de silêncio (sem mensagens)</label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <input type="time" value={quietStart}
+                          onChange={e => updateWA({ quietStart: e.target.value })}
+                          className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+                        />
+                        <p className="text-[10px] text-slate-600 mt-1 text-center">início</p>
+                      </div>
+                      <span className="text-slate-600 text-sm">→</span>
+                      <div className="flex-1">
+                        <input type="time" value={quietEnd}
+                          onChange={e => updateWA({ quietEnd: e.target.value })}
+                          className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+                        />
+                        <p className="text-[10px] text-slate-600 mt-1 text-center">fim</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </Section>
         </motion.div>
 
