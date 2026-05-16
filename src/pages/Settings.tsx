@@ -110,7 +110,7 @@ function WhatsAppSection() {
     ? { label: '📱 Número não configurado', color: 'text-slate-500' }
     : !enabled
     ? { label: '⏸ Lembretes desativados', color: 'text-slate-500' }
-    : { label: '✅ Ativo — aguardando bot no VPS', color: 'text-profit' }
+    : { label: '✅ Ativo — lembretes habilitados', color: 'text-profit' }
 
   return (
     <Section icon={MessageCircle} color="green" title="Notificações WhatsApp" subtitle="Lembretes automáticos de drop via bot">
@@ -120,8 +120,7 @@ function WhatsAppSection() {
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
           <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
           <div className="text-[11px] text-slate-500 leading-relaxed space-y-1">
-            <p>Requer o bot <span className="text-slate-300 font-medium">lootflow-bot</span> rodando no VPS (Oracle Cloud Free Tier).</p>
-            <p>O número do WhatsApp que você coloca aqui é o SEU número — onde você vai <span className="text-slate-300">receber</span> as mensagens. O bot usa um número dedicado pra enviar.</p>
+            <p>O número que você coloca aqui é o <span className="text-slate-300">seu</span> número — onde vai <span className="text-slate-300">receber</span> as mensagens. O bot envia de um número dedicado.</p>
           </div>
         </div>
 
@@ -237,7 +236,7 @@ function WhatsAppSection() {
             {testing ? '⏳ Enviando...' : '📲 Enviar mensagem de teste'}
           </Button>
           <p className="text-[10px] text-slate-600 mt-1.5 text-center">
-            {hasPhone ? 'O bot precisa estar rodando no VPS para funcionar' : 'Configure seu número para testar'}
+            {hasPhone ? 'Você receberá uma mensagem de teste em segundos' : 'Configure seu número para testar'}
           </p>
         </div>
       </div>
