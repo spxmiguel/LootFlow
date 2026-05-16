@@ -130,33 +130,33 @@ export function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             onClick={() => setCurrentPage('drops')}
-            className="col-span-2 lg:col-span-1 flex flex-col justify-between gap-2 p-4 rounded-2xl bg-loss/10 border-2 border-loss/60 shadow-[0_0_24px_rgba(248,113,113,0.18)] hover:bg-loss/15 hover:border-loss/80 transition-all text-left cursor-pointer"
+            className="col-span-2 lg:col-span-1 flex flex-col justify-between gap-3 p-4 rounded-2xl bg-loss/10 border-2 border-loss/60 shadow-[0_0_24px_rgba(248,113,113,0.15)] hover:bg-loss/15 hover:border-loss/80 transition-all text-left cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-loss/20 shrink-0">
-                <AlertTriangle className="w-4 h-4 text-loss" strokeWidth={2.5} />
+            <div className="flex items-start gap-2.5">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-loss/20 shrink-0 mt-0.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-loss" strokeWidth={2.5} />
               </div>
-              <p className="font-display font-black text-loss text-sm leading-tight uppercase tracking-wide">
+              <p className="font-display font-black text-loss text-xs sm:text-sm leading-snug uppercase tracking-wider">
                 Falta pegar drop semanal
               </p>
             </div>
-            <div className="space-y-1 pl-0.5">
+            <div className="space-y-1">
               {accountsMissingDrops.length === activeAccounts.length ? (
-                <p className="text-xs text-loss/80 font-body font-medium">
-                  Todas as {activeAccounts.length} contas ativas sem drop
+                <p className="text-xs text-loss/70 font-body">
+                  Todas as {activeAccounts.length} contas sem drop esta semana
                 </p>
               ) : (
                 accountsMissingDrops.slice(0, 3).map(a => {
                   const got = drops.filter(d => d.accountId === a.id && d.weekId === currentWeekId).length
                   return (
-                    <p key={a.id} className="text-xs text-loss/80 font-body font-medium truncate">
+                    <p key={a.id} className="text-xs text-loss/70 font-body truncate">
                       · {a.name} — {got}/2 drops
                     </p>
                   )
                 })
               )}
               {accountsMissingDrops.length > 3 && (
-                <p className="text-[10px] text-loss/60 font-body">
+                <p className="text-[11px] text-loss/50 font-body">
                   +{accountsMissingDrops.length - 3} conta{accountsMissingDrops.length - 3 !== 1 ? 's' : ''}
                 </p>
               )}
@@ -175,8 +175,8 @@ export function Dashboard() {
         <StatCard
           label="Contas"
           value={`${stats.activeAccounts}/${stats.totalAccounts}`}
-          sub={`${stats.currentWeekDrops}/${stats.currentWeekTarget} drops esta semana`}
-          subColor={weekProgress >= 100 ? 'text-profit' : 'text-slate-500'}
+          sub={`${stats.activeAccounts} ativa${stats.activeAccounts !== 1 ? 's' : ''} de ${stats.totalAccounts}`}
+          subColor="text-slate-500"
           icon={<Users className="w-5 h-5 text-purple-400" />}
           iconBg="bg-purple-400/10"
           delay={0.15}

@@ -46,6 +46,7 @@ export interface Goal {
   deadline?: string;      // ISO date
   color: string;
   createdAt: string;
+  targetItem?: SteamItem; // item CS2 que a meta representa (opcional)
 }
 
 // ─── Settings ───────────────────────────────────────────────────────────────

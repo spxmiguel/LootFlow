@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Plus, Target, Trash2, Edit3, CheckCircle2, Clock, TrendingUp, Package, DollarSign, Zap } from 'lucide-react'
+import { Plus, Target, Trash2, Edit3, CheckCircle2, Clock, TrendingUp, Package, DollarSign, Zap, Search, X, Loader2 } from 'lucide-react'
 import { useStore } from '../store'
 import { calcDashboardStats, calcGoalProgress, calcWeekStats } from '../lib/calculations'
-import { formatCurrency, formatPercent, formatDate, getCurrentWeekId } from '../lib/utils'
+import { formatCurrency, formatDate, getCurrentWeekId } from '../lib/utils'
 import { Button, Card, Input, Modal, Empty, Progress } from '../components/ui'
-import type { Goal } from '../lib/types'
+import { SteamItemImage } from '../components/SteamItemImage'
+import { searchSteamMarket } from '../lib/steam'
+import type { Goal, SteamItem } from '../lib/types'
 
 const GOAL_COLORS = ['#38bdf8','#4ade80','#fbbf24','#f87171','#a78bfa','#fb923c','#34d399','#e879f9']
 
@@ -16,6 +18,70 @@ export const GOAL_TYPES = [
   { value: 'drops',   label: 'Total de Drops',    icon: Zap,        desc: 'Quantidade total de drops'    },
 ] as const
 
+// ─── Mini Item Picker (para metas) ───────────────────────────────────────────
+
+function GoalItemPicker({ value, onChange }: { value: SteamItem | null; onChange: (item: SteamItem | null) => void }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<Array<{ name: string; hashName: string; imageUrl: string }>>([])
+  const [searching, setSearching] = useState(false)
+
+  const handleSearch = useCallback(async (q: string) => {
+    setQuery(q)
+    if (q.length < 2) { setResults([]); return }
+    setSearching(true)
+    try {
+      const r = await searchSteamMarket(q)
+      setResults(r.slice(0, 6))
+    } catch { setResults([]) }
+    finally { setSearching(false) }
+  }, [])
+
+  if (value) {
+    return (
+      <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.08]">
+        <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center shrink-0 overflow-hidden">
+          <SteamItemImage imageUrl={value.imageUrl} alt={value.name} size={40} />
+        </div>
+        <p className="flex-1 text-sm text-white font-medium truncate">{value.name}</p>
+        <button onClick={() => onChange(null)} className="p-1 text-slate-500 hover:text-loss transition-colors">
+          <X size={14} />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+        {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 animate-spin" />}
+        <input
+          value={query}
+          onChange={e => handleSearch(e.target.value)}
+          placeholder="Buscar item CS2 (ex: Bayonet Doppler)"
+          className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-xs pl-9 pr-4 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+        />
+      </div>
+      {results.length > 0 && (
+        <div className="rounded-xl border border-white/[0.08] bg-[#0d1117] overflow-hidden divide-y divide-white/[0.04]">
+          {results.map(r => (
+            <button
+              key={r.hashName}
+              onClick={() => { onChange({ name: r.name, marketHashName: r.hashName, imageUrl: r.imageUrl ?? '' }); setQuery(''); setResults([]) }}
+              className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/[0.04] transition-colors text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#111827] shrink-0 overflow-hidden flex items-center justify-center">
+                <SteamItemImage imageUrl={r.imageUrl} alt={r.name} size={32} />
+              </div>
+              <p className="text-xs text-slate-200 truncate">{r.name}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Goal Form ────────────────────────────────────────────────────────────────
 
 function GoalForm({ initial, onSave, onClose }: {
@@ -23,12 +89,13 @@ function GoalForm({ initial, onSave, onClose }: {
   onSave: (data: Omit<Goal, 'id' | 'createdAt'>) => void
   onClose: () => void
 }) {
-  const [name, setName]     = useState(initial?.name ?? '')
-  const [target, setTarget] = useState(String(initial?.targetAmount ?? ''))
-  const [type, setType]     = useState<Goal['type']>(initial?.type ?? 'profit')
+  const [name, setName]       = useState(initial?.name ?? '')
+  const [target, setTarget]   = useState(String(initial?.targetAmount ?? ''))
+  const [type, setType]       = useState<Goal['type']>(initial?.type ?? 'profit')
   const [deadline, setDeadline] = useState(initial?.deadline?.slice(0,10) ?? '')
-  const [color, setColor]   = useState(initial?.color ?? GOAL_COLORS[0])
-  const [errors, setErrors] = useState<Record<string,string>>({})
+  const [color, setColor]     = useState(initial?.color ?? GOAL_COLORS[0])
+  const [targetItem, setTargetItem] = useState<SteamItem | null>(initial?.targetItem ?? null)
+  const [errors, setErrors]   = useState<Record<string,string>>({})
 
   function handleSave() {
     const e: Record<string,string> = {}
@@ -36,16 +103,18 @@ function GoalForm({ initial, onSave, onClose }: {
     const n = parseFloat(target)
     if (isNaN(n) || n <= 0) e.target = 'Valor inválido'
     if (Object.keys(e).length) { setErrors(e); return }
-    onSave({ name: name.trim(), targetAmount: parseFloat(target), type, deadline: deadline || undefined, color })
+    onSave({
+      name: name.trim(), targetAmount: parseFloat(target), type,
+      deadline: deadline || undefined, color,
+      targetItem: targetItem ?? undefined,
+    })
   }
-
-  const selectedType = GOAL_TYPES.find(t => t.value === type) ?? GOAL_TYPES[0]
 
   return (
     <Modal open onClose={onClose} title={initial ? 'Editar Meta' : 'Nova Meta'} size="md">
       <div className="space-y-4">
         <Input label="Nome *" value={name} onChange={e => setName(e.target.value)}
-          placeholder="Ex: R$ 500 de cashout" error={errors.name} maxLength={80} />
+          placeholder="Ex: Comprar Bayonet Doppler" error={errors.name} maxLength={80} />
 
         <div>
           <label className="text-xs text-slate-400 block mb-2">Tipo</label>
@@ -74,6 +143,13 @@ function GoalForm({ initial, onSave, onClose }: {
           placeholder={type === 'drops' ? '100' : '500.00'}
           error={errors.target}
         />
+
+        <div>
+          <label className="text-xs text-slate-400 block mb-2">
+            Item alvo no CS2 <span className="text-slate-600 font-normal">(opcional)</span>
+          </label>
+          <GoalItemPicker value={targetItem} onChange={setTargetItem} />
+        </div>
 
         <Input label="Prazo (opcional)" type="date" value={deadline}
           onChange={e => setDeadline(e.target.value)} />
@@ -125,13 +201,21 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
       )}
 
       <div className="flex items-start gap-3 mb-4">
-        <div className="p-2 rounded-lg flex-shrink-0"
-          style={{ backgroundColor: goal.color + '20', color: goal.color }}>
-          <typeInfo.icon size={16} />
-        </div>
+        {goal.targetItem ? (
+          <div className="w-10 h-10 rounded-lg bg-[#111827] border border-white/[0.08] shrink-0 overflow-hidden flex items-center justify-center">
+            <SteamItemImage imageUrl={goal.targetItem.imageUrl} alt={goal.targetItem.name} size={40} />
+          </div>
+        ) : (
+          <div className="p-2 rounded-lg flex-shrink-0"
+            style={{ backgroundColor: goal.color + '20', color: goal.color }}>
+            <typeInfo.icon size={16} />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-white text-sm truncate">{goal.name}</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{typeInfo.label}</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {goal.targetItem ? goal.targetItem.name.split('|')[0].trim() : typeInfo.label}
+          </p>
         </div>
         {!isDone && (
           <div className="flex gap-1">
