@@ -5,8 +5,8 @@ import {
   ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts'
 import {
-  TrendingUp, Package, Users, DollarSign, Target,
-  Plus, ArrowUpRight, Flame, Trophy,
+  TrendingUp, Package, Users, DollarSign,
+  Plus, ArrowUpRight, Flame, Trophy, AlertTriangle,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { calcDashboardStats, calcWeekStats } from '../lib/calculations'
@@ -61,6 +61,13 @@ export function Dashboard() {
 
   const isEmpty = drops.length === 0
   const hasAccounts = accounts.length > 0
+
+  // Contas ativas com drops faltando esta semana
+  const activeAccounts = accounts.filter(a => a.active)
+  const accountsMissingDrops = activeAccounts.filter(a => {
+    const count = drops.filter(d => d.accountId === a.id && d.weekId === currentWeekId).length
+    return count < 2
+  })
 
   // Goals data for dashboard preview
   const dashStats = stats
@@ -117,14 +124,54 @@ export function Dashboard() {
           iconBg="bg-primary/10"
           delay={0.05}
         />
-        <StatCard
-          label="Drops Registrados"
-          value={stats.totalDropsAllTime.toString()}
-          sub={`${stats.activeAccounts} contas ativas`}
-          icon={<Package className="w-5 h-5 text-gold" />}
-          iconBg="bg-gold/10"
-          delay={0.1}
-        />
+        {accountsMissingDrops.length > 0 && activeAccounts.length > 0 ? (
+          <motion.button
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            onClick={() => setCurrentPage('drops')}
+            className="col-span-2 lg:col-span-1 flex flex-col justify-between gap-2 p-4 rounded-2xl bg-loss/10 border-2 border-loss/60 shadow-[0_0_24px_rgba(248,113,113,0.18)] hover:bg-loss/15 hover:border-loss/80 transition-all text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-loss/20 shrink-0">
+                <AlertTriangle className="w-4 h-4 text-loss" strokeWidth={2.5} />
+              </div>
+              <p className="font-display font-black text-loss text-sm leading-tight uppercase tracking-wide">
+                Falta pegar drop semanal
+              </p>
+            </div>
+            <div className="space-y-1 pl-0.5">
+              {accountsMissingDrops.length === activeAccounts.length ? (
+                <p className="text-xs text-loss/80 font-body font-medium">
+                  Todas as {activeAccounts.length} contas ativas sem drop
+                </p>
+              ) : (
+                accountsMissingDrops.slice(0, 3).map(a => {
+                  const got = drops.filter(d => d.accountId === a.id && d.weekId === currentWeekId).length
+                  return (
+                    <p key={a.id} className="text-xs text-loss/80 font-body font-medium truncate">
+                      · {a.name} — {got}/2 drops
+                    </p>
+                  )
+                })
+              )}
+              {accountsMissingDrops.length > 3 && (
+                <p className="text-[10px] text-loss/60 font-body">
+                  +{accountsMissingDrops.length - 3} conta{accountsMissingDrops.length - 3 !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          </motion.button>
+        ) : (
+          <StatCard
+            label="Drops Registrados"
+            value={stats.totalDropsAllTime.toString()}
+            sub={`${stats.activeAccounts} contas ativas`}
+            icon={<Package className="w-5 h-5 text-gold" />}
+            iconBg="bg-gold/10"
+            delay={0.1}
+          />
+        )}
         <StatCard
           label="Contas"
           value={`${stats.activeAccounts}/${stats.totalAccounts}`}
