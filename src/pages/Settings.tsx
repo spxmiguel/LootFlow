@@ -133,25 +133,32 @@ function WhatsAppSection() {
           <Toggle value={enabled} onChange={v => updateWA({ enabled: v })} />
         </div>
 
-        {/* Número — opcional */}
+        {/* Número */}
         <div>
           <label className="text-xs text-slate-400 block mb-1.5">
-            Seu número do WhatsApp <span className="text-slate-600">(opcional)</span>
+            Seu número do WhatsApp
           </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">+55</span>
-            <input
-              type="tel"
-              value={phone.startsWith('55') ? phone.slice(2) : phone}
-              onChange={e => {
-                const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
-                updateWA({ phone: digits ? `55${digits}` : '' })
-              }}
-              placeholder="11 99999-9999"
-              className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">+55</span>
+              <input
+                type="tel"
+                value={phone.startsWith('55') ? phone.slice(2) : phone}
+                onChange={e => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
+                  updateWA({ phone: digits ? `55${digits}` : '' })
+                }}
+                placeholder="11 99999-9999"
+                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+              />
+            </div>
           </div>
-          <p className="text-[10px] text-slate-600 mt-1">DDD + número, somente dígitos. Deixe vazio para não receber mensagens.</p>
+          <p className="text-[10px] mt-1">
+            {hasPhone
+              ? <span className="text-profit">✓ Número salvo — você pode enviar o teste abaixo</span>
+              : <span className="text-slate-600">DDD + número, somente dígitos</span>
+            }
+          </p>
         </div>
 
         {/* Opções de mensagem */}
