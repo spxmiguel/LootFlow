@@ -69,6 +69,7 @@ function WhatsAppSection() {
   const { settings, updateSettings } = useStore()
   const { user } = useAuth()
   const [testing, setTesting] = useState(false)
+  const [forcingReminder, setForcingReminder] = useState(false)
 
   const wa = settings.whatsapp
   const phone = wa?.phone ?? ''
@@ -100,6 +101,20 @@ function WhatsAppSection() {
       toast.error('Erro ao enviar solicitação. Verifique o Firebase.')
     } finally {
       setTesting(false)
+    }
+  }
+
+  async function handleForceReminder() {
+    if (!user?.uid) { toast.error('Você precisa estar logado'); return }
+    if (!phone) { toast.error('Adicione seu número primeiro'); return }
+    setForcingReminder(true)
+    try {
+      await firestoreQueueNotification(user.uid, 'force_reminder')
+      toast.success('Lembrete real enviado! Chegará em segundos com seus drops pendentes.')
+    } catch {
+      toast.error('Erro ao enviar. Verifique o Firebase.')
+    } finally {
+      setForcingReminder(false)
     }
   }
 
@@ -231,8 +246,8 @@ function WhatsAppSection() {
           </div>
         </div>
 
-        {/* Botão de teste */}
-        <div className="pt-1 border-t border-white/[0.06]">
+        {/* Botões de teste */}
+        <div className="pt-1 border-t border-white/[0.06] space-y-2">
           <Button
             onClick={handleTest}
             disabled={testing || !hasPhone}
@@ -242,8 +257,17 @@ function WhatsAppSection() {
           >
             {testing ? '⏳ Enviando...' : '📲 Enviar mensagem de teste'}
           </Button>
-          <p className="text-[10px] text-slate-600 mt-1.5 text-center">
-            {hasPhone ? 'Você receberá uma mensagem de teste em segundos' : 'Configure seu número para testar'}
+          <Button
+            onClick={handleForceReminder}
+            disabled={forcingReminder || !hasPhone}
+            variant="ghost"
+            size="sm"
+            className="w-full border border-white/[0.1] hover:border-primary/40 hover:text-primary"
+          >
+            {forcingReminder ? '⏳ Enviando...' : '🔔 Simular lembrete real agora'}
+          </Button>
+          <p className="text-[10px] text-slate-600 text-center">
+            {hasPhone ? 'O lembrete real mostra seus drops pendentes da semana' : 'Configure seu número para testar'}
           </p>
         </div>
       </div>
