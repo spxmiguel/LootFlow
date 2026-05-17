@@ -72,7 +72,9 @@ function WhatsAppSection() {
   const [forcingReminder, setForcingReminder] = useState(false)
   const [editingPhone, setEditingPhone] = useState(false)
   const [phoneInput, setPhoneInput] = useState('')
-  const [showVerifyHint, setShowVerifyHint] = useState(false)
+  const [codeInput, setCodeInput] = useState('')
+  const [sendingCode, setSendingCode] = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
   const wa = settings.whatsapp
   const phone = wa?.phone ?? ''
@@ -126,7 +128,6 @@ function WhatsAppSection() {
   const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
   const verified = wa?.verified ?? false
-  const verifyCode = wa?.verifyCode ?? ''
   const hasPhone = phone.length >= 12
   const botStatus = !hasPhone
     ? { label: '📱 Número não configurado', color: 'text-slate-500' }
@@ -188,17 +189,26 @@ function WhatsAppSection() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
+                  disabled={sendingCode}
+                  onClick={async () => {
                     if (phoneInput.length < 10) { toast.error('Número inválido'); return }
+                    if (!user?.uid) { toast.error('Você precisa estar logado'); return }
                     const code = String(Math.floor(100000 + Math.random() * 900000))
-                    updateWA({ phone: `55${phoneInput}`, verified: false, verifyCode: code })
-                    setEditingPhone(false)
-                    setShowVerifyHint(true)
-                    toast.success('Número salvo! Agora verifique pelo WhatsApp.')
+                    setSendingCode(true)
+                    try {
+                      updateWA({ phone: `55${phoneInput}`, verified: false, verifyCode: code })
+                      await firestoreQueueNotification(user.uid, 'send_verify_code')
+                      setEditingPhone(false)
+                      toast.success('Código enviado no WhatsApp! Digite-o abaixo.')
+                    } catch {
+                      toast.error('Erro ao enviar código. Tente novamente.')
+                    } finally {
+                      setSendingCode(false)
+                    }
                   }}
-                  className="flex-1 h-8 rounded-xl bg-primary/10 border border-primary/40 text-primary text-xs font-medium hover:bg-primary/20 transition-all"
+                  className="flex-1 h-8 rounded-xl bg-primary/10 border border-primary/40 text-primary text-xs font-medium hover:bg-primary/20 transition-all disabled:opacity-50"
                 >
-                  Salvar
+                  {sendingCode ? 'Enviando...' : 'Enviar código'}
                 </button>
                 {hasPhone && (
                   <button
@@ -214,25 +224,69 @@ function WhatsAppSection() {
           )}
         </div>
 
-        {/* Verificação pendente */}
-        {hasPhone && !verified && verifyCode && (
-          <div className="p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/25 space-y-2">
-            <p className="text-xs text-yellow-400 font-medium">⏳ Verificação pendente</p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Manda essa mensagem pro bot no WhatsApp pra confirmar seu número:
-            </p>
-            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#0d1117] border border-white/[0.08]">
-              <span className="font-mono text-lg text-white tracking-widest">{verifyCode}</span>
+        {/* Verificação pendente — usuário digita o código que recebeu no zap */}
+        {hasPhone && !verified && !editingPhone && (
+          <div className="p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/25 space-y-3">
+            <div>
+              <p className="text-xs text-yellow-400 font-medium">⏳ Verificação pendente</p>
+              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                O bot enviou um código de 6 dígitos pro seu WhatsApp. Digite ele abaixo:
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={codeInput}
+                onChange={e => setCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000"
+                className="flex-1 h-9 rounded-xl border border-white/[0.1] bg-[#0d1117] text-white text-center font-mono text-lg tracking-widest focus:outline-none focus:border-yellow-500/50 placeholder:text-slate-700"
+              />
               <button
-                onClick={() => { navigator.clipboard?.writeText(verifyCode); toast.success('Código copiado!') }}
-                className="text-[10px] text-slate-500 hover:text-slate-300 px-2 py-1 rounded border border-white/[0.08] hover:border-white/20 transition-all"
+                disabled={codeInput.length !== 6 || verifying}
+                onClick={async () => {
+                  if (!user?.uid) return
+                  setVerifying(true)
+                  try {
+                    // Busca o verifyCode salvo e compara localmente
+                    const stored = settings.whatsapp?.verifyCode
+                    if (codeInput === stored) {
+                      updateWA({ verified: true, verifyCode: undefined })
+                      setCodeInput('')
+                      toast.success('✅ Número verificado! Bot ativado.')
+                    } else {
+                      toast.error('Código inválido. Verifique e tente de novo.')
+                    }
+                  } finally {
+                    setVerifying(false)
+                  }
+                }}
+                className="px-4 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-medium hover:bg-yellow-500/20 transition-all disabled:opacity-40"
               >
-                Copiar
+                {verifying ? '...' : 'Verificar'}
               </button>
             </div>
-            <p className="text-[10px] text-slate-600">
-              Número do bot: salvo nos seus contatos como <span className="text-slate-400">LootFlow Bot</span>
-            </p>
+            <button
+              disabled={sendingCode}
+              onClick={async () => {
+                if (!user?.uid) return
+                setSendingCode(true)
+                try {
+                  const code = String(Math.floor(100000 + Math.random() * 900000))
+                  updateWA({ verifyCode: code })
+                  await firestoreQueueNotification(user.uid, 'send_verify_code')
+                  toast.success('Novo código enviado!')
+                } catch {
+                  toast.error('Erro ao reenviar.')
+                } finally {
+                  setSendingCode(false)
+                }
+              }}
+              className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+            >
+              {sendingCode ? 'Enviando...' : 'Não recebi — reenviar código'}
+            </button>
           </div>
         )}
 
