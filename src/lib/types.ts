@@ -86,6 +86,7 @@ export interface WhatsAppSettings {
   encheSaco: boolean;           // modo agressivo: mais lembretes, tom mais urgente
   encheSacoInterval: number;    // minutos entre lembretes (30, 60, 90, 120...)
   weeklySummary: boolean;       // resumo da semana toda terça de manhã
+  xingamentos: boolean;         // modo palavrão: bot xinga até registrar o drop
 }
 
 export interface AppSettings {

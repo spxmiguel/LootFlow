@@ -82,16 +82,17 @@ function WhatsAppSection() {
   const encheSaco = wa?.encheSaco ?? false
   const encheSacoInterval = wa?.encheSacoInterval ?? 60
   const weeklySummary = wa?.weeklySummary ?? true
+  const xingamentos = wa?.xingamentos ?? false
 
   const updateWA = useCallback((patch: Partial<NonNullable<typeof wa>>) => {
     updateSettings({
       whatsapp: {
-        phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary,
+        phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary, xingamentos,
         ...wa,
         ...patch,
       },
     })
-  }, [wa, phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary, updateSettings])
+  }, [wa, phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary, xingamentos, updateSettings])
 
   async function handleTest() {
     if (!user?.uid) { toast.error('Você precisa estar logado'); return }
@@ -224,6 +225,14 @@ function WhatsAppSection() {
               <p className="text-[11px] text-slate-500 mt-0.5">Lembretes repetidos até você registrar os drops</p>
             </div>
             <Toggle value={encheSaco} onChange={v => updateWA({ encheSaco: v })} />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-red-500/20">
+            <div>
+              <p className="text-sm text-white">Modo xingamentos 🤬</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
+            </div>
+            <Toggle value={xingamentos} onChange={v => updateWA({ xingamentos: v })} />
           </div>
 
           {/* Intervalo do enche o saco */}
