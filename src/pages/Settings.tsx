@@ -72,6 +72,7 @@ function WhatsAppSection() {
   const [forcingReminder, setForcingReminder] = useState(false)
   const [editingPhone, setEditingPhone] = useState(false)
   const [phoneInput, setPhoneInput] = useState('')
+  const [showVerifyHint, setShowVerifyHint] = useState(false)
 
   const wa = settings.whatsapp
   const phone = wa?.phone ?? ''
@@ -124,9 +125,13 @@ function WhatsAppSection() {
 
   const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+  const verified = wa?.verified ?? false
+  const verifyCode = wa?.verifyCode ?? ''
   const hasPhone = phone.length >= 12
   const botStatus = !hasPhone
     ? { label: '📱 Número não configurado', color: 'text-slate-500' }
+    : !verified
+    ? { label: '⏳ Aguardando verificação', color: 'text-yellow-500' }
     : !enabled
     ? { label: '⏸ Lembretes desativados', color: 'text-slate-500' }
     : { label: '✅ Ativo — lembretes habilitados', color: 'text-profit' }
@@ -185,9 +190,11 @@ function WhatsAppSection() {
                 <button
                   onClick={() => {
                     if (phoneInput.length < 10) { toast.error('Número inválido'); return }
-                    updateWA({ phone: `55${phoneInput}` })
+                    const code = String(Math.floor(100000 + Math.random() * 900000))
+                    updateWA({ phone: `55${phoneInput}`, verified: false, verifyCode: code })
                     setEditingPhone(false)
-                    toast.success('Número salvo!')
+                    setShowVerifyHint(true)
+                    toast.success('Número salvo! Agora verifique pelo WhatsApp.')
                   }}
                   className="flex-1 h-8 rounded-xl bg-primary/10 border border-primary/40 text-primary text-xs font-medium hover:bg-primary/20 transition-all"
                 >
@@ -206,6 +213,28 @@ function WhatsAppSection() {
             </div>
           )}
         </div>
+
+        {/* Verificação pendente */}
+        {hasPhone && !verified && verifyCode && (
+          <div className="p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/25 space-y-2">
+            <p className="text-xs text-yellow-400 font-medium">⏳ Verificação pendente</p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Manda essa mensagem pro bot no WhatsApp pra confirmar seu número:
+            </p>
+            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#0d1117] border border-white/[0.08]">
+              <span className="font-mono text-lg text-white tracking-widest">{verifyCode}</span>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(verifyCode); toast.success('Código copiado!') }}
+                className="text-[10px] text-slate-500 hover:text-slate-300 px-2 py-1 rounded border border-white/[0.08] hover:border-white/20 transition-all"
+              >
+                Copiar
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-600">
+              Número do bot: salvo nos seus contatos como <span className="text-slate-400">LootFlow Bot</span>
+            </p>
+          </div>
+        )}
 
         {/* Opções de mensagem */}
         <div className="space-y-2">

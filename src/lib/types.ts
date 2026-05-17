@@ -87,6 +87,8 @@ export interface WhatsAppSettings {
   encheSacoInterval: number;    // minutos entre lembretes (30, 60, 90, 120...)
   weeklySummary: boolean;       // resumo da semana toda terça de manhã
   xingamentos: boolean;         // modo palavrão: bot xinga até registrar o drop
+  verified?: boolean;           // true = número confirmado via código no WhatsApp
+  verifyCode?: string;          // código de 6 dígitos para verificação
 }
 
 export interface AppSettings {
