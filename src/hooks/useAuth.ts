@@ -17,6 +17,7 @@ const POPUP_PENDING_KEY = 'lootflow_popup_pending'
 
 let authListenerStarted = false
 let redirectHandled = false
+let redirectResultPending = false  // true while getRedirectResult() hasn't resolved yet
 
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
@@ -39,16 +40,17 @@ function saveSession(mode: 'local' | 'firebase', user: AppUser) {
   try { localStorage.setItem(SESSION_KEY, JSON.stringify({ mode, user, savedAt: Date.now() })) } catch {}
 }
 
+// iOS Safari clears sessionStorage on cross-origin redirect — use localStorage instead
 function setRedirectPending() {
-  try { sessionStorage.setItem(REDIRECT_PENDING_KEY, '1') } catch {}
+  try { localStorage.setItem(REDIRECT_PENDING_KEY, '1') } catch {}
 }
 
 function clearRedirectPending() {
-  try { sessionStorage.removeItem(REDIRECT_PENDING_KEY) } catch {}
+  try { localStorage.removeItem(REDIRECT_PENDING_KEY) } catch {}
 }
 
 function isRedirectPending(): boolean {
-  try { return sessionStorage.getItem(REDIRECT_PENDING_KEY) === '1' } catch { return false }
+  try { return localStorage.getItem(REDIRECT_PENDING_KEY) === '1' } catch { return false }
 }
 
 export function useAuth() {
@@ -77,9 +79,11 @@ export function useAuth() {
       // listener knows whether to wait or finalize immediately.
       if (!redirectHandled) {
         redirectHandled = true
+        redirectResultPending = true
 
         getRedirectResult(auth)
           .then(result => {
+            redirectResultPending = false
             if (result?.user) {
               clearRedirectPending()
               const appUser = makeAppUser(result.user)
@@ -100,6 +104,7 @@ export function useAuth() {
             }
           })
           .catch(e => {
+            redirectResultPending = false
             logger.error('[Auth] getRedirectResult error:', e)
             clearRedirectPending()
           })
@@ -114,6 +119,7 @@ export function useAuth() {
             // Don't finalize if a redirect or popup is still in flight —
             // the result handler will set the user when it resolves.
             if (isRedirectPending()) return
+            if (redirectResultPending) return  // getRedirectResult() still running
             if (localStorage.getItem(POPUP_PENDING_KEY)) return
             clearRedirectPending()
             finishReady()
