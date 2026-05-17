@@ -211,25 +211,9 @@ export function useAuth() {
       const { auth } = initFirebase(getActiveFirebaseConfig())
       const provider = getGoogleProvider()
 
-      const isPWA = window.matchMedia?.('(display-mode: standalone)').matches ||
-        (navigator as { standalone?: boolean }).standalone === true
-      const isMobileBrowser = !isPWA && (
-        /android|iphone|ipad|ipod/i.test(navigator.userAgent) ||
-        window.matchMedia?.('(pointer: coarse)').matches
-      )
-
-      // PWA mode: popup works (redirect leaves the PWA and never comes back)
-      // Mobile browser: redirect works better than popup
-      // Desktop: popup first, fallback to redirect
-      if (isMobileBrowser) {
-        setRedirectPending()
-        signInWithRedirect(auth, provider).catch(e => {
-          clearRedirectPending()
-          logger.error('[Auth] redirect error:', e)
-          toast.error('Não consegui abrir o login do Google.')
-        })
-        return 'redirect'
-      }
+      // signInWithRedirect is broken on iOS Safari (Firebase v9+ + ITP).
+      // Use popup everywhere — on mobile it opens as a new tab, which works fine.
+      // Only fallback to redirect if popup is explicitly blocked.
 
       try {
         // Save flag before opening popup so that if iOS kills the app while
