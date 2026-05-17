@@ -83,8 +83,9 @@ export interface WhatsAppSettings {
   quietStart: string;      // "HH:MM" — início do silêncio (BRT)
   quietEnd: string;        // "HH:MM" — fim do silêncio (BRT)
   remindDays: number[];    // dias da semana: 0=dom … 6=sáb
-  encheSaco: boolean;      // modo agressivo: mais lembretes, tom mais urgente
-  weeklySummary: boolean;  // resumo da semana toda terça de manhã
+  encheSaco: boolean;           // modo agressivo: mais lembretes, tom mais urgente
+  encheSacoInterval: number;    // minutos entre lembretes (30, 60, 90, 120...)
+  weeklySummary: boolean;       // resumo da semana toda terça de manhã
 }
 
 export interface AppSettings {

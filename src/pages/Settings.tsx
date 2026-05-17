@@ -80,17 +80,18 @@ function WhatsAppSection() {
   const quietEnd = wa?.quietEnd ?? '08:00'
   const remindDays = wa?.remindDays ?? [2, 3, 4]
   const encheSaco = wa?.encheSaco ?? false
+  const encheSacoInterval = wa?.encheSacoInterval ?? 60
   const weeklySummary = wa?.weeklySummary ?? true
 
   const updateWA = useCallback((patch: Partial<NonNullable<typeof wa>>) => {
     updateSettings({
       whatsapp: {
-        phone, enabled, quietStart, quietEnd, remindDays, encheSaco, weeklySummary,
+        phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary,
         ...wa,
         ...patch,
       },
     })
-  }, [wa, phone, enabled, quietStart, quietEnd, remindDays, encheSaco, weeklySummary, updateSettings])
+  }, [wa, phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary, updateSettings])
 
   async function handleTest() {
     if (!user?.uid) { toast.error('Você precisa estar logado'); return }
@@ -220,10 +221,39 @@ function WhatsAppSection() {
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-loss/20">
             <div>
               <p className="text-sm text-white">Modo "enche o saco" 😤</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Lembretes mais frequentes e urgentes até você registrar</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Lembretes repetidos até você registrar os drops</p>
             </div>
             <Toggle value={encheSaco} onChange={v => updateWA({ encheSaco: v })} />
           </div>
+
+          {/* Intervalo do enche o saco */}
+          {encheSaco && (
+            <div className="pl-1">
+              <label className="text-xs text-slate-500 block mb-2">Repetir a cada</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { label: '30 min', value: 30 },
+                  { label: '1h', value: 60 },
+                  { label: '1h30', value: 90 },
+                  { label: '2h', value: 120 },
+                  { label: '3h', value: 180 },
+                  { label: '4h', value: 240 },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateWA({ encheSacoInterval: opt.value })}
+                    className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
+                      encheSacoInterval === opt.value
+                        ? 'bg-loss/10 border-loss/40 text-loss'
+                        : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dias de lembrete */}
