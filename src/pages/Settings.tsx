@@ -70,6 +70,8 @@ function WhatsAppSection() {
   const { user } = useAuth()
   const [testing, setTesting] = useState(false)
   const [forcingReminder, setForcingReminder] = useState(false)
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [phoneInput, setPhoneInput] = useState('')
 
   const wa = settings.whatsapp
   const phone = wa?.phone ?? ''
@@ -150,30 +152,57 @@ function WhatsAppSection() {
 
         {/* Número */}
         <div>
-          <label className="text-xs text-slate-400 block mb-1.5">
-            Seu número do WhatsApp
-          </label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">+55</span>
-              <input
-                type="tel"
-                value={phone.startsWith('55') ? phone.slice(2) : phone}
-                onChange={e => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
-                  updateWA({ phone: digits ? `55${digits}` : '' })
-                }}
-                placeholder="11 99999-9999"
-                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
-              />
+          <label className="text-xs text-slate-400 block mb-1.5">Seu número do WhatsApp</label>
+          {!editingPhone && hasPhone ? (
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
+              <div>
+                <p className="text-sm text-white font-mono">+{phone}</p>
+                <p className="text-[11px] text-profit mt-0.5">✓ Número salvo</p>
+              </div>
+              <button
+                onClick={() => { setPhoneInput(phone.startsWith('55') ? phone.slice(2) : phone); setEditingPhone(true) }}
+                className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg border border-white/[0.1] hover:border-white/30 transition-all"
+              >
+                Trocar
+              </button>
             </div>
-          </div>
-          <p className="text-[10px] mt-1">
-            {hasPhone
-              ? <span className="text-profit">✓ Número salvo — você pode enviar o teste abaixo</span>
-              : <span className="text-slate-600">DDD + número, somente dígitos</span>
-            }
-          </p>
+          ) : (
+            <div className="space-y-2">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">+55</span>
+                <input
+                  type="tel"
+                  autoFocus
+                  value={phoneInput}
+                  onChange={e => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  placeholder="47 99999-9999"
+                  className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (phoneInput.length < 10) { toast.error('Número inválido'); return }
+                    updateWA({ phone: `55${phoneInput}` })
+                    setEditingPhone(false)
+                    toast.success('Número salvo!')
+                  }}
+                  className="flex-1 h-8 rounded-xl bg-primary/10 border border-primary/40 text-primary text-xs font-medium hover:bg-primary/20 transition-all"
+                >
+                  Salvar
+                </button>
+                {hasPhone && (
+                  <button
+                    onClick={() => { setEditingPhone(false); setPhoneInput('') }}
+                    className="px-3 h-8 rounded-xl border border-white/[0.1] text-slate-500 text-xs hover:text-slate-300 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-600">DDD + número — somente dígitos</p>
+            </div>
+          )}
         </div>
 
         {/* Opções de mensagem */}
