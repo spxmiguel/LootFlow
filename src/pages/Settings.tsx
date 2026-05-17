@@ -232,7 +232,14 @@ function WhatsAppSection() {
               <p className="text-sm text-white">Modo xingamentos 🤬</p>
               <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
             </div>
-            <Toggle value={xingamentos} onChange={v => updateWA({ xingamentos: v })} />
+            <Toggle value={xingamentos} onChange={async v => {
+              updateWA({ xingamentos: v })
+              if (v && user?.uid && phone.length >= 12) {
+                try {
+                  await firestoreQueueNotification(user.uid, 'xingamentos_welcome')
+                } catch {}
+              }
+            }} />
           </div>
 
           {/* Intervalo do enche o saco */}
