@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
@@ -6,6 +6,7 @@ import {
   RefreshCw, Lock, Info, ExternalLink, ChevronDown, UserX, MessageCircle,
 } from 'lucide-react'
 import { LegalModal, type LegalType } from '../components/LegalModal'
+import type { WhatsAppSettings, DaySchedule } from '../lib/types'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { exportDropsCSV, exportDropsXLSX, exportBackupJSON } from '../lib/export'
@@ -65,75 +66,186 @@ const PRESET_COLORS = [
 
 // ─── WhatsApp Section ─────────────────────────────────────────────────────────
 
+const DEFAULT_SCHEDULE: { [day: number]: DaySchedule } = {
+  0: { enabled: false, activeStart: '09:00', activeEnd: '22:00' },
+  1: { enabled: false, activeStart: '09:00', activeEnd: '22:00' },
+  2: { enabled: true,  activeStart: '09:00', activeEnd: '22:00' },
+  3: { enabled: true,  activeStart: '09:00', activeEnd: '22:00' },
+  4: { enabled: true,  activeStart: '09:00', activeEnd: '22:00' },
+  5: { enabled: false, activeStart: '09:00', activeEnd: '22:00' },
+  6: { enabled: false, activeStart: '09:00', activeEnd: '22:00' },
+}
+
+const VC_COOLDOWNS = [90, 30 * 60, 60 * 60, 4 * 60 * 60, 9 * 60 * 60] // segundos
+
+function formatCooldown(secs: number): string {
+  if (secs < 60) return `${secs}s`
+  if (secs < 3600) return `${Math.ceil(secs / 60)}min`
+  return `${Math.ceil(secs / 3600)}h`
+}
+
 function WhatsAppSection() {
   const { settings, updateSettings } = useStore()
   const { user } = useAuth()
-  const [testing, setTesting] = useState(false)
-  const [forcingReminder, setForcingReminder] = useState(false)
+
+  const wa = settings.whatsapp
+
+  // ── Draft state — só salva no Firestore ao clicar Salvar ──────────────────
+  const [draft, setDraft] = useState<Partial<WhatsAppSettings>>(() => ({
+    enabled: wa?.enabled ?? false,
+    schedule: wa?.schedule ?? (wa?.remindDays ? undefined : DEFAULT_SCHEDULE),
+    encheSaco: wa?.encheSaco ?? false,
+    encheSacoInterval: wa?.encheSacoInterval ?? 60,
+    weeklySummary: wa?.weeklySummary ?? true,
+    xingamentos: wa?.xingamentos ?? false,
+  }))
+  const [hasChanges, setHasChanges] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // ── Phone & verificação (imediato — bot precisa) ───────────────────────────
   const [editingPhone, setEditingPhone] = useState(false)
   const [phoneInput, setPhoneInput] = useState('')
   const [codeInput, setCodeInput] = useState('')
   const [sendingCode, setSendingCode] = useState(false)
   const [verifying, setVerifying] = useState(false)
 
-  const wa = settings.whatsapp
+  // ── Cooldown reenvio código ───────────────────────────────────────────────
+  const [cooldownLeft, setCooldownLeft] = useState(0)
+  useEffect(() => {
+    const count = parseInt(localStorage.getItem('lf_vc_count') ?? '0', 10)
+    const last = parseInt(localStorage.getItem('lf_vc_last') ?? '0', 10)
+    if (last > 0) {
+      const cd = (VC_COOLDOWNS[Math.min(count - 1, VC_COOLDOWNS.length - 1)] ?? 0) * 1000
+      const remaining = Math.max(0, cd - (Date.now() - last))
+      if (remaining > 0) setCooldownLeft(Math.ceil(remaining / 1000))
+    }
+  }, [])
+  useEffect(() => {
+    if (cooldownLeft <= 0) return
+    const t = setTimeout(() => setCooldownLeft(c => Math.max(0, c - 1)), 1000)
+    return () => clearTimeout(t)
+  }, [cooldownLeft])
+
+  // ── Test / force reminder ─────────────────────────────────────────────────
+  const [testing, setTesting] = useState(false)
+  const [forcingReminder, setForcingReminder] = useState(false)
+
   const phone = wa?.phone ?? ''
-  const enabled = wa?.enabled ?? false
-  const quietStart = wa?.quietStart ?? '22:00'
-  const quietEnd = wa?.quietEnd ?? '08:00'
-  const remindDays = wa?.remindDays ?? [2, 3, 4]
-  const encheSaco = wa?.encheSaco ?? false
-  const encheSacoInterval = wa?.encheSacoInterval ?? 60
-  const weeklySummary = wa?.weeklySummary ?? true
-  const xingamentos = wa?.xingamentos ?? false
+  const verified = wa?.verified ?? false
+  const hasPhone = phone.length >= 12
 
-  const updateWA = useCallback((patch: Partial<NonNullable<typeof wa>>) => {
-    updateSettings({
-      whatsapp: {
-        phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary, xingamentos,
-        ...wa,
-        ...patch,
-      },
-    })
-  }, [wa, phone, enabled, quietStart, quietEnd, remindDays, encheSaco, encheSacoInterval, weeklySummary, xingamentos, updateSettings])
+  const schedule = useMemo(() => {
+    const base = draft.schedule ?? wa?.schedule
+    if (base && Object.keys(base).length > 0) return base
+    // Legacy: construir schedule a partir de remindDays + quietHours
+    if (wa?.remindDays) {
+      const s: { [day: number]: DaySchedule } = {}
+      for (let d = 0; d < 7; d++) {
+        s[d] = {
+          enabled: wa.remindDays.includes(d),
+          activeStart: wa.quietEnd ?? '09:00',   // fim do silêncio = início do ativo
+          activeEnd: wa.quietStart ?? '22:00',    // início do silêncio = fim do ativo
+        }
+      }
+      return s
+    }
+    return DEFAULT_SCHEDULE
+  }, [draft.schedule, wa])
 
-  async function handleTest() {
-    if (!user?.uid) { toast.error('Você precisa estar logado'); return }
-    if (!phone) { toast.error('Adicione seu número primeiro'); return }
-    setTesting(true)
+  function updateDraft(patch: Partial<WhatsAppSettings>) {
+    setDraft(d => ({ ...d, ...patch }))
+    setHasChanges(true)
+  }
+
+  async function handleSave() {
+    setSaving(true)
     try {
-      await firestoreQueueNotification(user.uid, 'test')
-      toast.success('Solicitação enviada! O bot vai te mandar uma mensagem em segundos.')
-    } catch {
-      toast.error('Erro ao enviar solicitação. Verifique o Firebase.')
+      const newWA: WhatsAppSettings = {
+        phone: wa?.phone ?? '',
+        verified: wa?.verified,
+        verifyCode: wa?.verifyCode,
+        lastReminderAt: wa?.lastReminderAt,
+        enabled: draft.enabled ?? false,
+        schedule: draft.schedule ?? schedule,
+        encheSaco: draft.encheSaco ?? false,
+        encheSacoInterval: draft.encheSacoInterval ?? 60,
+        weeklySummary: draft.weeklySummary ?? true,
+        xingamentos: draft.xingamentos ?? false,
+      }
+      updateSettings({ whatsapp: newWA })
+      setHasChanges(false)
+      toast.success('✅ Configurações salvas!')
     } finally {
-      setTesting(false)
+      setSaving(false)
     }
   }
 
-  async function handleForceReminder() {
+  async function sendVerifyCode(newPhone?: string) {
     if (!user?.uid) { toast.error('Você precisa estar logado'); return }
-    if (!phone) { toast.error('Adicione seu número primeiro'); return }
+    const targetPhone = newPhone ?? phone
+    if (targetPhone.length < 12) { toast.error('Número inválido'); return }
+    const code = String(Math.floor(100000 + Math.random() * 900000))
+    setSendingCode(true)
+    try {
+      // Atualiza imediatamente (bot precisa do código no Firestore)
+      const currentWA: WhatsAppSettings = {
+        phone: targetPhone,
+        verified: false,
+        verifyCode: code,
+        enabled: draft.enabled ?? wa?.enabled ?? false,
+        schedule: draft.schedule ?? schedule,
+        encheSaco: draft.encheSaco ?? wa?.encheSaco ?? false,
+        encheSacoInterval: draft.encheSacoInterval ?? wa?.encheSacoInterval ?? 60,
+        weeklySummary: draft.weeklySummary ?? wa?.weeklySummary ?? true,
+        xingamentos: draft.xingamentos ?? wa?.xingamentos ?? false,
+        lastReminderAt: wa?.lastReminderAt,
+      }
+      updateSettings({ whatsapp: currentWA })
+      await firestoreQueueNotification(user.uid, 'send_verify_code')
+      // Registrar cooldown
+      const prev = parseInt(localStorage.getItem('lf_vc_count') ?? '0', 10)
+      const nextCount = prev + 1
+      localStorage.setItem('lf_vc_count', String(nextCount))
+      localStorage.setItem('lf_vc_last', String(Date.now()))
+      const cd = VC_COOLDOWNS[Math.min(nextCount, VC_COOLDOWNS.length - 1)] ?? VC_COOLDOWNS[VC_COOLDOWNS.length - 1]
+      setCooldownLeft(cd)
+      setEditingPhone(false)
+      setHasChanges(false)
+      toast.success('Código enviado no WhatsApp! Digite-o abaixo.')
+    } catch {
+      toast.error('Erro ao enviar código. Tente novamente.')
+    } finally {
+      setSendingCode(false)
+    }
+  }
+
+  async function handleTest() {
+    if (!user?.uid || !hasPhone) return
+    setTesting(true)
+    try {
+      await firestoreQueueNotification(user.uid, 'test')
+      toast.success('Mensagem de teste enviada em segundos!')
+    } catch { toast.error('Erro ao enviar solicitação.') }
+    finally { setTesting(false) }
+  }
+
+  async function handleForceReminder() {
+    if (!user?.uid || !hasPhone) return
     setForcingReminder(true)
     try {
       await firestoreQueueNotification(user.uid, 'force_reminder')
-      toast.success('Lembrete real enviado! Chegará em segundos com seus drops pendentes.')
-    } catch {
-      toast.error('Erro ao enviar. Verifique o Firebase.')
-    } finally {
-      setForcingReminder(false)
-    }
+      toast.success('Lembrete real enviado em segundos!')
+    } catch { toast.error('Erro ao enviar.') }
+    finally { setForcingReminder(false) }
   }
 
   const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-  const verified = wa?.verified ?? false
-  const hasPhone = phone.length >= 12
   const botStatus = !hasPhone
     ? { label: '📱 Número não configurado', color: 'text-slate-500' }
     : !verified
     ? { label: '⏳ Aguardando verificação', color: 'text-yellow-500' }
-    : !enabled
+    : !(draft.enabled ?? wa?.enabled)
     ? { label: '⏸ Lembretes desativados', color: 'text-slate-500' }
     : { label: '✅ Ativo — lembretes habilitados', color: 'text-profit' }
 
@@ -144,9 +256,9 @@ function WhatsAppSection() {
         {/* Info */}
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
           <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
-          <div className="text-[11px] text-slate-500 leading-relaxed space-y-1">
-            <p>O número que você coloca aqui é o <span className="text-slate-300">seu</span> número — onde vai <span className="text-slate-300">receber</span> as mensagens. O bot envia de um número dedicado.</p>
-          </div>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            O número que você coloca aqui é o <span className="text-slate-300">seu</span> número — onde vai <span className="text-slate-300">receber</span> as mensagens. O bot envia de um número dedicado.
+          </p>
         </div>
 
         {/* Toggle principal + status */}
@@ -155,7 +267,7 @@ function WhatsAppSection() {
             <p className="text-sm text-white font-medium">Ativar lembretes</p>
             <p className={`text-[11px] mt-0.5 ${botStatus.color}`}>{botStatus.label}</p>
           </div>
-          <Toggle value={enabled} onChange={v => updateWA({ enabled: v })} />
+          <Toggle value={draft.enabled ?? false} onChange={v => updateDraft({ enabled: v })} />
         </div>
 
         {/* Número */}
@@ -165,7 +277,9 @@ function WhatsAppSection() {
             <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
               <div>
                 <p className="text-sm text-white font-mono">+{phone}</p>
-                <p className="text-[11px] text-profit mt-0.5">✓ Número salvo</p>
+                <p className={`text-[11px] mt-0.5 ${verified ? 'text-profit' : 'text-yellow-500'}`}>
+                  {verified ? '✓ Verificado' : '⏳ Aguardando verificação'}
+                </p>
               </div>
               <button
                 onClick={() => { setPhoneInput(phone.startsWith('55') ? phone.slice(2) : phone); setEditingPhone(true) }}
@@ -183,32 +297,17 @@ function WhatsAppSection() {
                   autoFocus
                   value={phoneInput}
                   onChange={e => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                  placeholder="47 99999-9999"
+                  placeholder="11 99999-9999"
                   className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
                 />
               </div>
               <div className="flex gap-2">
                 <button
-                  disabled={sendingCode}
-                  onClick={async () => {
-                    if (phoneInput.length < 10) { toast.error('Número inválido'); return }
-                    if (!user?.uid) { toast.error('Você precisa estar logado'); return }
-                    const code = String(Math.floor(100000 + Math.random() * 900000))
-                    setSendingCode(true)
-                    try {
-                      updateWA({ phone: `55${phoneInput}`, verified: false, verifyCode: code })
-                      await firestoreQueueNotification(user.uid, 'send_verify_code')
-                      setEditingPhone(false)
-                      toast.success('Código enviado no WhatsApp! Digite-o abaixo.')
-                    } catch {
-                      toast.error('Erro ao enviar código. Tente novamente.')
-                    } finally {
-                      setSendingCode(false)
-                    }
-                  }}
+                  disabled={sendingCode || phoneInput.length < 10}
+                  onClick={() => sendVerifyCode(`55${phoneInput}`)}
                   className="flex-1 h-8 rounded-xl bg-primary/10 border border-primary/40 text-primary text-xs font-medium hover:bg-primary/20 transition-all disabled:opacity-50"
                 >
-                  {sendingCode ? 'Enviando...' : 'Enviar código'}
+                  {sendingCode ? 'Enviando...' : 'Enviar código de verificação'}
                 </button>
                 {hasPhone && (
                   <button
@@ -224,7 +323,7 @@ function WhatsAppSection() {
           )}
         </div>
 
-        {/* Verificação pendente — usuário digita o código que recebeu no zap */}
+        {/* Verificação pendente */}
         {hasPhone && !verified && !editingPhone && (
           <div className="p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/25 space-y-3">
             <div>
@@ -249,18 +348,15 @@ function WhatsAppSection() {
                   if (!user?.uid) return
                   setVerifying(true)
                   try {
-                    // Busca o verifyCode salvo e compara localmente
                     const stored = settings.whatsapp?.verifyCode
                     if (codeInput === stored) {
-                      updateWA({ verified: true, verifyCode: undefined })
+                      updateSettings({ whatsapp: { ...settings.whatsapp!, verified: true, verifyCode: undefined } })
                       setCodeInput('')
                       toast.success('✅ Número verificado! Bot ativado.')
                     } else {
                       toast.error('Código inválido. Verifique e tente de novo.')
                     }
-                  } finally {
-                    setVerifying(false)
-                  }
+                  } finally { setVerifying(false) }
                 }}
                 className="px-4 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-medium hover:bg-yellow-500/20 transition-all disabled:opacity-40"
               >
@@ -268,24 +364,15 @@ function WhatsAppSection() {
               </button>
             </div>
             <button
-              disabled={sendingCode}
-              onClick={async () => {
-                if (!user?.uid) return
-                setSendingCode(true)
-                try {
-                  const code = String(Math.floor(100000 + Math.random() * 900000))
-                  updateWA({ verifyCode: code })
-                  await firestoreQueueNotification(user.uid, 'send_verify_code')
-                  toast.success('Novo código enviado!')
-                } catch {
-                  toast.error('Erro ao reenviar.')
-                } finally {
-                  setSendingCode(false)
-                }
-              }}
-              className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+              disabled={sendingCode || cooldownLeft > 0}
+              onClick={() => sendVerifyCode()}
+              className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {sendingCode ? 'Enviando...' : 'Não recebi — reenviar código'}
+              {sendingCode
+                ? 'Enviando...'
+                : cooldownLeft > 0
+                ? `Aguarde ${formatCooldown(cooldownLeft)} para reenviar`
+                : 'Não recebi — reenviar código'}
             </button>
           </div>
         )}
@@ -297,36 +384,20 @@ function WhatsAppSection() {
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
             <div>
               <p className="text-sm text-white">Resumo semanal</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Toda terça: drops da semana, cashout e contas</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Toda terça: drops da semana e cashout</p>
             </div>
-            <Toggle value={weeklySummary} onChange={v => updateWA({ weeklySummary: v })} />
+            <Toggle value={draft.weeklySummary ?? true} onChange={v => updateDraft({ weeklySummary: v })} />
           </div>
 
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-loss/20">
             <div>
               <p className="text-sm text-white">Modo "enche o saco" 😤</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Lembretes repetidos até você registrar os drops</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Repete o lembrete no intervalo configurado</p>
             </div>
-            <Toggle value={encheSaco} onChange={v => updateWA({ encheSaco: v })} />
+            <Toggle value={draft.encheSaco ?? false} onChange={v => updateDraft({ encheSaco: v })} />
           </div>
 
-          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-red-500/20">
-            <div>
-              <p className="text-sm text-white">Modo xingamentos 🤬</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
-            </div>
-            <Toggle value={xingamentos} onChange={async v => {
-              updateWA({ xingamentos: v })
-              if (v && user?.uid && phone.length >= 12) {
-                try {
-                  await firestoreQueueNotification(user.uid, 'xingamentos_welcome')
-                } catch {}
-              }
-            }} />
-          </div>
-
-          {/* Intervalo do enche o saco */}
-          {encheSaco && (
+          {(draft.encheSaco ?? false) && (
             <div className="pl-1">
               <label className="text-xs text-slate-500 block mb-2">Repetir a cada</label>
               <div className="flex gap-1.5 flex-wrap">
@@ -340,9 +411,9 @@ function WhatsAppSection() {
                 ].map(opt => (
                   <button
                     key={opt.value}
-                    onClick={() => updateWA({ encheSacoInterval: opt.value })}
+                    onClick={() => updateDraft({ encheSacoInterval: opt.value })}
                     className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
-                      encheSacoInterval === opt.value
+                      (draft.encheSacoInterval ?? 60) === opt.value
                         ? 'bg-loss/10 border-loss/40 text-loss'
                         : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
                     }`}
@@ -353,59 +424,98 @@ function WhatsAppSection() {
               </div>
             </div>
           )}
+
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-red-500/20">
+            <div>
+              <p className="text-sm text-white">Modo xingamentos 🤬</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
+            </div>
+            <Toggle value={draft.xingamentos ?? false} onChange={async v => {
+              updateDraft({ xingamentos: v })
+              if (v && user?.uid && hasPhone) {
+                try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
+              }
+            }} />
+          </div>
         </div>
 
-        {/* Dias de lembrete */}
+        {/* Schedule por dia */}
         <div>
-          <label className="text-xs text-slate-400 block mb-2">Dias de lembrete</label>
-          <div className="flex gap-1.5 flex-wrap">
-            {DAY_LABELS.map((label, day) => {
-              const active = remindDays.includes(day)
+          <label className="text-xs text-slate-400 block mb-2">Horário por dia da semana</label>
+          <p className="text-[11px] text-slate-600 mb-3">Ative os dias e configure o horário em que o bot pode te mandar mensagem.</p>
+          <div className="space-y-1.5">
+            {[0, 1, 2, 3, 4, 5, 6].map(day => {
+              const conf = schedule[day] ?? { enabled: false, activeStart: '09:00', activeEnd: '22:00' }
               return (
-                <button
+                <div
                   key={day}
-                  onClick={() => updateWA({
-                    remindDays: active
-                      ? remindDays.filter(d => d !== day)
-                      : [...remindDays, day].sort(),
-                  })}
-                  className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
-                    active
-                      ? 'bg-profit/10 border-profit/40 text-profit'
-                      : 'bg-[#111827] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                  className={`rounded-xl border transition-all ${
+                    conf.enabled
+                      ? 'bg-[#111827] border-profit/20'
+                      : 'bg-[#0d1117] border-white/[0.05]'
                   }`}
                 >
-                  {label}
-                </button>
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <span className={`text-xs font-medium w-7 ${conf.enabled ? 'text-white' : 'text-slate-600'}`}>
+                      {DAY_LABELS[day]}
+                    </span>
+                    <Toggle
+                      value={conf.enabled}
+                      onChange={v => updateDraft({
+                        schedule: { ...schedule, [day]: { ...conf, enabled: v } },
+                      })}
+                    />
+                    {conf.enabled && (
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <input
+                          type="time"
+                          value={conf.activeStart}
+                          onChange={e => updateDraft({
+                            schedule: { ...schedule, [day]: { ...conf, activeStart: e.target.value } },
+                          })}
+                          className="h-7 w-24 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
+                        />
+                        <span className="text-slate-600 text-xs">→</span>
+                        <input
+                          type="time"
+                          value={conf.activeEnd}
+                          onChange={e => updateDraft({
+                            schedule: { ...schedule, [day]: { ...conf, activeEnd: e.target.value } },
+                          })}
+                          className="h-7 w-24 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               )
             })}
           </div>
         </div>
 
-        {/* Horário de silêncio */}
-        <div>
-          <label className="text-xs text-slate-400 block mb-2">Horário de silêncio</label>
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <input type="time" value={quietStart}
-                onChange={e => updateWA({ quietStart: e.target.value })}
-                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
-              />
-              <p className="text-[10px] text-slate-600 mt-1 text-center">início</p>
-            </div>
-            <span className="text-slate-600">→</span>
-            <div className="flex-1">
-              <input type="time" value={quietEnd}
-                onChange={e => updateWA({ quietEnd: e.target.value })}
-                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
-              />
-              <p className="text-[10px] text-slate-600 mt-1 text-center">fim</p>
-            </div>
-          </div>
+        {/* Botão Salvar */}
+        <div className={`pt-2 border-t transition-all ${hasChanges ? 'border-primary/30' : 'border-white/[0.06]'}`}>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !hasChanges}
+            size="sm"
+            className={`w-full transition-all ${
+              hasChanges
+                ? 'bg-primary/90 hover:bg-primary text-white border-transparent'
+                : 'opacity-40 cursor-not-allowed'
+            }`}
+          >
+            {saving ? '⏳ Salvando...' : hasChanges ? '💾 Salvar alterações' : '✓ Tudo salvo'}
+          </Button>
+          {hasChanges && (
+            <p className="text-[10px] text-primary/70 text-center mt-1.5">
+              Alterações pendentes — clique em salvar para o bot receber as novas configurações
+            </p>
+          )}
         </div>
 
         {/* Botões de teste */}
-        <div className="pt-1 border-t border-white/[0.06] space-y-2">
+        <div className="space-y-2">
           <Button
             onClick={handleTest}
             disabled={testing || !hasPhone}
@@ -424,9 +534,6 @@ function WhatsAppSection() {
           >
             {forcingReminder ? '⏳ Enviando...' : '🔔 Simular lembrete real agora'}
           </Button>
-          <p className="text-[10px] text-slate-600 text-center">
-            {hasPhone ? 'O lembrete real mostra seus drops pendentes da semana' : 'Configure seu número para testar'}
-          </p>
         </div>
       </div>
     </Section>

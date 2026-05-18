@@ -77,18 +77,28 @@ export interface ProfileOverride {
   customPhotoURL?: string   // custom avatar URL provided by user
 }
 
-export interface WhatsAppSettings {
-  phone: string;           // E.164 sem +, ex: "5511999999999" (opcional — sem número = sem mensagens)
+export interface DaySchedule {
   enabled: boolean;
-  quietStart: string;      // "HH:MM" — início do silêncio (BRT)
-  quietEnd: string;        // "HH:MM" — fim do silêncio (BRT)
-  remindDays: number[];    // dias da semana: 0=dom … 6=sáb
-  encheSaco: boolean;           // modo agressivo: mais lembretes, tom mais urgente
+  activeStart: string;    // "HH:MM" — começa a mandar a partir de
+  activeEnd: string;      // "HH:MM" — para de mandar depois de
+}
+
+export interface WhatsAppSettings {
+  phone: string;           // E.164 sem +, ex: "5511999999999"
+  enabled: boolean;
+  // Novo: schedule por dia da semana (substitui remindDays + quietHours)
+  schedule?: { [day: number]: DaySchedule };
+  // Legacy — mantidos para retrocompatibilidade
+  quietStart?: string;
+  quietEnd?: string;
+  remindDays?: number[];
+  encheSaco: boolean;
   encheSacoInterval: number;    // minutos entre lembretes (30, 60, 90, 120...)
-  weeklySummary: boolean;       // resumo da semana toda terça de manhã
-  xingamentos: boolean;         // modo palavrão: bot xinga até registrar o drop
-  verified?: boolean;           // true = número confirmado via código no WhatsApp
-  verifyCode?: string;          // código de 6 dígitos para verificação
+  weeklySummary: boolean;
+  xingamentos: boolean;
+  verified?: boolean;
+  verifyCode?: string;
+  lastReminderAt?: string;
 }
 
 export interface AppSettings {
