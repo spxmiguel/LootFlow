@@ -1,6 +1,6 @@
 /* components/sections.jsx — all landing sections, i18n-driven */
 
-const APP_URL      = 'https://spxmiguel.github.io/LootFlow'
+const APP_URL      = 'https://spxmiguel.github.io/LootFlow/app/'
 const GITHUB_URL   = 'https://github.com/spxmiguel/LootFlow'
 const CHANGELOG_URL = 'https://github.com/spxmiguel/LootFlow/releases'
 const SETTINGS_WA_URL = `${APP_URL}#settings`

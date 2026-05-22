@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
@@ -9,6 +10,7 @@ export default defineConfig({
     assetsDir: 'assets',
     chunkSizeWarningLimit: 650,
     rollupOptions: {
+      input: resolve(__dirname, 'app/index.html'),
       output: {
         manualChunks: {
           react: ['react', 'react-dom'],
