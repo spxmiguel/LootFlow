@@ -33,7 +33,6 @@ function StorageBanner({ onDismiss }: { onDismiss: () => void }) {
   )
 }
 const AuthPage = lazy(() => import('./pages/AuthPage'))
-const WelcomePage = lazy(() => import('./pages/WelcomePage'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Accounts = lazy(() => import('./pages/Accounts'))
 const Drops = lazy(() => import('./pages/Drops'))
@@ -77,7 +76,6 @@ function ThemeInjector() {
 export default function App() {
   const { isLoggedIn, authReady } = useAuth()
   const animations = useStore(s => s.settings.theme.animations)
-  const [showLogin, setShowLogin] = useState(true) // nova landing em /LootFlow/ substituiu o WelcomePage
   const [storageConsent, setStorageConsent] = useState(() =>
     localStorage.getItem(STORAGE_CONSENT_KEY) === 'true'
   )
@@ -102,11 +100,7 @@ export default function App() {
       ) : !isLoggedIn ? (
         <ErrorBoundary page="auth">
           <Suspense fallback={<PageFallback />}>
-            {showLogin ? (
-              <AuthPage onBack={() => setShowLogin(false)} />
-            ) : (
-              <WelcomePage onContinue={() => setShowLogin(true)} />
-            )}
+            <AuthPage />
           </Suspense>
         </ErrorBoundary>
       ) : (

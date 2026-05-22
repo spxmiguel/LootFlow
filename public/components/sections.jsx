@@ -37,16 +37,40 @@ function Nav() {
 
 /* ---------- HERO ---------- */
 function Hero() {
-  const frameRef = React.useRef(null);
-  const p = useScrollProgress(frameRef);
-  const tilt = 8 * (1 - p);
-  const fade = p * 0.45;
+  const containerRef = React.useRef(null);
+  const [scrollY, setScrollY] = React.useState(0);
+  const [containerTop, setContainerTop] = React.useState(0);
   const magnetRef = useMagnet(0.18);
   const { t, lang } = useI18n();
 
+  React.useEffect(() => {
+    const onScroll = () => setScrollY(window.scrollY);
+    const onResize = () => {
+      if (containerRef.current) {
+        setContainerTop(containerRef.current.offsetTop);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+    onResize();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  // ContainerScroll math: progress 0→1 over first ~600px of scroll inside container
+  const scrollInContainer = Math.max(0, scrollY - containerTop + window.innerHeight * 0.1);
+  const p = Math.min(1, scrollInContainer / 600);
+
+  const rotate = 20 * (1 - p);          // 20deg → 0
+  const scale = 1.05 - 0.05 * p;        // 1.05 → 1.0
+  const translateY = -80 * p;           // lifts slightly as unfolds
+  const fade = p * 0.5;                 // bottom gradient fade
+
   return (
     <section id="top" className="hero">
-      <div className="wrap">
+      <div className="wrap" ref={containerRef}>
         <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
           <Reveal as="div" margin="0px">
             <div className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
@@ -87,11 +111,15 @@ function Hero() {
           </Reveal>
         </div>
 
-        <div className="dash-frame-wrap" ref={frameRef}>
+        {/* ContainerScroll: starts tilted 3D, unfolds on scroll */}
+        <div className="dash-frame-wrap" style={{ perspective: "1200px" }}>
           <div
             className="dash-frame"
             style={{
-              "--tilt": `${tilt.toFixed(2)}deg`,
+              transform: `rotateX(${rotate.toFixed(2)}deg) scale(${scale.toFixed(3)}) translateY(${translateY.toFixed(1)}px)`,
+              transformOrigin: "center top",
+              willChange: "transform",
+              transition: "transform 0.05s linear",
               "--fade-bottom": fade.toFixed(2),
             }}
           >

@@ -26,29 +26,29 @@ function DashboardMock() {
     };
   }, []);
 
-  // 8-week cashout series (R$) — growth curve, big numbers
+  // 8-week cashout series (R$) — realistic CS2 drop values
   const weeks = [
-    { d: "31/03", v: 124 },
-    { d: "07/04", v: 280 },
-    { d: "14/04", v: 412 },
-    { d: "21/04", v: 690 },
-    { d: "28/04", v: 980 },
-    { d: "05/05", v: 1450 },
-    { d: "12/05", v: 1847 },
-    { d: "19/05", v: 1620 },
+    { d: "31/03", v: 18 },
+    { d: "07/04", v: 12 },
+    { d: "14/04", v: 44 },
+    { d: "21/04", v: 22 },
+    { d: "28/04", v: 38 },
+    { d: "05/05", v: 15 },
+    { d: "12/05", v: 62 },
+    { d: "19/05", v: 31 },
   ];
-  const maxV = 2000;
+  const maxV = 80;
 
   const accounts = [
-    { dot: "#22d3ee", name: "knife_hunter",   drops: 12, bruto: "R$ 1.890,70", cashout: "R$ 1.572,00", roi: "+312%", roiPos: true },
-    { dot: "#10b981", name: "main_acc",       drops: 16, bruto: "R$ 1.840,00", cashout: "R$ 1.520,40", roi: "+280%", roiPos: true },
-    { dot: "#a78bfa", name: "prime_x",        drops: 14, bruto: "R$ 994,00",   cashout: "R$ 824,10",   roi: "+198%", roiPos: true },
-    { dot: "#fbbf24", name: "daily_farm",     drops: 16, bruto: "R$ 712,60",   cashout: "R$ 590,30",   roi: "+160%", roiPos: true },
-    { dot: "#f472b6", name: "skin_collector", drops: 14, bruto: "R$ 402,70",   cashout: "R$ 333,20",   roi: "+75%",  roiPos: true },
+    { dot: "#22d3ee", name: "AKM",                  drops: 38, bruto: "R$ 162,40",  cashout: "R$ 138,00", roi: "+84%",  roiPos: true },
+    { dot: "#10b981", name: "servente de pedreiro",  drops: 42, bruto: "R$ 198,70",  cashout: "R$ 168,90", roi: "+125%", roiPos: true },
+    { dot: "#a78bfa", name: "leno brega",            drops: 34, bruto: "R$ 94,20",   cashout: "R$ 80,10",  roi: "+7%",   roiPos: true },
+    { dot: "#fbbf24", name: "patrão",                drops: 28, bruto: "R$ 76,40",   cashout: "R$ 64,90",  roi: "-13%",  roiPos: false },
+    { dot: "#f472b6", name: "cria",                  drops: 22, bruto: "R$ 54,60",   cashout: "R$ 46,40",  roi: "-38%",  roiPos: false },
   ];
 
   // chart
-  const chartW = 760, chartH = 220, padL = 60, padR = 24, padT = 18, padB = 36;
+  const chartW = 760, chartH = 220, padL = 44, padR = 24, padT = 18, padB = 36;
   const innerW = chartW - padL - padR;
   const innerH = chartH - padT - padB;
   const xs = weeks.map((_, i) => padL + (i / (weeks.length - 1)) * innerW);
@@ -75,7 +75,7 @@ function DashboardMock() {
   }
   const linePath = smoothPath(xs, ys);
   const areaPath = `${linePath} L${xs[xs.length - 1]},${padT + innerH} L${xs[0]},${padT + innerH} Z`;
-  const yTicks = [0, 500, 1000, 1500, 2000];
+  const yTicks = [0, 20, 40, 60, 80];
 
   return (
     <div className="dash-scaler" ref={scaleWrapRef} style={{ height: 820 * scale }}>
@@ -175,8 +175,8 @@ function DashboardMock() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   </span>
                 </div>
-                <div className="dash-kpi-num">R$ <span>4.872,40</span></div>
-                <div className="dash-kpi-sub green">R$ 5.840,00 bruto</div>
+                <div className="dash-kpi-num">R$ <span>498,30</span></div>
+                <div className="dash-kpi-sub green">R$ 586,30 bruto</div>
               </div>
 
               <div className="dash-kpi">
@@ -186,8 +186,8 @@ function DashboardMock() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                   </span>
                 </div>
-                <div className="dash-kpi-num green-num">+318<em>%</em></div>
-                <div className="dash-kpi-sub">Investido: R$ 1.165,00</div>
+                <div className="dash-kpi-num green-num">+33<em>%</em></div>
+                <div className="dash-kpi-sub">Investido: R$ 374,95</div>
               </div>
 
               <div className="dash-kpi dash-kpi-alert">
@@ -197,7 +197,7 @@ function DashboardMock() {
                   </span>
                   <div className="dash-kpi-alert-title">FALTA PEGAR<br/>DROP SEMANAL</div>
                 </div>
-                <div className="dash-kpi-sub red">· skin_collector — 1/2 drops</div>
+                <div className="dash-kpi-sub red">· cria — 1/2 drops</div>
               </div>
 
               <div className="dash-kpi">
@@ -264,11 +264,11 @@ function DashboardMock() {
                 <div className="dash-mini-stats">
                   <div className="dash-mini-stat">
                     <div className="dash-mini-lbl">BRUTO</div>
-                    <div className="dash-mini-val">R$ <span>1.620,00</span></div>
+                    <div className="dash-mini-val">R$ <span>36,40</span></div>
                   </div>
                   <div className="dash-mini-stat">
                     <div className="dash-mini-lbl">CASHOUT</div>
-                    <div className="dash-mini-val green">R$ <span>1.347,80</span></div>
+                    <div className="dash-mini-val green">R$ <span>30,90</span></div>
                   </div>
                 </div>
                 <div className="dash-best">
@@ -276,7 +276,7 @@ function DashboardMock() {
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
                     Melhor semana
                   </div>
-                  <div className="dash-best-val">R$ <span>1.847,30</span></div>
+                  <div className="dash-best-val">R$ <span>62,40</span></div>
                   <div className="dash-best-date">12/05 — 18/05/26</div>
                 </div>
                 <a className="dash-week-link">Ver todos os drops <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>

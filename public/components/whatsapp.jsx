@@ -1,21 +1,74 @@
-/* components/whatsapp.jsx — fake WhatsApp conversation with inline typing */
+/* components/whatsapp.jsx — fake WhatsApp conversation with char-by-char typing */
+
+/* TypeWriter: animates text character by character once visible */
+function TypeWriter({ text, active, delay = 0, speed = 28 }) {
+  const [displayed, setDisplayed] = React.useState("");
+  const [started, setStarted] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!active) return;
+    const startTimer = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(startTimer);
+  }, [active, delay]);
+
+  React.useEffect(() => {
+    if (!started) return;
+    if (displayed.length >= text.length) return;
+    const t = setTimeout(() => {
+      setDisplayed(text.slice(0, displayed.length + 1));
+    }, speed);
+    return () => clearTimeout(t);
+  }, [started, displayed, text, speed]);
+
+  // Reset when text or active changes
+  React.useEffect(() => {
+    setDisplayed("");
+    setStarted(false);
+  }, [text]);
+
+  return <span style={{ whiteSpace: "pre-wrap" }}>{displayed}<span style={{ opacity: displayed.length < text.length && started ? 1 : 0, borderRight: "1.5px solid currentColor", marginLeft: 1, animation: "waCaretBlink 0.6s step-end infinite" }}></span></span>;
+}
 
 function WhatsAppMock() {
   const [ref, inView] = useInView({ margin: "-120px" });
   const { t, lang } = useI18n();
 
-  // mixed sequence: msg + typing pauses (typing dots before each bot reply)
+  // Conversation: reminder → user STATUS → bot status → user AJUDA → bot help → typing
   const items = [
-    { kind: "msg", from: "bot", text: t("wa.mock.1"), time: "20:14" },
-    { kind: "msg", from: "bot", text: t("wa.mock.2"), time: "20:14", sub: true },
-    { kind: "msg", from: "me",  text: t("wa.mock.3"), time: "20:32" },
-    { kind: "typing", from: "bot" },
-    { kind: "msg", from: "bot", text: t("wa.mock.4"), time: "20:32" },
-    { kind: "msg", from: "me",  text: t("wa.mock.5"), time: "20:33" },
-    { kind: "typing", from: "bot" },
-    { kind: "msg", from: "bot", text: t("wa.mock.6"), time: "20:33" },
-    { kind: "typing", from: "bot", persist: true }, // permanent "still typing" at end
+    { kind: "msg",    from: "bot", textKey: "wa.mock.1", time: "20:14", typeDelay: 200 },
+    { kind: "msg",    from: "me",  textKey: "wa.mock.2", time: "20:15", showDelay: 1800 },
+    { kind: "typing", from: "bot", showDelay: 2000, hideAfter: 800 },
+    { kind: "msg",    from: "bot", textKey: "wa.mock.3", time: "20:15", typeDelay: 2800 },
+    { kind: "msg",    from: "me",  textKey: "wa.mock.4", time: "20:16", showDelay: 4800 },
+    { kind: "typing", from: "bot", showDelay: 5000, hideAfter: 700 },
+    { kind: "msg",    from: "bot", textKey: "wa.mock.5", time: "20:16", typeDelay: 5700 },
+    { kind: "typing", from: "bot", showDelay: 7800, persist: true },
   ];
+
+  // Track which items are visible and which typing bubbles are hidden
+  const [visibleCount, setVisibleCount] = React.useState(0);
+  const [hiddenTyping, setHiddenTyping] = React.useState(new Set());
+
+  React.useEffect(() => {
+    if (!inView) return;
+    let timers = [];
+    items.forEach((item, i) => {
+      const showAt = item.showDelay ?? item.typeDelay ?? 0;
+      timers.push(setTimeout(() => setVisibleCount(c => Math.max(c, i + 1)), showAt));
+      if (item.kind === "typing" && item.hideAfter) {
+        timers.push(setTimeout(() => {
+          setHiddenTyping(s => { const n = new Set(s); n.add(i); return n; });
+        }, showAt + item.hideAfter));
+      }
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [inView, lang]);
+
+  // Reset on lang change or re-enter
+  React.useEffect(() => {
+    setVisibleCount(0);
+    setHiddenTyping(new Set());
+  }, [lang, inView]);
 
   return (
     <div ref={ref} className="wa-mock" key={lang}>
@@ -35,32 +88,38 @@ function WhatsAppMock() {
 
       <div className="wa-body">
         <div className="wa-day">{t("wa.mock.day")}</div>
-        {items.map((it, i) => {
-          const delay = inView ? 220 + i * 360 : 0;
-          if (it.kind === "typing") {
+        {items.map((item, i) => {
+          const visible = visibleCount > i;
+          const hidden = hiddenTyping.has(i);
+          if (!visible) return null;
+
+          if (item.kind === "typing") {
+            if (hidden) return null;
             return (
-              <div
-                key={i}
-                className={"wa-msg wa-bot wa-typing-row" + (inView ? " in" : "")}
-                style={{ transitionDelay: `${delay}ms` }}
-              >
+              <div key={i} className="wa-msg wa-bot wa-typing-row in">
                 <div className="wa-bubble wa-typing">
                   <span></span><span></span><span></span>
                 </div>
               </div>
             );
           }
+
+          const text = t(item.textKey);
+          const isBot = item.from === "bot";
+
           return (
-            <div
-              key={i}
-              className={`wa-msg wa-${it.from}${it.sub ? " wa-sub" : ""}${inView ? " in" : ""}`}
-              style={{ transitionDelay: `${delay}ms` }}
-            >
-              <div className={"wa-bubble" + (it.sub ? " sub" : "")}>
-                <div className="wa-text">{it.text}</div>
+            <div key={i} className={`wa-msg wa-${item.from} in`}>
+              <div className="wa-bubble">
+                <div className="wa-text">
+                  {isBot ? (
+                    <TypeWriter text={text} active={visible} delay={0} speed={22} />
+                  ) : (
+                    <span style={{ whiteSpace: "pre-wrap" }}>{text}</span>
+                  )}
+                </div>
                 <div className="wa-time">
-                  {it.time}
-                  {it.from === "me" && (
+                  {item.time}
+                  {item.from === "me" && (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#53bdeb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 12 7 17 14 8"/><polyline points="10 12 14 17 22 6"/></svg>
                   )}
                 </div>
@@ -143,18 +202,18 @@ const waStyles = `
   display: flex;
   opacity: 0;
   transform: translateY(8px) scale(0.96);
-  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.2,0.7,0.15,1);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2,0.7,0.15,1);
   will-change: opacity, transform;
 }
 .wa-msg.in { opacity: 1; transform: translateY(0) scale(1); }
 .wa-bot { justify-content: flex-start; }
 .wa-me { justify-content: flex-end; }
 .wa-bubble {
-  max-width: 78%;
+  max-width: 82%;
   padding: 8px 12px 6px;
   border-radius: 10px;
-  font-size: 13.5px;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1.45;
   position: relative;
   word-break: break-word;
 }
@@ -168,16 +227,15 @@ const waStyles = `
   color: #e9edef;
   border-top-right-radius: 2px;
 }
-.wa-bubble.sub { background: rgba(255,255,255,0.03); font-size: 11.5px; color: #aebac1; font-family: var(--mono); }
-.wa-text { white-space: pre-wrap; }
+.wa-text { white-space: pre-wrap; min-height: 1em; }
 .wa-me .wa-text { font-family: var(--mono); font-size: 12px; letter-spacing: 0.03em; }
 .wa-time {
   display: flex; align-items: center; gap: 3px; justify-content: flex-end;
-  font-size: 10px; color: #aebac1; margin-top: 2px;
+  font-size: 10px; color: #aebac1; margin-top: 4px;
   font-family: var(--mono);
 }
 
-/* typing bubble — visible whenever wa-msg.in */
+/* typing bubble */
 .wa-typing { display: flex; gap: 4px; padding: 12px 14px; width: max-content; border-top-left-radius: 2px; }
 .wa-typing span {
   width: 6px; height: 6px; border-radius: 50%; background: #aebac1;
@@ -188,6 +246,10 @@ const waStyles = `
 @keyframes waBlink {
   0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-2px); }
+}
+@keyframes waCaretBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .wa-composer {
