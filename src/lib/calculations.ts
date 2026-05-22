@@ -133,7 +133,7 @@ export function calcDashboardStats(
   }, undefined)
 
   const recentDrops = [...drops]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .sort((a, b) => (b.createdAt ?? b.registeredAt ?? '').localeCompare(a.createdAt ?? a.registeredAt ?? ''))
     .slice(0, 10)
 
   return {

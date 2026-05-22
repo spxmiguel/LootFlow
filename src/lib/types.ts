@@ -36,6 +36,7 @@ export interface Drop {
   soldAt?: string;        // ISO date
   note?: string;
   createdAt: string;
+  registeredAt?: string;  // fallback para drops criados pelo bot
 }
 
 export interface Goal {
