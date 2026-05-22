@@ -97,6 +97,7 @@ export interface WhatsAppSettings {
   encheSacoInterval: number;    // minutos entre lembretes (30, 60, 90, 120...)
   weeklySummary: boolean;
   xingamentos: boolean;
+  enabledXingamentos?: number[];  // undefined = todos ativos; [] = nenhum
   verified?: boolean;
   verifyCode?: string;
   lastReminderAt?: string;

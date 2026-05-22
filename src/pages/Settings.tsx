@@ -64,6 +64,30 @@ const PRESET_COLORS = [
   '#f87171', '#e879f9', '#ffffff',
 ]
 
+// ─── Xingamentos metadata (espelha REMINDERS_XINGAMENTOS do bot) ──────────────
+const XINGAMENTOS_META = [
+  { id:  0, emoji: '🤬', title: 'BORA SEU VAGABUNDO!' },
+  { id:  1, emoji: '😡', title: 'ACORDA PORRA!' },
+  { id:  2, emoji: '🔥', title: 'EI SEU FILHO DA PUTA!' },
+  { id:  3, emoji: '💢', title: 'FALTA FARMAR N CONTAS SEU PREGUIÇOSO DE MERDA!' },
+  { id:  4, emoji: '😤', title: 'QUE É ISSO SEU MERDA!' },
+  { id:  5, emoji: '🤦', title: 'PORRA, TÁ DORMINDO NO PONTO?' },
+  { id:  6, emoji: '💀', title: 'BORA SEU PUTO, PARA DE ENROLAÇÃO!' },
+  { id:  7, emoji: '🚨', title: 'ACORDA SEU FILHO DA PUTA!' },
+  { id:  8, emoji: '😡', title: 'FALTANDO N CONTAS PRA FARMAR SEU LERDO DO CARALHO!' },
+  { id:  9, emoji: '🤡', title: 'RELATÓRIO DO INÚTIL DA SEMANA' },
+  { id: 10, emoji: '🔥', title: 'VAI TOMAR NO CU SEU ESQUECIDO!' },
+  { id: 11, emoji: '💢', title: 'BORA PORRA!' },
+  { id: 12, emoji: '😤', title: 'DROP SEMANAL SEU FILHO DA PUTA!' },
+  { id: 13, emoji: '🤬', title: 'ACORDA SEU PREGUIÇOSO DO CARALHO!' },
+  { id: 14, emoji: '💀', title: 'PARA DE SER UM FRACASSADO!' },
+  { id: 15, emoji: '🚨', title: 'PORRA, OS DROPS TÃO TE CHAMANDO!' },
+  { id: 16, emoji: '😡', title: 'BORA SEU MOLEZA DE MERDA!' },
+  { id: 17, emoji: '🤦', title: 'EI SEU INÚTIL, PARA DE COISA!' },
+  { id: 18, emoji: '🔥', title: 'OI SEU ANIMAL, TUDO BEM?' },
+  { id: 19, emoji: '💢', title: 'ÚLTIMA CHAMADA SEU FILHO DA PUTA!' },
+]
+
 // ─── WhatsApp Section ─────────────────────────────────────────────────────────
 
 const DEFAULT_SCHEDULE: { [day: number]: DaySchedule } = {
@@ -98,6 +122,7 @@ function WhatsAppSection() {
     encheSacoInterval: wa?.encheSacoInterval ?? 60,
     weeklySummary: wa?.weeklySummary ?? true,
     xingamentos: wa?.xingamentos ?? false,
+    enabledXingamentos: wa?.enabledXingamentos,
   }))
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -171,6 +196,7 @@ function WhatsAppSection() {
         encheSacoInterval: draft.encheSacoInterval ?? 60,
         weeklySummary: draft.weeklySummary ?? true,
         xingamentos: draft.xingamentos ?? false,
+        enabledXingamentos: draft.enabledXingamentos,
       }
       updateSettings({ whatsapp: newWA })
       setHasChanges(false)
@@ -431,17 +457,76 @@ function WhatsAppSection() {
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-red-500/20">
-            <div>
-              <p className="text-sm text-white">Modo xingamentos 🤬</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
+          <div className="rounded-xl border border-red-500/20 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 p-3 bg-[#111827]">
+              <div>
+                <p className="text-sm text-white">Modo xingamentos 🤬</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
+              </div>
+              <Toggle value={draft.xingamentos ?? false} onChange={async v => {
+                updateDraft({ xingamentos: v })
+                if (v && user?.uid && hasPhone) {
+                  try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
+                }
+              }} />
             </div>
-            <Toggle value={draft.xingamentos ?? false} onChange={async v => {
-              updateDraft({ xingamentos: v })
-              if (v && user?.uid && hasPhone) {
-                try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
-              }
-            }} />
+            {(draft.xingamentos ?? false) && (
+              <div className="bg-[#0d1117] border-t border-red-500/10 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Mensagens ativas</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => updateDraft({ enabledXingamentos: undefined })}
+                      className="text-[10px] text-slate-600 hover:text-profit transition-colors"
+                    >
+                      Todas
+                    </button>
+                    <span className="text-slate-800 text-[10px]">·</span>
+                    <button
+                      onClick={() => updateDraft({ enabledXingamentos: [] })}
+                      className="text-[10px] text-slate-600 hover:text-loss transition-colors"
+                    >
+                      Nenhuma
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {XINGAMENTOS_META.map(x => {
+                    const enabled = !draft.enabledXingamentos || draft.enabledXingamentos.includes(x.id)
+                    return (
+                      <div
+                        key={x.id}
+                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer ${
+                          enabled
+                            ? 'bg-red-500/5 border-red-500/15 text-slate-300'
+                            : 'bg-transparent border-white/[0.04] text-slate-600'
+                        }`}
+                        onClick={() => {
+                          const current = draft.enabledXingamentos ?? XINGAMENTOS_META.map(m => m.id)
+                          updateDraft({
+                            enabledXingamentos: enabled
+                              ? current.filter(i => i !== x.id)
+                              : [...current, x.id].sort((a, b) => a - b),
+                          })
+                        }}
+                      >
+                        <span className="text-base leading-none shrink-0">{x.emoji}</span>
+                        <span className="text-[11px] font-mono flex-1 truncate">{x.title}</span>
+                        <span className={`text-[10px] shrink-0 ${enabled ? 'text-profit' : 'text-slate-700'}`}>
+                          {enabled ? 'ON' : 'OFF'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-700 mt-2 text-center">
+                  {(() => {
+                    const n = draft.enabledXingamentos == null ? XINGAMENTOS_META.length : draft.enabledXingamentos.length
+                    return `${n} de ${XINGAMENTOS_META.length} ativas`
+                  })()}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
