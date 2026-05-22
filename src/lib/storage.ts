@@ -34,8 +34,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   weeklyGoalAmount: 50,
   firebaseSyncEnabled: true,
   theme: {
-    primaryColor: '#38bdf8',
-    accentColor: '#4ade80',
+    primaryColor: '#10b981',
+    accentColor: '#10b981',
     glassmorphism: true,
     animations: true,
     sidebarCompact: false,

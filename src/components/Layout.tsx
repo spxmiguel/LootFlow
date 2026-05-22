@@ -293,13 +293,16 @@ export function Layout({ children }: { children: ReactNode }) {
   const compact = settings.theme.sidebarCompact
 
   return (
-    <div className="flex h-full bg-[#0d1117]">
+    <div className="flex h-full bg-[#0d1117] relative">
+      {/* Background texture — matches landing page */}
+      <div className="bg-texture" aria-hidden="true" />
       {/* Desktop Sidebar */}
       <aside className={cn(
         'hidden lg:flex flex-col shrink-0',
-        'border-r border-white/[0.09]',
+        'border-r border-white/[0.06]',
         'sticky top-0 h-screen overflow-hidden',
-        'bg-[#0d1117]',
+        'bg-[#0d1117]/95 backdrop-blur-sm',
+        'relative z-10',
         compact ? 'w-16' : 'w-60',
       )}>
         <Sidebar />
@@ -330,7 +333,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </AnimatePresence>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden relative z-10">
         <MobileHeader />
         <div className="flex-1 overflow-y-auto mobile-scroll">
           <AnimatePresence mode="wait">

@@ -40,9 +40,10 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
 
       <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="bg-texture" aria-hidden="true" />
         <a
           href="https://spxmiguel.github.io/LootFlow/"
-          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#11161d]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.16] transition-colors"
+          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-[#11161d]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.12] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar
@@ -50,7 +51,7 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
         {/* Ambient glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-[120px]"
-            style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 6%, transparent)' }} />
+            style={{ backgroundColor: 'rgba(16,185,129,0.08)' }} />
         </div>
 
         <motion.div

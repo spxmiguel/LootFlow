@@ -16,8 +16,8 @@ export default {
           3: '#111827',
         },
         border: {
-          DEFAULT: 'rgba(255,255,255,0.08)',
-          strong: 'rgba(255,255,255,0.13)',
+          DEFAULT: 'rgba(255,255,255,0.06)',
+          strong: 'rgba(255,255,255,0.1)',
         },
         primary: {
           DEFAULT: 'var(--color-primary, #38bdf8)',

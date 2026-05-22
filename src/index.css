@@ -4,8 +4,8 @@
 
 /* ── CSS Custom Properties (overridden by ThemeInjector) ── */
 :root {
-  --color-primary: #38bdf8;
-  --color-accent: #4ade80;
+  --color-primary: #10b981;
+  --color-accent: #10b981;
 }
 
 /* ── Base ── */
@@ -22,10 +22,11 @@ body {
   height: 100%;
   margin: 0;
   background-color: #0d1117;
-  color: #e2e8f0;
-  font-family: 'Figtree', system-ui, sans-serif;
+  color: #e6edf3;
+  font-family: 'Geist', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
   overflow: hidden;
 }
 
@@ -54,8 +55,8 @@ body {
 
 /* ── Text Selection ── */
 ::selection {
-  background: #38bdf820;
-  color: #38bdf8;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
 }
 
 /* ── Number inputs ── */
@@ -107,9 +108,36 @@ html[data-glass='on'] .lf-card {
 }
 
 html[data-glass='off'] .lf-card {
-  background: #11161d;
+  background: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.005) 100%), #11161d;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* ── Background texture (matches landing page) ── */
+.bg-texture {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.bg-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% -10%, rgba(16, 185, 129, 0.07), transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.03), transparent 35%);
+}
+.bg-texture::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 65%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 65%);
 }
 
 /* ── Mobile scroll ── */
