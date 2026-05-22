@@ -50,11 +50,15 @@ function loadDrops(): Drop[] { return load<Drop[]>(KEYS.drops, []) }
 function loadGoals(): Goal[] { return load<Goal[]>(KEYS.goals, []) }
 function loadSettings(): AppSettings {
   const saved = load<Partial<AppSettings>>(KEYS.settings, {})
-  return {
+  const merged: AppSettings = {
     ...DEFAULT_SETTINGS,
     ...saved,
     theme: { ...DEFAULT_SETTINGS.theme, ...(saved.theme ?? {}) },
   }
+  // Migrate old cyan default → green to match new design system
+  if (merged.theme.primaryColor === '#38bdf8') merged.theme.primaryColor = '#10b981'
+  if (merged.theme.accentColor === '#4ade80') merged.theme.accentColor = '#10b981'
+  return merged
 }
 function saveAccounts(accounts: CSAccount[]) { save(KEYS.accounts, accounts) }
 function saveDrops(drops: Drop[]) { save(KEYS.drops, drops) }
