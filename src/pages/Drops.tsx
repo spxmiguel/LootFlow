@@ -673,7 +673,7 @@ export default function Drops() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por item..."
-              className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#0c1018] text-slate-200 text-sm pl-9 pr-9 focus:outline-none focus:border-primary/60 placeholder:text-slate-600 transition-colors"
+              className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#11161d] text-slate-200 text-sm pl-9 pr-9 focus:outline-none focus:border-primary/60 placeholder:text-slate-600 transition-colors"
             />
             {search && (
               <button onClick={() => setSearch('')}
@@ -687,7 +687,7 @@ export default function Drops() {
             className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-all ${
               showFilters || (hasActiveFilters && !search)
                 ? 'border-primary/60 bg-primary/10 text-primary'
-                : 'border-white/[0.1] bg-[#0c1018] text-slate-400 hover:text-slate-200 hover:border-white/[0.2]'
+                : 'border-white/[0.1] bg-[#11161d] text-slate-400 hover:text-slate-200 hover:border-white/[0.2]'
             }`}
           >
             <Filter size={14} />
@@ -700,7 +700,7 @@ export default function Drops() {
 
         {/* Expanded filters */}
         {showFilters && (
-          <div className="rounded-xl border border-white/[0.08] bg-[#0c1018] p-3 space-y-2">
+          <div className="rounded-xl border border-white/[0.08] bg-[#11161d] p-3 space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <select
                 value={filterAccount}

@@ -9,9 +9,9 @@ export default {
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
-        'base-bg': '#07090f',
+        'base-bg': '#0d1117',
         surface: {
-          DEFAULT: '#0c1018',
+          DEFAULT: '#11161d',
           2: '#0d1117',
           3: '#111827',
         },

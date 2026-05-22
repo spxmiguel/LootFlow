@@ -14,7 +14,7 @@ function StorageBanner({ onDismiss }: { onDismiss: () => void }) {
   return (
     <>
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-3 bg-[#0c1018]/95 border-t border-white/[0.08] backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-3 bg-[#11161d]/95 border-t border-white/[0.08] backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
         <p className="flex-1 min-w-0">
           O LootFlow usa <strong className="text-slate-300">localStorage</strong> para salvar seus dados localmente.
           Nenhum dado é coletado sem sua ação — modo Convidado é 100% local.{' '}
@@ -42,7 +42,7 @@ const Settings = lazy(() => import('./pages/Settings'))
 
 function PageFallback() {
   return (
-    <div className="flex h-full min-h-screen items-center justify-center bg-[#07090f] text-sm text-slate-500">
+    <div className="flex h-full min-h-screen items-center justify-center bg-[#0d1117] text-sm text-slate-500">
       Carregando LootFlow...
     </div>
   )

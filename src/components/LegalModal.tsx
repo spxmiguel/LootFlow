@@ -165,7 +165,7 @@ export function LegalModal({ type, onClose }: { type: LegalType; onClose: () => 
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full sm:max-w-lg max-h-[88vh] sm:max-h-[82vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-[#0c1018] border border-white/[0.09] shadow-2xl">
+      <div className="relative z-10 w-full sm:max-w-lg max-h-[88vh] sm:max-h-[82vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-[#11161d] border border-white/[0.09] shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08]">
           <div>
             <h2 className="font-semibold text-white text-sm">{title}</h2>

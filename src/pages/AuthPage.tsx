@@ -39,10 +39,10 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
     <>
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
 
-      <div className="min-h-screen bg-[#07090f] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-4 relative overflow-hidden">
         <a
           href="https://spxmiguel.github.io/LootFlow/"
-          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0c1018]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.16] transition-colors"
+          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#11161d]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.16] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar
@@ -82,7 +82,7 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
               onClick={loginLocal}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#0c1018] border border-white/[0.09] hover:bg-[#111827] hover:border-white/[0.15] transition-all group"
+              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#11161d] border border-white/[0.09] hover:bg-[#111827] hover:border-white/[0.15] transition-all group"
             >
               <div className="w-11 h-11 rounded-xl bg-[#111827] flex items-center justify-center shrink-0 group-hover:bg-[#1a2235] transition-colors">
                 <UserCircle2 className="w-5 h-5 text-slate-400" />
@@ -137,7 +137,7 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 rounded-2xl bg-[#0c1018] border border-white/[0.12]">
+                  <div className="p-4 rounded-2xl bg-[#11161d] border border-white/[0.12]">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2">
                         <Shield size={14} className="text-primary shrink-0 mt-0.5" />

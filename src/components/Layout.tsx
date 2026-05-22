@@ -217,7 +217,7 @@ function MobileHeader() {
   const [profileOpen, setProfileOpen] = useState(false)
 
   return (
-    <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#07090f]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
+    <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#0d1117]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shadow-glow">
@@ -241,7 +241,7 @@ function MobileHeader() {
         <button
           onClick={logout}
           aria-label="Sair da conta"
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-[#0c1018] text-slate-500 transition-colors active:text-loss"
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-[#11161d] text-slate-500 transition-colors active:text-loss"
         >
           <LogOut className="h-4 w-4" />
         </button>
@@ -293,13 +293,13 @@ export function Layout({ children }: { children: ReactNode }) {
   const compact = settings.theme.sidebarCompact
 
   return (
-    <div className="flex h-full bg-[#07090f]">
+    <div className="flex h-full bg-[#0d1117]">
       {/* Desktop Sidebar */}
       <aside className={cn(
         'hidden lg:flex flex-col shrink-0',
         'border-r border-white/[0.09]',
         'sticky top-0 h-screen overflow-hidden',
-        'bg-[#07090f]',
+        'bg-[#0d1117]',
         compact ? 'w-16' : 'w-60',
       )}>
         <Sidebar />
