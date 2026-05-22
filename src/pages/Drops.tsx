@@ -472,7 +472,7 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
     <Modal open onClose={onClose} title="Registrar Venda">
       <div className="space-y-4">
         <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
-          <p className="text-sm font-medium text-white">{drop.item.name}</p>
+          <p className="text-sm font-medium text-white">{drop.item?.name || '—'}</p>
           <p className="text-xs text-slate-500 mt-0.5">Bruto: {formatCurrency(drop.steamValue)}</p>
         </div>
         <Input label="Valor recebido (R$)" type="number" min="0" step="0.01"
@@ -527,10 +527,10 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
       </div>
       <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06] mb-3">
         <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <SteamItemImage imageUrl={drop.item.imageUrl} alt={drop.item.name} size={40} />
+          <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={40} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-white font-medium leading-tight truncate">{drop.item.name}</p>
+          <p className="text-sm text-white font-medium leading-tight truncate">{drop.item?.name || '—'}</p>
           {drop.float != null && (
             <span className="text-[10px] font-mono text-slate-500 mt-1 block">{drop.float.toFixed(4)}</span>
           )}
@@ -602,8 +602,8 @@ export default function Drops() {
       if (filterAccount !== 'all' && d.accountId !== filterAccount) return false
       if (filterStatus === 'sold' && !d.sold) return false
       if (filterStatus === 'unsold' && d.sold) return false
-      const type = detectItemType(d.item.name)
-      if (search && !matchesSearch(d.item.name, type, search)) return false
+      const type = detectItemType(d.item?.name ?? '')
+      if (search && !matchesSearch(d.item?.name ?? '', type, search)) return false
       if (filterType !== 'all' && type !== filterType) return false
       return true
     })

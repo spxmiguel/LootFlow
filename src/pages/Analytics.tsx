@@ -248,10 +248,10 @@ export default function Analytics() {
                     {i + 1}
                   </span>
                   <div className="w-9 h-9 rounded-lg bg-[#111827] flex-shrink-0 flex items-center justify-center overflow-hidden">
-                    <SteamItemImage imageUrl={drop.item.imageUrl} alt={drop.item.name} size={36} />
+                    <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={36} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{drop.item.name}</p>
+                    <p className="text-sm text-white font-medium truncate">{drop.item?.name || '—'}</p>
                     <p className="text-xs text-slate-500">{account?.name ?? '?'}</p>
                   </div>
                   <div className="text-right">

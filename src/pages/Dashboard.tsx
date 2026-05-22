@@ -461,10 +461,10 @@ export function Dashboard() {
                 return (
                   <div key={drop.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#111827] transition-colors">
                     <div className="w-10 h-10 rounded-lg bg-[#111827] border border-white/[0.09] shrink-0 overflow-hidden flex items-center justify-center">
-                      <SteamItemImage imageUrl={drop.item.imageUrl} alt={drop.item.name} size={40} />
+                      <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={40} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-200 font-body truncate">{drop.item.name}</p>
+                      <p className="text-sm text-slate-200 font-body truncate">{drop.item?.name || '—'}</p>
                       <p className="text-xs text-slate-500 font-body">{account?.name} · Drop #{drop.dropNumber}</p>
                     </div>
                     <div className="text-right shrink-0">

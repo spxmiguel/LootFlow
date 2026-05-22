@@ -53,7 +53,7 @@ function buildDropRows(
         Semana: getWeekLabel(drop.weekId),
         Conta: account?.name ?? 'Desconhecida',
         'Drop #': drop.dropNumber,
-        Item: drop.item.name,
+        Item: drop.item?.name ?? '',
         'Valor Bruto (R$)': drop.steamValue.toFixed(2),
         'Valor Cashout (R$)': cashout.toFixed(2),
         Vendido: drop.sold ? 'Sim' : 'Não',
