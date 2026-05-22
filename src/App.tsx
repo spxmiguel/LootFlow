@@ -77,7 +77,7 @@ function ThemeInjector() {
 export default function App() {
   const { isLoggedIn, authReady } = useAuth()
   const animations = useStore(s => s.settings.theme.animations)
-  const [showLogin, setShowLogin] = useState(false)
+  const [showLogin, setShowLogin] = useState(true) // nova landing em /LootFlow/ substituiu o WelcomePage
   const [storageConsent, setStorageConsent] = useState(() =>
     localStorage.getItem(STORAGE_CONSENT_KEY) === 'true'
   )
