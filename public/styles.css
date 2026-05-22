@@ -143,6 +143,8 @@ body {
   font-weight: 600;
   letter-spacing: -0.01em;
   font-size: 15px;
+  color: var(--text);
+  text-decoration: none;
 }
 .nav-logo-mark {
   width: 28px;
@@ -174,15 +176,16 @@ body {
   margin-left: 8px;
   padding: 8px 14px;
   border-radius: 8px;
-  background: var(--text);
-  color: #0d1117;
+  background: #0d1117;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.12);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: transform 0.15s, background 0.15s;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
 }
-.nav-cta:hover { background: #fff; transform: translateY(-1px); }
+.nav-cta:hover { background: var(--surface-2); border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
 .nav-links a { white-space: nowrap; }
 
 /* language toggle */

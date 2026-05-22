@@ -42,7 +42,6 @@ function WhatsAppMock() {
     { kind: "msg",    from: "me",  textKey: "wa.mock.4", time: "20:16", showDelay: 4800 },
     { kind: "typing", from: "bot", showDelay: 5000, hideAfter: 700 },
     { kind: "msg",    from: "bot", textKey: "wa.mock.5", time: "20:16", typeDelay: 5700 },
-    { kind: "typing", from: "bot", showDelay: 7800, persist: true },
   ];
 
   // Track which items are visible and which typing bubbles are hidden

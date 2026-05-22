@@ -40,7 +40,7 @@ function DashboardMock() {
   const maxV = 80;
 
   const accounts = [
-    { dot: "#22d3ee", name: "AKM",                  drops: 38, bruto: "R$ 162,40",  cashout: "R$ 138,00", roi: "+84%",  roiPos: true },
+    { dot: "#60a5fa", name: "AKM",                  drops: 38, bruto: "R$ 162,40",  cashout: "R$ 138,00", roi: "+84%",  roiPos: true },
     { dot: "#10b981", name: "servente de pedreiro",  drops: 42, bruto: "R$ 198,70",  cashout: "R$ 168,90", roi: "+125%", roiPos: true },
     { dot: "#a78bfa", name: "leno brega",            drops: 34, bruto: "R$ 94,20",   cashout: "R$ 80,10",  roi: "+7%",   roiPos: true },
     { dot: "#fbbf24", name: "patrão",                drops: 28, bruto: "R$ 76,40",   cashout: "R$ 64,90",  roi: "-13%",  roiPos: false },
