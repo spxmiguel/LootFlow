@@ -99,6 +99,7 @@ export interface WhatsAppSettings {
   verified?: boolean;
   verifyCode?: string;
   lastReminderAt?: string;
+  consentAt?: string;       // ISO timestamp — quando usuário consentiu coleta do telefone (LGPD Art. 7, I)
 }
 
 export interface AppSettings {

@@ -56,16 +56,30 @@ function PrivacyContent() {
           <li>• Login Google: sync ativado por padrão, mas você pode desligar em <strong className="text-slate-300">Configurações → Privacidade</strong>.</li>
           <li>• Com sync ativo: exclusões locais também apagam do Firestore.</li>
           <li>• Com sync desativado: novas alterações ficam só no dispositivo.</li>
+          <li>• Dados sincronizados ficam em servidores Google (EUA) sob Standard Contractual Clauses (SCCs) — proteção equivalente à LGPD.</li>
         </ul>
       </section>
 
       <section>
-        <h3 className="text-slate-200 font-semibold mb-2">Seus dados, seu controle</h3>
+        <h3 className="text-slate-200 font-semibold mb-2">Notificações WhatsApp (opcional)</h3>
+        <ul className="space-y-1.5">
+          <li>• Se você ativar lembretes, coletamos seu <strong className="text-slate-300">número de telefone</strong> para enviar mensagens automáticas via bot WhatsApp.</li>
+          <li>• O número fica armazenado no Firestore vinculado à sua conta.</li>
+          <li>• Base legal: <strong className="text-slate-300">consentimento</strong> (LGPD Art. 7, I) — registrado com data e hora no momento do cadastro.</li>
+          <li>• Para revogar: envie <code className="text-primary text-xs bg-primary/10 px-1 rounded">PARAR</code> para o bot, ou desative em <strong className="text-slate-300">Configurações → WhatsApp</strong>.</li>
+          <li>• Sem ativar essa função, nenhum telefone é coletado.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-slate-200 font-semibold mb-2">Seus dados, seu controle (LGPD Art. 18)</h3>
         <ul className="space-y-1.5">
           <li>• <strong className="text-slate-300">Ver:</strong> tudo visível no app.</li>
           <li>• <strong className="text-slate-300">Corrigir:</strong> edite qualquer registro a qualquer momento.</li>
-          <li>• <strong className="text-slate-300">Apagar:</strong> Configurações → Privacidade, por categoria ou tudo.</li>
-          <li>• <strong className="text-slate-300">Exportar:</strong> Configurações → Exportar (CSV, XLSX ou JSON).</li>
+          <li>• <strong className="text-slate-300">Apagar:</strong> Configurações → Privacidade, por categoria ou tudo de uma vez.</li>
+          <li>• <strong className="text-slate-300">Excluir conta:</strong> Configurações → Privacidade → "Excluir conta" — apaga todos os dados do Firestore e locais (LGPD Art. 18, IV).</li>
+          <li>• <strong className="text-slate-300">Exportar:</strong> Configurações → Exportar (CSV, XLSX ou JSON — portabilidade, Art. 18, V).</li>
+          <li>• <strong className="text-slate-300">Revogar WhatsApp:</strong> desative os lembretes em Configurações ou envie PARAR para o bot (revogação de consentimento, Art. 8, §5).</li>
         </ul>
       </section>
 

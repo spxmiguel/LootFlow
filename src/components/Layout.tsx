@@ -9,6 +9,7 @@ import { cn } from '../lib/utils'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { Avatar, ProfileModal, useProfileDisplay } from './ProfileModal'
+import { LegalModal, type LegalType } from './LegalModal'
 import type { Page } from '../lib/types'
 
 // ─── Nav Config ───────────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
   const compact = !mobile && settings.theme.sidebarCompact
   const { displayName, photoURL, email, showEmail } = useProfileDisplay()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [legalModal, setLegalModal] = useState<LegalType | null>(null)
 
   const handleNav = (page: Page) => {
     setCurrentPage(page)
@@ -148,6 +150,26 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
           />
         ))}
       </nav>
+
+      {/* Legal links */}
+      {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
+      {!compact && (
+        <div className="px-4 pb-2 flex items-center gap-2">
+          <button
+            onClick={() => setLegalModal('privacy')}
+            className="text-[10px] text-slate-700 hover:text-slate-500 transition-colors underline underline-offset-2"
+          >
+            Privacidade
+          </button>
+          <span className="text-slate-800 text-[10px]">·</span>
+          <button
+            onClick={() => setLegalModal('terms')}
+            className="text-[10px] text-slate-700 hover:text-slate-500 transition-colors underline underline-offset-2"
+          >
+            Termos
+          </button>
+        </div>
+      )}
 
       {/* User */}
       <div className={cn('px-3 py-4 border-t border-white/[0.09]', compact && 'px-2')}>

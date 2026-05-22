@@ -192,6 +192,7 @@ function WhatsAppSection() {
         phone: targetPhone,
         verified: false,
         verifyCode: code,
+        consentAt: wa?.consentAt ?? new Date().toISOString(), // LGPD Art. 7, I — registra timestamp do consentimento
         enabled: draft.enabled ?? wa?.enabled ?? false,
         schedule: draft.schedule ?? schedule,
         encheSaco: draft.encheSaco ?? wa?.encheSaco ?? false,
@@ -319,6 +320,11 @@ function WhatsAppSection() {
                 )}
               </div>
               <p className="text-[10px] text-slate-600">DDD + número — somente dígitos</p>
+              <p className="text-[10px] text-slate-600/70 leading-relaxed">
+                Ao enviar o código, você autoriza o LootFlow a enviar mensagens automáticas para este número via bot WhatsApp.
+                Para revogar, envie <span className="text-slate-500">PARAR</span> para o bot ou desative os lembretes.
+                Base legal: consentimento (LGPD Art. 7, I).
+              </p>
             </div>
           )}
         </div>
