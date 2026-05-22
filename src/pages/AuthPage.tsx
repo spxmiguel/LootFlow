@@ -40,15 +40,13 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
 
       <div className="min-h-screen bg-[#07090f] flex items-center justify-center p-4 relative overflow-hidden">
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0c1018]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.16] transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar
-          </button>
-        )}
+        <a
+          href="https://spxmiguel.github.io/LootFlow/"
+          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0c1018]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.16] transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </a>
         {/* Ambient glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-[120px]"
