@@ -200,11 +200,14 @@ const waStyles = `
 .wa-msg {
   display: flex;
   opacity: 0;
-  transform: translateY(8px) scale(0.96);
-  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2,0.7,0.15,1);
-  will-change: opacity, transform;
 }
-.wa-msg.in { opacity: 1; transform: translateY(0) scale(1); }
+.wa-msg.in {
+  animation: waSlideIn 0.38s cubic-bezier(0.2, 0.7, 0.15, 1) forwards;
+}
+@keyframes waSlideIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
 .wa-bot { justify-content: flex-start; }
 .wa-me { justify-content: flex-end; }
 .wa-bubble {

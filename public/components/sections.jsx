@@ -222,19 +222,25 @@ function FeatureVisualChart() {
   const { t } = useI18n();
   const bars = [10, 14, 22, 30, 28, 64, 88];
   return (
-    <div style={{ position: "absolute", inset: 16, display: "flex", alignItems: "flex-end", gap: 6 }}>
-      {bars.map((h, i) => (
-        <div key={i} style={{
-          flex: 1,
-          height: `${h}%`,
-          background: `linear-gradient(180deg, rgba(16,185,129,${0.25 + i*0.08}), rgba(16,185,129,0.05))`,
-          border: "1px solid rgba(16,185,129,0.3)",
-          borderBottom: "none",
-          borderRadius: "4px 4px 0 0",
-        }} />
-      ))}
-      <div style={{ position: "absolute", top: 8, left: 12, fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.08em" }}>{t("features.viz.chart.range")}</div>
-      <div style={{ position: "absolute", top: 8, right: 12, fontFamily: "var(--mono)", fontSize: 10, color: "var(--profit)" }}>{t("features.viz.chart.delta")}</div>
+    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", padding: "12px 16px 0" }}>
+      {/* header row — fora da área de barras */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexShrink: 0 }}>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.08em" }}>{t("features.viz.chart.range")}</div>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--profit)", fontWeight: 600, letterSpacing: "0.02em" }}>{t("features.viz.chart.delta")}</div>
+      </div>
+      {/* barras */}
+      <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 6 }}>
+        {bars.map((h, i) => (
+          <div key={i} style={{
+            flex: 1,
+            height: `${h}%`,
+            background: `linear-gradient(180deg, rgba(16,185,129,${0.25 + i*0.08}), rgba(16,185,129,0.05))`,
+            border: "1px solid rgba(16,185,129,0.3)",
+            borderBottom: "none",
+            borderRadius: "4px 4px 0 0",
+          }} />
+        ))}
+      </div>
     </div>
   );
 }
