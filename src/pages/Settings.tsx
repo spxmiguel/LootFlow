@@ -9,7 +9,7 @@ import { LegalModal, type LegalType } from '../components/LegalModal'
 import type { WhatsAppSettings, DaySchedule } from '../lib/types'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
-import { exportDropsCSV, exportDropsXLSX, exportBackupJSON } from '../lib/export'
+import { exportDrops, exportBackupJSON, DEFAULT_EXPORT_OPTIONS, type ExportOptions, type ExportFormat, type ExportFilter, type ExportColumns, type ExportCurrency } from '../lib/export'
 import { storage } from '../lib/storage'
 import { clearSteamCache, getSteamCacheStats } from '../lib/steam'
 import { CUSTOM_FIREBASE_KEY, getCustomFirebaseConfig, isUsingCustomFirebase, FIREBASE_CONFIG } from '../lib/config'
@@ -714,21 +714,18 @@ export default function Settings() {
     updateSettings({ cashoutRate: Math.min(100, Math.max(0, val)) })
   }
 
-  function handleExportCSV() {
-    try {
-      exportDropsCSV(drops, accounts, settings)
-      toast.success('CSV exportado!')
-    } catch (e) {
-      toast.error('Erro ao exportar CSV')
-    }
-  }
+  const [exportOpts, setExportOpts] = useState<ExportOptions>({
+    ...DEFAULT_EXPORT_OPTIONS,
+    currency: (settings.currency as ExportCurrency) ?? 'BRL',
+  })
 
-  function handleExportXLSX() {
+  function handleExport() {
     try {
-      exportDropsXLSX(drops, accounts, settings)
-      toast.success('XLSX exportado!')
-    } catch (e) {
-      toast.error('Erro ao exportar XLSX')
+      exportDrops(drops, accounts, settings, exportOpts)
+      const labels: Record<ExportFormat, string> = { csv: 'CSV', xlsx: 'XLSX', txt: 'TXT' }
+      toast.success(`${labels[exportOpts.format]} exportado!`)
+    } catch {
+      toast.error('Erro ao exportar')
     }
   }
 
@@ -736,7 +733,7 @@ export default function Settings() {
     try {
       exportBackupJSON(storage.exportAll())
       toast.success('Backup exportado!')
-    } catch (e) {
+    } catch {
       toast.error('Erro ao exportar backup')
     }
   }
@@ -994,41 +991,143 @@ export default function Settings() {
         {/* ── Exportação ── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <Section icon={Download} color="green" title="Exportar Dados" subtitle={`${drops.length} drops · ${accounts.length} contas`}>
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                onClick={handleExportCSV}
-                disabled={drops.length === 0}
-                className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#111827]/40 hover:bg-[#111827] border border-white/[0.08] hover:border-primary/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
-              >
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white">Exportar CSV</p>
-                  <p className="text-xs text-slate-500">Tabela simples de todos os drops</p>
-                </div>
-                <ChevronRight size={16} className="text-slate-500 group-hover:text-primary transition-colors" />
-              </button>
 
-              <button
-                onClick={handleExportXLSX}
-                disabled={drops.length === 0}
-                className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#111827]/40 hover:bg-[#111827] border border-white/[0.08] hover:border-profit/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
-              >
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white">Exportar XLSX</p>
-                  <p className="text-xs text-slate-500">Excel com abas: Drops + Contas</p>
-                </div>
-                <ChevronRight size={16} className="text-slate-500 group-hover:text-profit transition-colors" />
-              </button>
+            {/* Format */}
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Formato</p>
+              <div className="flex gap-1.5">
+                {(['csv', 'xlsx', 'txt'] as ExportFormat[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setExportOpts(o => ({ ...o, format: f }))}
+                    className={`h-8 px-3 rounded-xl text-xs font-semibold border uppercase transition-all ${
+                      exportOpts.format === f
+                        ? 'bg-profit/10 border-profit/40 text-profit'
+                        : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                    }`}
+                  >{f}</button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-600 mt-1.5">
+                {exportOpts.format === 'csv'  && 'Planilha CSV — abre em Excel, Sheets e LibreOffice'}
+                {exportOpts.format === 'xlsx' && 'Excel com abas: Drops + Contas'}
+                {exportOpts.format === 'txt'  && 'Relatório em texto formatado, legível em qualquer editor'}
+              </p>
+            </div>
 
-              <button
-                onClick={handleExportJSON}
-                className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#111827]/40 hover:bg-[#111827] border border-white/[0.08] hover:border-gold/50 transition-all group"
-              >
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white">Backup JSON</p>
-                  <p className="text-xs text-slate-500">Exporta tudo: contas, drops, metas</p>
+            {/* Filter */}
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Filtrar drops</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {([
+                  { id: 'all',    label: 'Todos' },
+                  { id: 'sold',   label: 'Vendidos' },
+                  { id: 'unsold', label: 'Não vendidos' },
+                ] as { id: ExportFilter; label: string }[]).map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setExportOpts(o => ({ ...o, filter: f.id }))}
+                    className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
+                      exportOpts.filter === f.id
+                        ? 'bg-primary/10 border-primary/40 text-primary'
+                        : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                    }`}
+                  >{f.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Columns */}
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Campos</p>
+              <div className="space-y-1.5">
+                {([
+                  { id: 'all',        label: 'Todos os campos',         hint: 'Semana, conta, item, bruto, cashout, vendido, datas, nota' },
+                  { id: 'minimal',    label: 'Somente nomes dos drops', hint: 'Semana, conta, nº drop, item — sem valores' },
+                  { id: 'with-dates', label: 'Com datas',               hint: 'Todos os campos + data de venda e registro' },
+                ] as { id: ExportColumns; label: string; hint: string }[]).map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setExportOpts(o => ({ ...o, columns: c.id }))}
+                    className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                      exportOpts.columns === c.id
+                        ? 'bg-[#111827] border-primary/30'
+                        : 'bg-[#0d1117] border-white/[0.06] hover:border-white/[0.12]'
+                    }`}
+                  >
+                    <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
+                      exportOpts.columns === c.id ? 'border-primary bg-primary' : 'border-slate-600'
+                    }`} />
+                    <div>
+                      <p className={`text-xs font-medium ${exportOpts.columns === c.id ? 'text-white' : 'text-slate-400'}`}>{c.label}</p>
+                      <p className="text-[10px] text-slate-600 mt-0.5">{c.hint}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Currency */}
+            {exportOpts.columns !== 'minimal' && (
+              <div>
+                <p className="text-xs text-slate-400 mb-2">Moeda dos valores</p>
+                <div className="flex gap-1.5">
+                  {(['BRL', 'USD'] as ExportCurrency[]).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setExportOpts(o => ({ ...o, currency: c }))}
+                      className={`h-8 px-3 rounded-xl text-xs font-semibold border transition-all ${
+                        exportOpts.currency === c
+                          ? 'bg-primary/10 border-primary/40 text-primary'
+                          : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                      }`}
+                    >{c === 'BRL' ? '🇧🇷 R$ BRL' : '🇺🇸 $ USD'}</button>
+                  ))}
                 </div>
-                <ChevronRight size={16} className="text-slate-500 group-hover:text-gold transition-colors" />
-              </button>
+                {exportOpts.currency === 'USD' && (
+                  <p className="text-[10px] text-slate-600 mt-1">
+                    Taxa: 1 USD = R$ {(settings as any).usdRate ?? 5.2}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Total row */}
+            {exportOpts.columns !== 'minimal' && (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-white">Linha de total</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Adiciona soma de bruto e cashout no final</p>
+                </div>
+                <Toggle value={exportOpts.includeTotal} onChange={v => setExportOpts(o => ({ ...o, includeTotal: v }))} />
+              </div>
+            )}
+
+            {/* Export button */}
+            <Button
+              onClick={handleExport}
+              disabled={drops.length === 0}
+              size="sm"
+              className="w-full"
+            >
+              <Download size={14} />
+              Exportar {exportOpts.format.toUpperCase()} · {drops.length} drops
+            </Button>
+
+            {/* JSON backup */}
+            <div className="pt-1 border-t border-white/[0.08]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-white">Backup completo</p>
+                  <p className="text-xs text-slate-500 mt-0.5">JSON com contas, drops e metas — para restaurar depois</p>
+                </div>
+                <button
+                  onClick={handleExportJSON}
+                  className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#111827]/40 border border-white/[0.08] hover:border-gold/40 text-slate-400 hover:text-gold text-xs transition-all shrink-0"
+                >
+                  <Download size={12} />JSON
+                </button>
+              </div>
             </div>
 
             <div className="pt-1 border-t border-white/[0.08]">

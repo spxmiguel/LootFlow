@@ -177,7 +177,7 @@ function DashboardMock() {
                   </span>
                 </div>
                 <div className="dash-kpi-num">R$ <span>498,30</span></div>
-                <div className="dash-kpi-sub green">R$ 586,30 bruto / gross</div>
+                <div className="dash-kpi-sub green">{t("dash.kpi.bruto")}</div>
               </div>
 
               <div className="dash-kpi">
@@ -464,6 +464,7 @@ const dashboardStyles = `
   border-color: rgba(239,68,68,0.45);
   background: linear-gradient(180deg, rgba(239,68,68,0.05), rgba(239,68,68,0.01));
   box-shadow: 0 0 28px -8px rgba(239,68,68,0.4), inset 0 0 0 1px rgba(239,68,68,0.15);
+  justify-content: space-between;
 }
 .dash-kpi-alert-title {
   font-size: 17px;
