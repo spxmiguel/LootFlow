@@ -197,7 +197,7 @@ function DashboardMock() {
                   </span>
                   <div className="dash-kpi-alert-title">FALTA PEGAR<br/>DROP SEMANAL</div>
                 </div>
-                <div className="dash-kpi-sub red">· cria — 1/2 drops</div>
+                <div className="dash-kpi-sub red">· servente de pedreiro — 1/2 drops</div>
               </div>
 
               <div className="dash-kpi">
