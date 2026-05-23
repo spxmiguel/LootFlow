@@ -62,8 +62,14 @@ function WhatsAppMock() {
   const [visibleCount, setVisibleCount] = React.useState(0);
   const [hiddenTyping, setHiddenTyping] = React.useState(new Set());
 
+  // Restart animation whenever active state or inView changes (or lang changes).
+  // Adding inView to deps ensures: when user scrolls to section (inView→true),
+  // animation restarts even if forceStart already fired while section was off-screen.
   React.useEffect(() => {
     if (!active) return;
+    // Reset first
+    setVisibleCount(0);
+    setHiddenTyping(new Set());
     let timers = [];
     items.forEach((item, i) => {
       const showAt = item.showDelay ?? item.typeDelay ?? 0;
@@ -75,13 +81,7 @@ function WhatsAppMock() {
       }
     });
     return () => timers.forEach(clearTimeout);
-  }, [active, lang]);
-
-  // Reset on lang change or re-enter
-  React.useEffect(() => {
-    setVisibleCount(0);
-    setHiddenTyping(new Set());
-  }, [lang, inView]);
+  }, [active, lang, inView]);
 
   return (
     <div ref={ref} className="wa-mock">
