@@ -33,15 +33,20 @@ function WhatsAppMock() {
   const [ref, inView] = useInView({ margin: "-120px" });
   const { t, lang } = useI18n();
 
-  // Conversation: reminder → user STATUS → bot status → user AJUDA → bot help → typing
+  // Conversation: reminder → user STATUS → bot status → user AJUDA → bot help
+  // Delays ajustados para typing aparecer SÓ após a mensagem anterior terminar
+  // TypeWriter speed = 8ms/char:
+  //   msg1 ~145 chars → ~1160ms → done ~1360ms
+  //   msg3 ~110 chars → ~880ms
+  //   msg5 ~130 chars → ~1040ms
   const items = [
     { kind: "msg",    from: "bot", textKey: "wa.mock.1", time: "20:14", typeDelay: 200 },
-    { kind: "msg",    from: "me",  textKey: "wa.mock.2", time: "20:15", showDelay: 1800 },
-    { kind: "typing", from: "bot", showDelay: 2000, hideAfter: 800 },
+    { kind: "msg",    from: "me",  textKey: "wa.mock.2", time: "20:15", showDelay: 1900 },
+    { kind: "typing", from: "bot", showDelay: 2100, hideAfter: 700 },
     { kind: "msg",    from: "bot", textKey: "wa.mock.3", time: "20:15", typeDelay: 2800 },
-    { kind: "msg",    from: "me",  textKey: "wa.mock.4", time: "20:16", showDelay: 4800 },
-    { kind: "typing", from: "bot", showDelay: 5000, hideAfter: 700 },
-    { kind: "msg",    from: "bot", textKey: "wa.mock.5", time: "20:16", typeDelay: 5700 },
+    { kind: "msg",    from: "me",  textKey: "wa.mock.4", time: "20:16", showDelay: 4300 },
+    { kind: "typing", from: "bot", showDelay: 4500, hideAfter: 700 },
+    { kind: "msg",    from: "bot", textKey: "wa.mock.5", time: "20:16", typeDelay: 5200 },
   ];
 
   // Track which items are visible and which typing bubbles are hidden
@@ -70,7 +75,7 @@ function WhatsAppMock() {
   }, [lang, inView]);
 
   return (
-    <div ref={ref} className="wa-mock" key={lang}>
+    <div ref={ref} className="wa-mock">
       <div className="wa-header">
         <div className="wa-avatar">
           <BoltMark stroke={2.4} />
@@ -111,7 +116,7 @@ function WhatsAppMock() {
               <div className="wa-bubble">
                 <div className="wa-text">
                   {isBot ? (
-                    <TypeWriter text={text} active={visible} delay={0} speed={22} />
+                    <TypeWriter text={text} active={visible} delay={0} speed={8} />
                   ) : (
                     <span style={{ whiteSpace: "pre-wrap" }}>{text}</span>
                   )}

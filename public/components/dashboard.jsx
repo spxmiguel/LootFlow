@@ -3,6 +3,7 @@
 function DashboardMock() {
   const scaleWrapRef = React.useRef(null);
   const [scale, setScale] = React.useState(1);
+  const { t } = useI18n();
 
   React.useEffect(() => {
     const el = scaleWrapRef.current;
@@ -96,16 +97,16 @@ function DashboardMock() {
             <div className="dash-week-card">
               <div className="dash-week-head">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
-                Esta semana
+                {t("dash.week.label")}
               </div>
               <div className="dash-week-stats">
                 <div>
                   <div className="dash-week-num">8</div>
-                  <div className="dash-week-lbl">contas</div>
+                  <div className="dash-week-lbl">{t("dash.week.contas")}</div>
                 </div>
                 <div>
                   <div className="dash-week-num">16</div>
-                  <div className="dash-week-lbl">drops alvo</div>
+                  <div className="dash-week-lbl">{t("dash.week.target")}</div>
                 </div>
               </div>
             </div>
@@ -113,28 +114,28 @@ function DashboardMock() {
             <nav className="dash-nav">
               <a className="active">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-                Dashboard
+                {t("dash.nav.dashboard")}
                 <svg className="dash-nav-chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><polyline points="9 6 15 12 9 18"/></svg>
               </a>
               <a>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                Contas
+                {t("dash.nav.contas")}
               </a>
               <a>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                Drops
+                {t("dash.nav.drops")}
               </a>
               <a>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                Analytics
+                {t("dash.nav.analytics")}
               </a>
               <a>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
-                Metas
+                {t("dash.nav.metas")}
               </a>
               <a>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                Configurações
+                {t("dash.nav.config")}
               </a>
             </nav>
 
@@ -157,12 +158,12 @@ function DashboardMock() {
             {/* topbar */}
             <div className="dash-topbar">
               <div>
-                <h3 className="dash-title">Dashboard</h3>
-                <div className="dash-subtitle">Visão geral dos seus drops CS2</div>
+                <h3 className="dash-title">{t("dash.nav.dashboard")}</h3>
+                <div className="dash-subtitle">{t("dash.subtitle")}</div>
               </div>
               <button className="dash-cta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Registrar Drops
+                {t("dash.register")}
               </button>
             </div>
 
@@ -170,24 +171,24 @@ function DashboardMock() {
             <div className="dash-kpis">
               <div className="dash-kpi">
                 <div className="dash-kpi-row">
-                  <div className="dash-kpi-label">CASHOUT TOTAL</div>
+                  <div className="dash-kpi-label">{t("dash.kpi.cashout")}</div>
                   <span className="dash-kpi-icon green">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   </span>
                 </div>
                 <div className="dash-kpi-num">R$ <span>498,30</span></div>
-                <div className="dash-kpi-sub green">R$ 586,30 bruto</div>
+                <div className="dash-kpi-sub green">R$ 586,30 bruto / gross</div>
               </div>
 
               <div className="dash-kpi">
                 <div className="dash-kpi-row">
-                  <div className="dash-kpi-label">ROI GERAL</div>
+                  <div className="dash-kpi-label">{t("dash.kpi.roi")}</div>
                   <span className="dash-kpi-icon green">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                   </span>
                 </div>
                 <div className="dash-kpi-num green-num">+33<em>%</em></div>
-                <div className="dash-kpi-sub">Investido: R$ 374,95</div>
+                <div className="dash-kpi-sub">{t("dash.kpi.invested")}</div>
               </div>
 
               <div className="dash-kpi dash-kpi-alert">
@@ -195,20 +196,20 @@ function DashboardMock() {
                   <span className="dash-kpi-icon red strong">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                   </span>
-                  <div className="dash-kpi-alert-title">FALTA PEGAR<br/>DROP SEMANAL</div>
+                  <div className="dash-kpi-alert-title" style={{ whiteSpace: "pre-line" }}>{t("dash.kpi.alert")}</div>
                 </div>
                 <div className="dash-kpi-sub red">· servente de pedreiro — 1/2 drops</div>
               </div>
 
               <div className="dash-kpi">
                 <div className="dash-kpi-row">
-                  <div className="dash-kpi-label">CONTAS</div>
+                  <div className="dash-kpi-label">{t("dash.kpi.contas")}</div>
                   <span className="dash-kpi-icon violet">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   </span>
                 </div>
                 <div className="dash-kpi-num"><span>8</span><em>/8</em></div>
-                <div className="dash-kpi-sub">8 ativas de 8</div>
+                <div className="dash-kpi-sub">{t("dash.kpi.active")}</div>
               </div>
             </div>
 
@@ -217,10 +218,10 @@ function DashboardMock() {
               <div className="dash-panel">
                 <div className="dash-panel-head">
                   <div>
-                    <div className="dash-panel-eyebrow">CASHOUT SEMANAL</div>
-                    <div className="dash-panel-title">Últimas 8 semanas</div>
+                    <div className="dash-panel-eyebrow">{t("dash.chart.eyebrow")}</div>
+                    <div className="dash-panel-title">{t("dash.chart.title")}</div>
                   </div>
-                  <button className="dash-pill-btn">Histórico</button>
+                  <button className="dash-pill-btn">{t("dash.chart.btn")}</button>
                 </div>
                 <svg className="dash-chart" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="none">
                   <defs>
@@ -254,48 +255,48 @@ function DashboardMock() {
                   <span className="dash-flame">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73S7.3 7.53 7.3 5.47l.03-.36C5.21 7.51 4 10.62 4 14a8 8 0 0 0 16 0c0-4.08-2-7.74-6.5-13.33zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
                   </span>
-                  <span>Semana Atual</span>
+                  <span>{t("dash.week2.title")}</span>
                 </div>
                 <div className="dash-week-row">
-                  <span className="dash-week-row-lbl">Drops</span>
+                  <span className="dash-week-row-lbl">{t("dash.week2.drops")}</span>
                   <span className="dash-week-row-val">15 / 16</span>
                 </div>
                 <div className="dash-week-bar"><i style={{ width: "94%" }}></i></div>
                 <div className="dash-mini-stats">
                   <div className="dash-mini-stat">
-                    <div className="dash-mini-lbl">BRUTO</div>
+                    <div className="dash-mini-lbl">{t("dash.week2.bruto")}</div>
                     <div className="dash-mini-val">R$ <span>36,40</span></div>
                   </div>
                   <div className="dash-mini-stat">
-                    <div className="dash-mini-lbl">CASHOUT</div>
+                    <div className="dash-mini-lbl">{t("dash.week2.cashout")}</div>
                     <div className="dash-mini-val green">R$ <span>30,90</span></div>
                   </div>
                 </div>
                 <div className="dash-best">
                   <div className="dash-best-row">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-                    Melhor semana
+                    {t("dash.week2.best")}
                   </div>
                   <div className="dash-best-val">R$ <span>62,40</span></div>
                   <div className="dash-best-date">12/05 — 18/05/26</div>
                 </div>
-                <a className="dash-week-link">Ver todos os drops <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+                <a className="dash-week-link">{t("dash.week2.link")} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
               </div>
             </div>
 
             {/* accounts table */}
             <div className="dash-panel">
               <div className="dash-panel-head">
-                <div className="dash-panel-title plain">Performance por Conta</div>
-                <a className="dash-week-link sm">Ver todas <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+                <div className="dash-panel-title plain">{t("dash.table.title")}</div>
+                <a className="dash-week-link sm">{t("dash.table.link")} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
               </div>
               <div className="dash-table">
                 <div className="dash-tr dash-th">
-                  <div>CONTA</div>
-                  <div className="num">DROPS</div>
-                  <div className="num">BRUTO</div>
-                  <div className="num">CASHOUT</div>
-                  <div className="num">ROI</div>
+                  <div>{t("dash.table.conta")}</div>
+                  <div className="num">{t("dash.table.drops")}</div>
+                  <div className="num">{t("dash.table.bruto")}</div>
+                  <div className="num">{t("dash.table.cashout")}</div>
+                  <div className="num">{t("dash.table.roi")}</div>
                 </div>
                 {accounts.map((a) => (
                   <div className="dash-tr" key={a.name}>
