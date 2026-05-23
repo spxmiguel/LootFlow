@@ -30,31 +30,40 @@ function TypeWriter({ text, active, delay = 0, speed = 28 }) {
 }
 
 function WhatsAppMock() {
-  const [ref, inView] = useInView({ margin: "-120px" });
+  // margin "0px" → triggers as soon as element enters viewport (fix Windows black screen)
+  const [ref, inView] = useInView({ margin: "0px" });
+  const [forceStart, setForceStart] = React.useState(false);
   const { t, lang } = useI18n();
 
-  // Conversation: reminder → user STATUS → bot status → user AJUDA → bot help
-  // Delays ajustados para typing aparecer SÓ após a mensagem anterior terminar
-  // TypeWriter speed = 8ms/char:
-  //   msg1 ~145 chars → ~1160ms → done ~1360ms
-  //   msg3 ~110 chars → ~880ms
-  //   msg5 ~130 chars → ~1040ms
+  // Timing chain (speed = 8ms/char):
+  //   msg1 ~145 chars → done at ~300 + 1160 = 1460ms
+  //   typing1 shows 2000ms, lasts 2300ms → hides 4300ms → msg3 at 4300ms
+  //   msg3 ~110 chars → done at 4300 + 880 = 5180ms
+  //   typing2 shows 5800ms, lasts 2200ms → hides 8000ms → msg5 at 8000ms
   const items = [
-    { kind: "msg",    from: "bot", textKey: "wa.mock.1", time: "20:14", typeDelay: 200 },
-    { kind: "msg",    from: "me",  textKey: "wa.mock.2", time: "20:15", showDelay: 1900 },
-    { kind: "typing", from: "bot", showDelay: 2100, hideAfter: 700 },
-    { kind: "msg",    from: "bot", textKey: "wa.mock.3", time: "20:15", typeDelay: 2800 },
-    { kind: "msg",    from: "me",  textKey: "wa.mock.4", time: "20:16", showDelay: 4300 },
-    { kind: "typing", from: "bot", showDelay: 4500, hideAfter: 700 },
-    { kind: "msg",    from: "bot", textKey: "wa.mock.5", time: "20:16", typeDelay: 5200 },
+    { kind: "msg",    from: "bot", textKey: "wa.mock.1", time: "20:14", typeDelay: 300 },
+    { kind: "msg",    from: "me",  textKey: "wa.mock.2", time: "20:15", showDelay: 2100 },
+    { kind: "typing", from: "bot", showDelay: 2500, hideAfter: 2300 },
+    { kind: "msg",    from: "bot", textKey: "wa.mock.3", time: "20:15", typeDelay: 4800 },
+    { kind: "msg",    from: "me",  textKey: "wa.mock.4", time: "20:16", showDelay: 6100 },
+    { kind: "typing", from: "bot", showDelay: 6500, hideAfter: 2100 },
+    { kind: "msg",    from: "bot", textKey: "wa.mock.5", time: "20:16", typeDelay: 8600 },
   ];
+
+  // Fallback: start even if IntersectionObserver never fires (Windows quirk)
+  React.useEffect(() => {
+    const t = setTimeout(() => setForceStart(true), 1800);
+    return () => clearTimeout(t);
+  }, []);
+
+  const active = inView || forceStart;
 
   // Track which items are visible and which typing bubbles are hidden
   const [visibleCount, setVisibleCount] = React.useState(0);
   const [hiddenTyping, setHiddenTyping] = React.useState(new Set());
 
   React.useEffect(() => {
-    if (!inView) return;
+    if (!active) return;
     let timers = [];
     items.forEach((item, i) => {
       const showAt = item.showDelay ?? item.typeDelay ?? 0;
@@ -66,7 +75,7 @@ function WhatsAppMock() {
       }
     });
     return () => timers.forEach(clearTimeout);
-  }, [inView, lang]);
+  }, [active, lang]);
 
   // Reset on lang change or re-enter
   React.useEffect(() => {

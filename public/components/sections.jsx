@@ -149,7 +149,7 @@ function Stats() {
           <div className="stat">
             <div className="stat-tag">{t("stats.2.tag")}</div>
             <div className="stat-num">
-              R$ 79,99
+              {t("stats.2.currency")} {t("stats.2.price")}
               <span className="unit">{t("stats.2.unit")}</span>
             </div>
             <div className="stat-label">{t("stats.2.label")}</div>

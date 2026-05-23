@@ -28,9 +28,18 @@ function save<T>(key: string, value: T): void {
 
 // ─── Default Settings ──────────────────────────────────────────────────────────
 
+function detectLanguage(): 'pt' | 'en' {
+  try {
+    const nav = navigator.language || 'pt'
+    return nav.toLowerCase().startsWith('pt') ? 'pt' : 'en'
+  } catch { return 'pt' }
+}
+
 export const DEFAULT_SETTINGS: AppSettings = {
   cashoutRate: 85,
   currency: 'BRL',
+  usdRate: 5.2,
+  language: detectLanguage(),
   weeklyGoalAmount: 50,
   firebaseSyncEnabled: true,
   theme: {
@@ -58,6 +67,8 @@ function loadSettings(): AppSettings {
   // Migrate old cyan default → green to match new design system
   if (merged.theme.primaryColor === '#38bdf8') merged.theme.primaryColor = '#10b981'
   if (merged.theme.accentColor === '#4ade80') merged.theme.accentColor = '#10b981'
+  // Auto-detect language if not explicitly set
+  if (!merged.language) merged.language = detectLanguage()
   return merged
 }
 function saveAccounts(accounts: CSAccount[]) { save(KEYS.accounts, accounts) }

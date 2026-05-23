@@ -870,10 +870,31 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Currency - fixed BRL */}
-            <SettingRow label="Moeda" hint="Todos os valores em Real Brasileiro (R$)">
-              <div className="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
-                R$ BRL
+            {/* Currency */}
+            <SettingRow label="Moeda / Currency" hint={settings.currency === 'USD' ? `Taxa: 1 USD = R$ ${settings.usdRate ?? 5.2}` : 'Valores em Real Brasileiro'}>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateSettings({ currency: 'BRL' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'BRL' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >R$ BRL</button>
+                <button
+                  onClick={() => updateSettings({ currency: 'USD' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'USD' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >$ USD</button>
+              </div>
+            </SettingRow>
+
+            {/* Language */}
+            <SettingRow label="Idioma / Language" hint="Interface language">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateSettings({ language: 'pt' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >🇧🇷 PT</button>
+                <button
+                  onClick={() => updateSettings({ language: 'en' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >🇺🇸 EN</button>
               </div>
             </SettingRow>
 

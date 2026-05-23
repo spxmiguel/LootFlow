@@ -106,7 +106,9 @@ export interface WhatsAppSettings {
 
 export interface AppSettings {
   cashoutRate: number;            // 0-100, e.g. 85 = 85% of Steam value
-  currency: 'BRL';               // always BRL — Steam prices fetched in R$
+  currency: 'BRL' | 'USD';       // display currency (Steam prices fetched in R$; USD = converted)
+  usdRate?: number;               // BRL→USD rate (default 5.2, user can override)
+  language?: 'pt' | 'en';        // UI language (auto-detected from browser if not set)
   weeklyGoalAmount: number;
   firebaseConfig?: FirebaseConfig;
   firebaseSyncEnabled: boolean;  // when false, no data is sent to Firestore

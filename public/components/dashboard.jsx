@@ -365,8 +365,8 @@ const dashboardStyles = `
 .dash-brand-sub { font-size: 10px; color: #6b7280; font-family: var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
 
 .dash-week-card {
-  background: rgba(56,189,248,0.04);
-  border: 1px solid rgba(56,189,248,0.14);
+  background: rgba(16,185,129,0.04);
+  border: 1px solid rgba(16,185,129,0.14);
   border-radius: 10px;
   padding: 12px 14px;
 }
@@ -387,8 +387,8 @@ const dashboardStyles = `
 }
 .dash-nav a:hover { color: #94a3b8; }
 .dash-nav a.active {
-  color: #38bdf8;
-  background: rgba(56,189,248,0.06);
+  color: #10b981;
+  background: rgba(16,185,129,0.06);
 }
 .dash-nav a svg { opacity: 0.7; flex-shrink: 0; }
 .dash-nav-chev { margin-left: auto; }
@@ -424,9 +424,9 @@ const dashboardStyles = `
   border-radius: 10px;
   font-size: 13px; font-weight: 500;
   font-family: inherit;
-  border: 1px solid rgba(56,189,248,0.35);
-  background: rgba(56,189,248,0.06);
-  color: #38bdf8;
+  border: 1px solid rgba(16,185,129,0.35);
+  background: rgba(16,185,129,0.06);
+  color: #10b981;
   cursor: default;
 }
 
@@ -506,7 +506,7 @@ const dashboardStyles = `
 .dash-week-row-lbl { color: #94a3b8; }
 .dash-week-row-val { color: #e6edf3; font-variant-numeric: tabular-nums; }
 .dash-week-bar { height: 4px; background: rgba(255,255,255,0.05); border-radius: 999px; overflow: hidden; }
-.dash-week-bar i { display: block; height: 100%; background: #38bdf8; border-radius: 999px; box-shadow: 0 0 8px rgba(56,189,248,0.6); }
+.dash-week-bar i { display: block; height: 100%; background: #10b981; border-radius: 999px; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
 .dash-mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dash-mini-stat {
   background: rgba(255,255,255,0.025);

@@ -24,6 +24,8 @@ const dict = {
     "stats.1.tag": "por conta",
     "stats.1.label": "drops semanais garantidos por conta Prime ativa.",
     "stats.2.tag": "2 contas · r$10 / semana",
+    "stats.2.currency": "R$",
+    "stats.2.price": "79,99",
     "stats.2.unit": "/ mês",
     "stats.2.label": "potencial farmando 2 contas Prime (se vc tiver sorte de pegar drops que valem 10 reais toda vez).",
     "stats.3.tag": "seus dados",
@@ -141,7 +143,9 @@ const dict = {
 
     "stats.1.tag": "per account",
     "stats.1.label": "weekly drops guaranteed per active Prime account.",
-    "stats.2.tag": "2 accounts · r$10 / week",
+    "stats.2.tag": "2 accounts · ~$2 / week",
+    "stats.2.currency": "$",
+    "stats.2.price": "14.99",
     "stats.2.unit": "/ month",
     "stats.2.label": "realistic potential farming 2 Prime accounts (if you're lucky enough to get $2 drops every single time).",
     "stats.3.tag": "your data",
@@ -245,7 +249,13 @@ const I18nContext = React.createContext({ lang: "pt", t: (k) => k, setLang: () =
 
 function I18nProvider({ children }) {
   const [lang, setLangState] = React.useState(() => {
-    try { return localStorage.getItem(I18N_KEY) || "pt"; } catch { return "pt"; }
+    try {
+      const saved = localStorage.getItem(I18N_KEY);
+      if (saved) return saved;
+      // Auto-detect from browser locale
+      const browserLang = (navigator.language || navigator.userLanguage || 'pt').toLowerCase();
+      return browserLang.startsWith('pt') ? 'pt' : 'en';
+    } catch { return 'pt'; }
   });
   React.useEffect(() => {
     document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
