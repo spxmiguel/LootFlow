@@ -220,7 +220,7 @@ function DeleteModal({
 
 interface AccountCardProps {
   stats: ReturnType<typeof calcAccountStats>
-  currency: 'BRL'
+  currency: 'BRL' | 'USD'
   onEdit: () => void
   onDelete: () => void
   onToggle: () => void

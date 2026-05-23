@@ -16,7 +16,7 @@ import { SteamItemImage } from '../components/SteamItemImage'
 
 // ─── Custom Recharts Tooltip ──────────────────────────────────────────────────
 
-function ChartTooltip({ active, payload, label, currency }: Record<string, unknown> & { currency: 'BRL' }) {
+function ChartTooltip({ active, payload, label, currency }: Record<string, unknown> & { currency: 'BRL' | 'USD' }) {
   if (!active || !payload || !(payload as unknown[]).length) return null
   const p = payload as Array<{ name: string; value: number; color: string }>
   return (
