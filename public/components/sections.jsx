@@ -149,7 +149,7 @@ function Stats() {
           <div className="stat">
             <div className="stat-tag">{t("stats.2.tag")}</div>
             <div className="stat-num">
-              R$ <CountUp to={80} duration={1600} />
+              R$ 79,99
               <span className="unit">{t("stats.2.unit")}</span>
             </div>
             <div className="stat-label">{t("stats.2.label")}</div>

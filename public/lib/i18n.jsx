@@ -25,7 +25,7 @@ const dict = {
     "stats.1.label": "drops semanais garantidos por conta Prime ativa.",
     "stats.2.tag": "2 contas · r$10 / semana",
     "stats.2.unit": "/ mês",
-    "stats.2.label": "potencial farmando 2 contas Prime — calculado em tempo real.",
+    "stats.2.label": "potencial farmando 2 contas Prime (se vc tiver sorte de pegar drops que valem 10 reais toda vez).",
     "stats.3.tag": "seus dados",
     "stats.3.label": "de comissão. zero analytics. local-first por padrão.",
 
@@ -109,7 +109,7 @@ const dict = {
     "stats.1.label": "weekly drops guaranteed per active Prime account.",
     "stats.2.tag": "2 accounts · r$10 / week",
     "stats.2.unit": "/ month",
-    "stats.2.label": "realistic potential farming 2 Prime accounts — computed in real time.",
+    "stats.2.label": "realistic potential farming 2 Prime accounts (if you're lucky enough to get $2 drops every single time).",
     "stats.3.tag": "your data",
     "stats.3.label": "commission. zero analytics. local-first by default.",
 
