@@ -464,8 +464,9 @@ function WhatsAppSection() {
                 <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
               </div>
               <Toggle value={draft.xingamentos ?? false} onChange={async v => {
+                const wasOff = !(draft.xingamentos ?? false)
                 updateDraft({ xingamentos: v })
-                if (v && user?.uid && hasPhone) {
+                if (v && wasOff && user?.uid && hasPhone) {
                   try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
                 }
               }} />
@@ -669,6 +670,15 @@ export default function Settings() {
   useEffect(() => () => {
     if (deleteConfirmTimerRef.current) clearTimeout(deleteConfirmTimerRef.current)
   }, [])
+
+  // Sync exportOpts when settings.currency / usdRate change mid-session (BUG-005)
+  useEffect(() => {
+    setExportOpts(prev => ({
+      ...prev,
+      currency: (settings.currency as ExportCurrency) ?? 'BRL',
+      usdRate:  settings.usdRate ?? 5.2,
+    }))
+  }, [settings.currency, settings.usdRate])
 
   // ── Handlers ──
 

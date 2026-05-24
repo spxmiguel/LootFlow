@@ -13,6 +13,7 @@ import { calcDashboardStats, calcWeekStats } from '../lib/calculations'
 import { formatCurrency, formatCurrencyCompact, formatPercent, getCurrentWeekId, cn } from '../lib/utils'
 import { StatCard, Card, Badge, Button, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
+import { useT } from '../hooks/useT'
 
 // ─── Custom Recharts Tooltip ──────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ function ChartTooltip({ active, payload, label, currency }: Record<string, unkno
 
 export function Dashboard() {
   const { accounts, drops, goals, settings, setCurrentPage } = useStore()
+  const t = useT()
+  const currency = settings.currency
 
   const stats = useMemo(
     () => calcDashboardStats(accounts, drops, goals, settings),
@@ -108,8 +111,8 @@ export function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           label="Cashout Total"
-          value={formatCurrencyCompact(stats.totalCashoutAllTime)}
-          sub={`${formatCurrencyCompact(stats.totalSteamValueAllTime)} bruto`}
+          value={formatCurrencyCompact(stats.totalCashoutAllTime, currency)}
+          sub={`${formatCurrencyCompact(stats.totalSteamValueAllTime, currency)} ${t('dash.bruto')}`}
           subColor="text-slate-500"
           icon={<DollarSign className="w-5 h-5 text-profit" />}
           iconBg="bg-profit/10"
@@ -118,7 +121,7 @@ export function Dashboard() {
         <StatCard
           label="ROI Geral"
           value={stats.overallROI === Infinity ? '∞' : formatPercent(stats.overallROI, 0)}
-          sub={stats.totalInvestedAllTime > 0 ? `Investido: ${formatCurrencyCompact(stats.totalInvestedAllTime)}` : 'Sem custo registrado'}
+          sub={stats.totalInvestedAllTime > 0 ? `${t('dash.invested')}: ${formatCurrencyCompact(stats.totalInvestedAllTime, currency)}` : t('dash.no_cost')}
           subColor={stats.overallROI > 0 ? 'text-profit' : 'text-loss'}
           icon={<TrendingUp className="w-5 h-5 text-primary" />}
           iconBg="bg-primary/10"
@@ -233,7 +236,7 @@ export function Dashboard() {
                       tick={{ fill: '#475569', fontSize: 11, fontFamily: 'JetBrains Mono' }}
                       axisLine={false}
                       tickLine={false}
-                      tickFormatter={(v) => `R$${v}`}
+                      tickFormatter={(v) => currency === 'USD' ? `$${v}` : `R$${v}`}
                       width={50}
                     />
                     <Tooltip content={(p) => <ChartTooltip {...p} currency={settings.currency} />} />
@@ -287,13 +290,13 @@ export function Dashboard() {
                   <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.09]">
                     <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Bruto</p>
                     <p className="font-mono text-sm font-medium text-slate-200 mt-0.5">
-                      {formatCurrencyCompact(currentWeekStats.totalSteamValue)}
+                      {formatCurrencyCompact(currentWeekStats.totalSteamValue, currency)}
                     </p>
                   </div>
                   <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.09]">
                     <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Cashout</p>
                     <p className="font-mono text-sm font-medium text-profit mt-0.5">
-                      {formatCurrencyCompact(currentWeekStats.totalCashout)}
+                      {formatCurrencyCompact(currentWeekStats.totalCashout, currency)}
                     </p>
                   </div>
                 </div>
@@ -303,10 +306,10 @@ export function Dashboard() {
                   <div className="p-3 rounded-xl bg-gold/[0.05] border border-gold/15">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Trophy className="w-3.5 h-3.5 text-gold" />
-                      <p className="text-xs text-gold font-body font-medium">Melhor semana</p>
+                      <p className="text-xs text-gold font-body font-medium">{t('dash.best_week')}</p>
                     </div>
                     <p className="font-mono text-sm font-medium text-slate-200">
-                      {formatCurrency(stats.bestWeek.totalCashout)}
+                      {formatCurrency(stats.bestWeek.totalCashout, currency)}
                     </p>
                     <p className="text-[10px] text-slate-500 font-body">{stats.bestWeek.label}</p>
                   </div>
@@ -372,10 +375,10 @@ export function Dashboard() {
                         {as.totalDrops}
                       </td>
                       <td className="py-3 pr-4 text-right font-mono text-sm text-slate-400">
-                        {formatCurrencyCompact(as.totalSteamValue)}
+                        {formatCurrencyCompact(as.totalSteamValue, currency)}
                       </td>
                       <td className="py-3 pr-4 text-right font-mono text-sm text-profit">
-                        {formatCurrencyCompact(as.totalCashout)}
+                        {formatCurrencyCompact(as.totalCashout, currency)}
                       </td>
                       <td className="py-3 text-right">
                         <Badge color={as.roiPercent > 0 ? 'green' : as.roiPercent < -10 ? 'red' : 'default'}>
@@ -417,9 +420,9 @@ export function Dashboard() {
                       </div>
                       <div className="flex items-center gap-3 text-xs font-mono">
                         <span className="text-slate-500">
-                          {isMonetary ? formatCurrency(current) : current.toString()}
+                          {isMonetary ? formatCurrency(current, currency) : current.toString()}
                           {' / '}
-                          {isMonetary ? formatCurrency(goal.targetAmount) : goal.targetAmount.toString()}
+                          {isMonetary ? formatCurrency(goal.targetAmount, currency) : goal.targetAmount.toString()}
                         </span>
                         <span className="font-semibold" style={{ color: goal.color }}>
                           {progress.toFixed(0)}%
@@ -469,10 +472,10 @@ export function Dashboard() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-mono text-sm font-medium text-profit">
-                        {formatCurrency(cashout)}
+                        {formatCurrency(cashout, currency)}
                       </p>
                       <p className="text-[10px] text-slate-600 font-mono">
-                        {formatCurrency(drop.steamValue)} bruto
+                        {formatCurrency(drop.steamValue, currency)} {t('dash.bruto')}
                       </p>
                     </div>
                   </div>

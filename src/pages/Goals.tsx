@@ -7,16 +7,28 @@ import { formatCurrency, formatDate, getCurrentWeekId } from '../lib/utils'
 import { Button, Card, Input, Modal, Empty, Progress } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket } from '../lib/steam'
+import { useT } from '../hooks/useT'
 import type { Goal, SteamItem } from '../lib/types'
 
 const GOAL_COLORS = ['#38bdf8','#4ade80','#fbbf24','#f87171','#a78bfa','#fb923c','#34d399','#e879f9']
 
+// Static type structure (icons/values) — labels are resolved via t() at render time
 export const GOAL_TYPES = [
   { value: 'profit',  label: 'Cashout Total',    icon: DollarSign, desc: 'Cashout real acumulado'       },
   { value: 'revenue', label: 'Receita Steam',     icon: Package,    desc: 'Valor Steam acumulado'        },
   { value: 'cashout', label: 'Cashout Semanal',   icon: TrendingUp, desc: 'Cashout na semana atual'      },
   { value: 'drops',   label: 'Total de Drops',    icon: Zap,        desc: 'Quantidade total de drops'    },
 ] as const
+
+function useGoalTypes() {
+  const t = useT()
+  return [
+    { value: 'profit',  label: t('goals.type_profit_label'),  icon: DollarSign, desc: t('goals.type_profit_desc')  },
+    { value: 'revenue', label: t('goals.type_revenue_label'), icon: Package,    desc: t('goals.type_revenue_desc') },
+    { value: 'cashout', label: t('goals.type_cashout_label'), icon: TrendingUp, desc: t('goals.type_cashout_desc') },
+    { value: 'drops',   label: t('goals.type_drops_label'),   icon: Zap,        desc: t('goals.type_drops_desc')   },
+  ] as const
+}
 
 // ─── Mini Item Picker (para metas) ───────────────────────────────────────────
 
@@ -89,6 +101,10 @@ function GoalForm({ initial, onSave, onClose }: {
   onSave: (data: Omit<Goal, 'id' | 'createdAt'>) => void
   onClose: () => void
 }) {
+  const t = useT()
+  const { settings } = useStore()
+  const currency = settings.currency
+  const goalTypes = useGoalTypes()
   const [name, setName]       = useState(initial?.name ?? '')
   const [target, setTarget]   = useState(String(initial?.targetAmount ?? ''))
   const [type, setType]       = useState<Goal['type']>(initial?.type ?? 'profit')
@@ -113,23 +129,23 @@ function GoalForm({ initial, onSave, onClose }: {
   return (
     <Modal open onClose={onClose} title={initial ? 'Editar Meta' : 'Nova Meta'} size="md">
       <div className="space-y-4">
-        <Input label="Nome *" value={name} onChange={e => setName(e.target.value)}
-          placeholder="Ex: Comprar Bayonet Doppler" error={errors.name} maxLength={80} />
+        <Input label={t('goals.name_label')} value={name} onChange={e => setName(e.target.value)}
+          placeholder={t('goals.name_placeholder')} error={errors.name} maxLength={80} />
 
         <div>
           <label className="text-xs text-slate-400 block mb-2">Tipo</label>
           <div className="grid grid-cols-2 gap-2">
-            {GOAL_TYPES.map(t => (
-              <button key={t.value} onClick={() => setType(t.value)}
+            {goalTypes.map(gt => (
+              <button key={gt.value} onClick={() => setType(gt.value)}
                 className={`flex items-start gap-2 p-3 rounded-xl border text-left transition-all ${
-                  type === t.value
+                  type === gt.value
                     ? 'border-primary/60 bg-primary/10 text-white'
                     : 'border-white/[0.08] text-slate-400 hover:border-white/20 bg-[#111827]'
                 }`}>
-                <t.icon size={14} className="mt-0.5 flex-shrink-0" />
+                <gt.icon size={14} className="mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-medium">{t.label}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{t.desc}</p>
+                  <p className="text-xs font-medium">{gt.label}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{gt.desc}</p>
                 </div>
               </button>
             ))}
@@ -137,7 +153,7 @@ function GoalForm({ initial, onSave, onClose }: {
         </div>
 
         <Input
-          label={`Meta alvo ${type === 'drops' ? '(quantidade)' : '(R$)'}`}
+          label={type === 'drops' ? t('goals.target_label_qty') : t('goals.target_label_money', { currency: currency === 'USD' ? '$' : 'R$' })}
           type="number" min="0" step={type === 'drops' ? '1' : '0.01'}
           value={target} onChange={e => setTarget(e.target.value)}
           placeholder={type === 'drops' ? '100' : '500.00'}
@@ -180,9 +196,12 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
   goal: Goal; progress: number; currentValue: number
   onEdit: () => void; onDelete: () => void
 }) {
+  const { settings } = useStore()
+  const currency = settings.currency
+  const goalTypes = useGoalTypes()
   const clamped    = Math.min(100, Math.max(0, progress))
   const isDone     = clamped >= 100
-  const typeInfo   = GOAL_TYPES.find(t => t.value === goal.type) ?? GOAL_TYPES[0]
+  const typeInfo   = goalTypes.find(gt => gt.value === goal.type) ?? goalTypes[0]
   const isMonetary = goal.type !== 'drops'
   const isOverdue  = goal.deadline && new Date(goal.deadline) < new Date() && !isDone
 
@@ -248,18 +267,18 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
         <div>
           <p className="text-xs text-slate-500 mb-0.5">Atual</p>
           <p className="font-mono font-semibold text-white">
-            {isMonetary ? formatCurrency(currentValue) : Math.round(currentValue).toString()}
+            {isMonetary ? formatCurrency(currentValue, currency) : Math.round(currentValue).toString()}
           </p>
         </div>
         <div className="text-center text-xs text-slate-500">
           Falta {isMonetary
-            ? formatCurrency(Math.max(0, goal.targetAmount - currentValue))
+            ? formatCurrency(Math.max(0, goal.targetAmount - currentValue), currency)
             : Math.max(0, Math.round(goal.targetAmount - currentValue)).toString()}
         </div>
         <div className="text-right">
           <p className="text-xs text-slate-500 mb-0.5">Meta</p>
           <p className="font-mono font-semibold text-white">
-            {isMonetary ? formatCurrency(goal.targetAmount) : goal.targetAmount.toString()}
+            {isMonetary ? formatCurrency(goal.targetAmount, currency) : goal.targetAmount.toString()}
           </p>
         </div>
       </div>
@@ -278,6 +297,7 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
 
 export default function Goals() {
   const { accounts, drops, goals, settings, addGoal, updateGoal, deleteGoal } = useStore()
+  const t = useT()
   const [showForm, setShowForm]         = useState(false)
   const [editingGoal, setEditingGoal]   = useState<Goal | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -346,8 +366,8 @@ export default function Goals() {
       {goals.length === 0 && (
         <Empty
           icon={Target}
-          title="Nenhuma meta criada"
-          description="Crie metas de cashout, receita ou drops para acompanhar sua evolução."
+          title={t('goals.empty_title')}
+          description={t('goals.empty_desc')}
           action={{ label: 'Criar meta', onClick: () => setShowForm(true) }}
         />
       )}

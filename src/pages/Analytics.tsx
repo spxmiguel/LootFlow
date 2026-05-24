@@ -10,6 +10,7 @@ import { calcDashboardStats, calcAccountStats } from '../lib/calculations'
 import { formatCurrency, formatPercent, getWeekLabel, getPreviousWeeks, roiColorClass } from '../lib/utils'
 import { Card, StatCard, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
+import { useT } from '../hooks/useT'
 
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,8 @@ function ChartTip({ active, payload, label, currency }: any) {
 
 export default function Analytics() {
   const { accounts, drops, goals, settings } = useStore()
+  const t = useT()
+  const currency = settings.currency
   const [weeksRange, setWeeksRange] = useState(12)
 
   // All memos are null-safe
@@ -89,13 +92,13 @@ export default function Analytics() {
   if (drops.length === 0) {
     return (
       <div className="p-6 flex items-center justify-center h-full">
-        <Empty icon={BarChart2} title="Nenhum dado ainda"
-          description="Registre drops para ver os analytics." />
+        <Empty icon={BarChart2} title={t('analytics.empty_title')}
+          description={t('analytics.empty_desc')} />
       </div>
     )
   }
 
-  const cur = settings.currency
+  const cur = currency
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-12">
@@ -106,10 +109,10 @@ export default function Analytics() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Cashout Total"  value={formatCurrency(stats.totalCashoutAllTime)}  icon={DollarSign} color="profit" />
-        <StatCard label="Valor Bruto"    value={formatCurrency(stats.totalSteamValueAllTime)} icon={Package}   color="primary" />
+        <StatCard label={t('analytics.total_cashout')}  value={formatCurrency(stats.totalCashoutAllTime, currency)}  icon={DollarSign} color="profit" />
+        <StatCard label={t('analytics.gross_value')}    value={formatCurrency(stats.totalSteamValueAllTime, currency)} icon={Package}   color="primary" />
         <StatCard label="ROI Geral"      value={isFinite(stats.overallROI) ? formatPercent(stats.overallROI) : '∞'} icon={TrendingUp} color={stats.overallROI >= 0 ? 'profit' : 'loss'} />
-        <StatCard label="Total de Drops" value={String(stats.totalDropsAllTime)} icon={Zap} color="gold" />
+        <StatCard label={t('analytics.total_drops')} value={String(stats.totalDropsAllTime)} icon={Zap} color="gold" />
       </div>
 
       {/* Charts row 1 */}
@@ -212,9 +215,9 @@ export default function Analytics() {
                     </div>
                   </td>
                   <td className="py-3 pr-4 text-slate-400">{as.totalDrops}</td>
-                  <td className="py-3 pr-4 text-slate-400 whitespace-nowrap">{formatCurrency(as.totalSteamValue)}</td>
-                  <td className="py-3 pr-4 text-profit font-mono whitespace-nowrap">{formatCurrency(as.totalCashout)}</td>
-                  <td className="py-3 pr-4 text-slate-400 whitespace-nowrap">{formatCurrency(as.investedCost)}</td>
+                  <td className="py-3 pr-4 text-slate-400 whitespace-nowrap">{formatCurrency(as.totalSteamValue, currency)}</td>
+                  <td className="py-3 pr-4 text-profit font-mono whitespace-nowrap">{formatCurrency(as.totalCashout, currency)}</td>
+                  <td className="py-3 pr-4 text-slate-400 whitespace-nowrap">{formatCurrency(as.investedCost, currency)}</td>
                   <td className={`py-3 pr-4 font-mono font-semibold whitespace-nowrap ${roiColorClass(as.roiPercent)}`}>
                     {isFinite(as.roiPercent) ? formatPercent(as.roiPercent) : '∞'}
                   </td>
@@ -255,8 +258,8 @@ export default function Analytics() {
                     <p className="text-xs text-slate-500">{account?.name ?? '?'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-mono font-semibold text-profit">{formatCurrency(val)}</p>
-                    <p className="text-xs text-slate-500 font-mono">Bruto {formatCurrency(drop.steamValue)}</p>
+                    <p className="text-sm font-mono font-semibold text-profit">{formatCurrency(val, currency)}</p>
+                    <p className="text-xs text-slate-500 font-mono">Bruto {formatCurrency(drop.steamValue, currency)}</p>
                   </div>
                   <ArrowUpRight size={13} className="text-slate-600" />
                 </div>

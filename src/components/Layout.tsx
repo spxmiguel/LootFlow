@@ -10,23 +10,29 @@ import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { Avatar, ProfileModal, useProfileDisplay } from './ProfileModal'
 import { LegalModal, type LegalType } from './LegalModal'
+import { useT } from '../hooks/useT'
 import type { Page } from '../lib/types'
 
 // ─── Nav Config ───────────────────────────────────────────────────────────────
 
-const NAV_ITEMS: { id: Page; label: string; icon: typeof LayoutDashboard; badge?: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'accounts', label: 'Contas', icon: Users },
-  { id: 'drops', label: 'Drops', icon: Package },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'goals', label: 'Metas', icon: Target },
-  { id: 'settings', label: 'Configurações', icon: Settings },
-]
+type NavItem = { id: Page; label: string; icon: typeof LayoutDashboard; badge?: string }
+
+function useNavItems(): NavItem[] {
+  const t = useT()
+  return [
+    { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { id: 'accounts', label: t('nav.accounts'), icon: Users },
+    { id: 'drops', label: t('nav.drops'), icon: Package },
+    { id: 'analytics', label: t('nav.analytics'), icon: BarChart3 },
+    { id: 'goals', label: t('nav.goals'), icon: Target },
+    { id: 'settings', label: t('nav.settings'), icon: Settings },
+  ]
+}
 
 // ─── Sidebar Item ─────────────────────────────────────────────────────────────
 
 interface SidebarItemProps {
-  item: typeof NAV_ITEMS[0]
+  item: NavItem
   active: boolean
   compact: boolean
   onClick: () => void
@@ -80,6 +86,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
   const { displayName, photoURL, email, showEmail } = useProfileDisplay()
   const [profileOpen, setProfileOpen] = useState(false)
   const [legalModal, setLegalModal] = useState<LegalType | null>(null)
+  const navItems = useNavItems()
 
   const handleNav = (page: Page) => {
     setCurrentPage(page)
@@ -140,7 +147,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 pt-4 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map(item => (
+        {navItems.map(item => (
           <SidebarItem
             key={item.id}
             item={item}
@@ -211,7 +218,8 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
 
 function MobileHeader() {
   const currentPage = useStore(s => s.currentPage)
-  const currentItem = NAV_ITEMS.find(i => i.id === currentPage)
+  const navItems = useNavItems()
+  const currentItem = navItems.find(i => i.id === currentPage)
   const { logout } = useAuth()
   const { displayName, photoURL } = useProfileDisplay()
   const [profileOpen, setProfileOpen] = useState(false)
@@ -253,11 +261,12 @@ function MobileHeader() {
 function MobileBottomNav() {
   const currentPage = useStore(s => s.currentPage)
   const setCurrentPage = useStore(s => s.setCurrentPage)
+  const navItems = useNavItems()
 
   return (
     <nav className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.09] bg-[#080b12]/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 backdrop-blur-xl">
       <div className="grid grid-cols-6 gap-1">
-        {NAV_ITEMS.map(item => {
+        {navItems.map(item => {
           const Icon = item.icon
           const active = currentPage === item.id
           return (

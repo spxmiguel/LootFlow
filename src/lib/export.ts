@@ -147,17 +147,23 @@ function buildTxt(
   const currency = opts.currency
   const S        = sym(currency)
   const filtered = applyFilter(drops, opts.filter)
-  const today    = new Date().toLocaleDateString('pt-BR')
+  const lang     = settings.language ?? 'pt'
+  const isEN     = lang === 'en'
+  const today    = new Date().toLocaleDateString(isEN ? 'en-US' : 'pt-BR')
 
   const SEP  = '─'.repeat(56)
   const DSEP = '═'.repeat(56)
+
+  const filterLabel = isEN
+    ? (opts.filter === 'all' ? 'all' : opts.filter === 'sold' ? 'sold' : 'unsold')
+    : (opts.filter === 'all' ? 'todos' : opts.filter === 'sold' ? 'vendidos' : 'não vendidos')
 
   const lines: string[] = [
     DSEP,
     '  LOOTFLOW — CS2 Drop Export',
     DSEP,
-    `  Data: ${today}`,
-    `  Drops: ${filtered.length}  ·  Moeda: ${currency}  ·  Filtro: ${opts.filter === 'all' ? 'todos' : opts.filter === 'sold' ? 'vendidos' : 'não vendidos'}`,
+    `  ${isEN ? 'Date' : 'Data'}: ${today}`,
+    `  Drops: ${filtered.length}  ·  ${isEN ? 'Currency' : 'Moeda'}: ${currency}  ·  ${isEN ? 'Filter' : 'Filtro'}: ${filterLabel}`,
     '',
   ]
 
@@ -197,18 +203,22 @@ function buildTxt(
       }
 
       if (opts.columns !== 'minimal') {
-        const soldStr = drop.sold ? '✓ Vendido' : '○ Não vendido'
-        lines.push(`      Bruto: ${S} ${fmtMoney(gross)}   Cashout: ${S} ${fmtMoney(cashout)}   ${soldStr}`)
+        const soldStr = drop.sold
+          ? (isEN ? '✓ Sold' : '✓ Vendido')
+          : (isEN ? '○ Unsold' : '○ Não vendido')
+        const grossLabel   = isEN ? 'Gross'    : 'Bruto'
+        const cashoutLabel = isEN ? 'Cashout'  : 'Cashout'
+        lines.push(`      ${grossLabel}: ${S} ${fmtMoney(gross)}   ${cashoutLabel}: ${S} ${fmtMoney(cashout)}   ${soldStr}`)
       }
 
       if ((opts.columns === 'with-dates' || opts.columns === 'all') && drop.soldAt) {
-        lines.push(`      Data venda: ${formatDate(drop.soldAt)}`)
+        lines.push(`      ${isEN ? 'Sale date' : 'Data venda'}: ${formatDate(drop.soldAt)}`)
       }
       if (opts.columns === 'with-dates' || opts.columns === 'all') {
-        lines.push(`      Registro: ${formatDate(drop.createdAt)}`)
+        lines.push(`      ${isEN ? 'Registered' : 'Registro'}: ${formatDate(drop.createdAt)}`)
       }
       if (opts.columns === 'all' && drop.note) {
-        lines.push(`      Nota: ${drop.note}`)
+        lines.push(`      ${isEN ? 'Note' : 'Nota'}: ${drop.note}`)
       }
       lines.push('')
     }
@@ -217,9 +227,9 @@ function buildTxt(
   if (opts.includeTotal && opts.columns !== 'minimal') {
     lines.push(DSEP)
     lines.push(`  TOTAL`)
-    lines.push(`  Itens: ${totalItems}`)
-    lines.push(`  Bruto total:   ${S} ${fmtMoney(totalGross)}`)
-    lines.push(`  Cashout total: ${S} ${fmtMoney(totalCashout)}`)
+    lines.push(`  ${isEN ? 'Items' : 'Itens'}: ${totalItems}`)
+    lines.push(`  ${isEN ? 'Total gross'   : 'Bruto total'}:   ${S} ${fmtMoney(totalGross)}`)
+    lines.push(`  ${isEN ? 'Total cashout' : 'Cashout total'}: ${S} ${fmtMoney(totalCashout)}`)
     lines.push(DSEP)
   }
 

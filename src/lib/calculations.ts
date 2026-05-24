@@ -16,12 +16,12 @@ export function calcCashout(steamValue: number, rate: number): number {
 }
 
 export function calcROIPercent(cashout: number, cost: number): number {
-  if (cost === 0) return cashout > 0 ? Infinity : 0
+  if (cost === 0) return cashout > 0 ? 9999 : 0
   return ((cashout / cost) - 1) * 100
 }
 
 export function calcPaybackMultiplier(cashout: number, cost: number): number {
-  if (cost === 0) return Infinity
+  if (cost === 0) return cashout > 0 ? 99 : 0
   return cashout / cost
 }
 

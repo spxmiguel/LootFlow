@@ -9,6 +9,7 @@ import { formatCurrency, getCurrentWeekId, getWeekLabel, getWeekIdForDate } from
 import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
+import { useT } from '../hooks/useT'
 import type { Drop, SteamItem, WearCondition } from '../lib/types'
 
 // ─── Item type detection ──────────────────────────────────────────────────────
@@ -97,10 +98,11 @@ interface ItemPickerProps {
   onItemChange: (item: SteamItem | null) => void
   onValueChange: (v: string) => void
   cashoutRate: number
+  currency: 'BRL' | 'USD'
   optional?: boolean
 }
 
-function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cashoutRate, optional }: ItemPickerProps) {
+function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cashoutRate, currency, optional }: ItemPickerProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Array<{ name: string; hashName: string; imageUrl: string; sellPrice?: number }>>([])
   const [searching, setSearching] = useState(false)
@@ -156,7 +158,7 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-white font-medium truncate">{value.name}</p>
-            {cashout > 0 && <p className="text-xs text-slate-500">Cashout: {formatCurrency(cashout)}</p>}
+            {cashout > 0 && <p className="text-xs text-slate-500">Cashout: {formatCurrency(cashout, currency)}</p>}
           </div>
           <button onClick={() => { onItemChange(null); onValueChange('') }}
             className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-[#1a2235] transition-colors">
@@ -188,7 +190,7 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
                     <SteamItemImage imageUrl={r.imageUrl} alt={r.name} size={32} />
                   </div>
                   <span className="text-sm text-white truncate flex-1">{r.name}</span>
-                  {r.sellPrice ? <span className="text-xs font-mono text-profit flex-shrink-0">{formatCurrency(r.sellPrice)}</span> : null}
+                  {r.sellPrice ? <span className="text-xs font-mono text-profit flex-shrink-0">{formatCurrency(r.sellPrice, currency)}</span> : null}
                 </button>
               ))}
             </div>
@@ -204,12 +206,12 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
           step="0.01"
           value={steamValue}
           onChange={e => onValueChange(e.target.value)}
-          placeholder="Valor bruto (R$)"
+          placeholder={`Valor bruto (${currency === 'USD' ? '$' : 'R$'})`}
           className="flex-1 h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60 transition-all placeholder:text-slate-600"
         />
         {parseFloat(steamValue) > 0 && (
           <span className="text-xs text-profit font-mono whitespace-nowrap">
-            → {formatCurrency(cashout)}
+            → {formatCurrency(cashout, currency)}
           </span>
         )}
       </div>
@@ -250,6 +252,8 @@ type DateMode = 'this-week' | 'manual' | 'unknown'
 
 function DropModal({ onSave, onClose }: DropModalProps) {
   const { accounts, drops, settings } = useStore()
+  const t = useT()
+  const currency = settings.currency
   const activeAccounts = accounts.filter(a => a.active)
   const currentWid = getCurrentWeekId()
 
@@ -311,7 +315,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
       })
     }
 
-    if (toSave.length === 0) { setError('Nenhum item válido'); return }
+    if (toSave.length === 0) { setError(t('drops.no_valid_item')); return }
     onSave(toSave)
   }
 
@@ -329,7 +333,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
   )
 
   return (
-    <Modal open onClose={onClose} title="Registrar Drops da Semana" size="md" footer={footer}>
+    <Modal open onClose={onClose} title={t('drops.register_title')} size="md" footer={footer}>
       <div className="space-y-4">
         {/* Conta */}
         <div>
@@ -415,6 +419,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
               onItemChange={i => { setItem1(i); if (!i) setFloat1('') }}
               onValueChange={setValue1}
               cashoutRate={settings.cashoutRate}
+              currency={currency}
             />
             {item1 && detectItemType(item1.name) === 'weapon' && (
               <FloatInput float={float1} onFloatChange={setFloat1} />
@@ -429,6 +434,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
                   onItemChange={i => { setItem2(i); if (!i) setFloat2('') }}
                   onValueChange={setValue2}
                   cashoutRate={settings.cashoutRate}
+                  currency={currency}
                 />
                 {item2 && detectItemType(item2.name) === 'weapon' && (
                   <FloatInput float={float2} onFloatChange={setFloat2} />
@@ -443,7 +449,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
           <div className="p-3 rounded-xl bg-profit/10 border border-profit/20">
             <p className="text-xs text-slate-400 mb-1">Cashout estimado total</p>
             <p className="text-profit font-mono font-bold text-base">
-              {formatCurrency(totalCashout)}
+              {formatCurrency(totalCashout, currency)}
             </p>
             <p className="text-xs text-slate-500 mt-0.5">
               com taxa de {settings.cashoutRate}%
@@ -465,6 +471,8 @@ function DropModal({ onSave, onClose }: DropModalProps) {
 
 function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string, v: number) => void; onClose: () => void }) {
   const { settings } = useStore()
+  const t = useT()
+  const currency = settings.currency
   const [value, setValue] = useState((drop.steamValue * settings.cashoutRate / 100).toFixed(2))
   const parsed = parseFloat(value)
   const valid = Number.isFinite(parsed) && parsed >= 0
@@ -473,9 +481,9 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
       <div className="space-y-4">
         <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
           <p className="text-sm font-medium text-white">{drop.item?.name || '—'}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Bruto: {formatCurrency(drop.steamValue)}</p>
+          <p className="text-xs text-slate-500 mt-0.5">Bruto: {formatCurrency(drop.steamValue, currency)}</p>
         </div>
-        <Input label="Valor recebido (R$)" type="number" min="0" step="0.01"
+        <Input label={`${t('drops.received_value')} (${currency === 'USD' ? '$' : 'R$'})`} type="number" min="0" step="0.01"
           value={value} onChange={e => setValue(e.target.value)}
           error={!valid && value !== '' ? 'Informe um valor válido' : undefined} />
         <div className="flex gap-3">
@@ -492,9 +500,9 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
 
 // ─── Drop Card ────────────────────────────────────────────────────────────────
 
-function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSell, index }: {
+function DropCard({ drop, accountName, accountColor, cashoutRate, currency, onDelete, onSell, index }: {
   drop: Drop; accountName: string; accountColor: string
-  cashoutRate: number; index: number
+  cashoutRate: number; currency: 'BRL' | 'USD'; index: number
   onDelete: () => void; onSell: () => void
 }) {
   const cashout = drop.cashoutValue ?? drop.steamValue * cashoutRate / 100
@@ -539,11 +547,11 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs text-slate-500 mb-0.5">Cashout</p>
-          <p className="font-mono font-semibold text-profit">{formatCurrency(cashout)}</p>
+          <p className="font-mono font-semibold text-profit">{formatCurrency(cashout, currency)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-slate-500 mb-0.5">Bruto</p>
-          <p className="font-mono text-sm text-slate-400">{formatCurrency(drop.steamValue)}</p>
+          <p className="font-mono text-sm text-slate-400">{formatCurrency(drop.steamValue, currency)}</p>
         </div>
       </div>
     </Card>
@@ -553,8 +561,8 @@ function DropCard({ drop, accountName, accountColor, cashoutRate, onDelete, onSe
 
 // ─── Week Divider ─────────────────────────────────────────────────────────────
 
-function WeekDivider({ weekId, cashout, count, isCurrentWeek }: {
-  weekId: string; cashout: number; count: number; isCurrentWeek: boolean
+function WeekDivider({ weekId, cashout, count, isCurrentWeek, currency }: {
+  weekId: string; cashout: number; count: number; isCurrentWeek: boolean; currency: 'BRL' | 'USD'
 }) {
   const label = weekId === 'unknown'
     ? 'Sem data'
@@ -568,7 +576,7 @@ function WeekDivider({ weekId, cashout, count, isCurrentWeek }: {
       <div className="flex items-center gap-2 flex-shrink-0">
         <span className="text-xs font-semibold text-slate-400">{label}</span>
         {cashout > 0 && weekId !== 'unknown' && (
-          <span className="text-xs text-profit font-mono">{formatCurrency(cashout)}</span>
+          <span className="text-xs text-profit font-mono">{formatCurrency(cashout, currency)}</span>
         )}
         <span className="text-[10px] text-slate-600">{count} drop{count !== 1 ? 's' : ''}</span>
       </div>
@@ -584,6 +592,8 @@ type FilterType = 'all' | 'weapon' | 'case' | 'sticker' | 'other'
 
 export default function Drops() {
   const { accounts, drops, settings, addDrop, deleteDrop, markDropSold } = useStore()
+  const t = useT()
+  const currency = settings.currency
   const [showModal, setShowModal] = useState(false)
   const [sellingDrop, setSellingDrop] = useState<Drop | null>(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -654,7 +664,7 @@ export default function Drops() {
           <h1 className="text-xl font-bold text-white">Drops</h1>
           <p className="text-slate-500 text-sm mt-0.5">
             {drops.length} drops · cashout total{' '}
-            <span className="text-profit font-mono">{formatCurrency(totalCashout)}</span>
+            <span className="text-profit font-mono">{formatCurrency(totalCashout, currency)}</span>
           </p>
         </div>
         <Button icon={Plus} size="sm" onClick={() => setShowModal(true)} className="shrink-0">
@@ -752,15 +762,15 @@ export default function Drops() {
       {drops.length === 0 ? (
         <Empty
           icon={Package}
-          title="Nenhum drop ainda"
+          title={t('drops.empty_title')}
           description="Registre os itens recebidos. Você pode registrar até 2 por conta por semana."
           action={{ label: 'Registrar Drops', onClick: () => setShowModal(true) }}
         />
       ) : grouped.length === 0 ? (
         <Empty
           icon={Search}
-          title="Nenhum drop encontrado"
-          description="Nenhum drop corresponde aos filtros ativos."
+          title={t('drops.empty_filtered')}
+          description={t('drops.empty_filtered_desc')}
           action={{ label: 'Limpar filtros', onClick: clearFilters }}
         />
       ) : (
@@ -772,6 +782,7 @@ export default function Drops() {
                 cashout={cashout}
                 count={wdrops.length}
                 isCurrentWeek={weekId === currentWid}
+                currency={currency}
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
                 {wdrops.map((drop, i) => {
@@ -784,6 +795,7 @@ export default function Drops() {
                       accountName={acct?.name ?? '?'}
                       accountColor={acct?.color ?? '#64748b'}
                       cashoutRate={settings.cashoutRate}
+                      currency={currency}
                       onDelete={() => deleteDrop(drop.id)}
                       onSell={() => setSellingDrop(drop)}
                     />

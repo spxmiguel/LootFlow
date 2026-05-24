@@ -12,6 +12,7 @@ import {
   Empty, Progress, Divider, ImageUploadButton,
 } from '../components/ui'
 import { getPrimeCostBRL, getPrimeCostBRLSync, fetchSteamProfileAvatar } from '../lib/steam'
+import { useT } from '../hooks/useT'
 import toast from 'react-hot-toast'
 
 // ─── Account Form ─────────────────────────────────────────────────────────────
@@ -38,7 +39,9 @@ function AccountModal({
   initial?: AccountFormData
   editId?: string
 }) {
-  const { addAccount, updateAccount } = useStore()
+  const { addAccount, updateAccount, settings } = useStore()
+  const t = useT()
+  const currency = settings.currency
   const [form, setForm] = useState<AccountFormData>(initial ?? emptyForm)
   const [errors, setErrors] = useState<Partial<AccountFormData>>({})
   const [primeCostBRL, setPrimeCostBRL] = useState<number>(getPrimeCostBRLSync())
@@ -99,10 +102,10 @@ function AccountModal({
     }
     if (editId) {
       updateAccount(editId, data)
-      toast.success('Conta atualizada!')
+      toast.success(t('accounts.toast_updated'))
     } else {
       addAccount(data)
-      toast.success('Conta adicionada!')
+      toast.success(t('accounts.toast_added'))
     }
     onClose()
   }
@@ -116,7 +119,7 @@ function AccountModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={editId ? 'Editar Conta' : 'Nova Conta CS2'}
+      title={editId ? t('accounts.title_edit') : t('accounts.title_add')}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
@@ -162,10 +165,10 @@ function AccountModal({
         <Divider />
         <div className="flex items-center justify-between p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Custo Prime CS2</p>
+            <p className="text-xs text-slate-500 mb-0.5">{t('accounts.prime_cost')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-base font-mono font-bold text-primary">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(primeCostBRL)}
+                {formatCurrency(primeCostBRL, currency)}
               </p>
               <p className="text-xs text-slate-600 font-mono">valor fixo</p>
             </div>
@@ -341,6 +344,8 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
 
 export function Accounts() {
   const { accounts, drops, settings, toggleAccountActive, deleteAccount, openModal } = useStore()
+  const t = useT()
+  const currency = settings.currency
   const [showAdd, setShowAdd] = useState(false)
   const [editData, setEditData] = useState<{ id: string; form: AccountFormData } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -396,7 +401,7 @@ export function Accounts() {
             },
             {
               label: 'Cashout total',
-              value: formatCurrency(accountStats.reduce((s, a) => s + a.totalCashout, 0)),
+              value: formatCurrency(accountStats.reduce((s, a) => s + a.totalCashout, 0), currency),
               icon: <TrendingUp className="w-4 h-4 text-profit" />,
             },
             {
@@ -422,8 +427,8 @@ export function Accounts() {
       {accounts.length === 0 ? (
         <Empty
           icon={<Users className="w-8 h-8" />}
-          title="Nenhuma conta ainda"
-          description="Adicione suas contas CS2 Prime para começar a trackear seus drops"
+          title={t('accounts.empty_title')}
+          description={t('accounts.empty_desc')}
           action={
             <Button variant="primary" onClick={() => setShowAdd(true)}>
               <Plus className="w-4 h-4" /> Adicionar Conta

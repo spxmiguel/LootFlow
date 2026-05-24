@@ -60,23 +60,25 @@ export function getPreviousWeeks(count: number): string[] {
 
 // ─── Currency Formatting ─────────────────────────────────────────────────────
 
-// Sempre em R$ — Steam Market é consultado com currency=7 (BRL)
-export function formatCurrency(value: number, _currency?: string): string {
+// Steam prices are fetched in BRL; USD values are pre-converted before calling these.
+export function formatCurrency(value: number, currency: 'BRL' | 'USD' = 'BRL'): string {
   const safe = value == null || isNaN(value) ? 0 : value
-  return new Intl.NumberFormat('pt-BR', {
+  const locale = currency === 'USD' ? 'en-US' : 'pt-BR'
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'BRL',
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(safe)
 }
 
-export function formatCurrencyCompact(value: number, _currency?: string): string {
+export function formatCurrencyCompact(value: number, currency: 'BRL' | 'USD' = 'BRL'): string {
   const safe = value == null || isNaN(value) ? 0 : value
+  const sym = currency === 'USD' ? '$' : 'R$'
   if (Math.abs(safe) >= 1000) {
-    return `R$ ${(safe / 1000).toFixed(1)}k`
+    return `${sym} ${(safe / 1000).toFixed(1)}k`
   }
-  return formatCurrency(safe)
+  return formatCurrency(safe, currency)
 }
 
 // Steam API retorna preços formatados em BRL: "R$ 52,40", "R$52,40", "52,40"
