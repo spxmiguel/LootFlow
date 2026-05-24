@@ -77,7 +77,7 @@ function buildRows(
   opts: ExportOptions,
 ): Record<string, unknown>[] {
   const accountMap = new Map(accounts.map(a => [a.id, a]))
-  const rate = opts.usdRate ?? (settings as any).usdRate ?? 5.2
+  const rate = opts.usdRate ?? settings.usdRate ?? 5.2
   const currency = opts.currency
   const S = sym(currency)
 
@@ -143,7 +143,7 @@ function buildTxt(
   opts: ExportOptions,
 ): string {
   const accountMap = new Map(accounts.map(a => [a.id, a]))
-  const rate     = opts.usdRate ?? (settings as any).usdRate ?? 5.2
+  const rate     = opts.usdRate ?? settings.usdRate ?? 5.2
   const currency = opts.currency
   const S        = sym(currency)
   const filtered = applyFilter(drops, opts.filter)
@@ -252,7 +252,7 @@ export function exportDrops(
   }
 
   // xlsx
-  const rate = opts.usdRate ?? (settings as any).usdRate ?? 5.2
+  const rate = opts.usdRate ?? settings.usdRate ?? 5.2
   const S    = sym(opts.currency)
   const accountRows = accounts.map(a => ({
     Name:                    a.name,

@@ -647,6 +647,11 @@ export default function Settings() {
   const [cacheStats, setCacheStats] = useState<{ entries: number; sizeKB: number } | null>(null)
   const [showCustomFirebase, setShowCustomFirebase] = useState(false)
   const [showFirebaseTutorial, setShowFirebaseTutorial] = useState(false)
+  const [exportOpts, setExportOpts] = useState<ExportOptions>(() => ({
+    ...DEFAULT_EXPORT_OPTIONS,
+    currency: (settings.currency as ExportCurrency) ?? 'BRL',
+    usdRate:  settings.usdRate ?? 5.2,
+  }))
   const [customFbForm, setCustomFbForm] = useState(() => {
     const c = getCustomFirebaseConfig()
     return {
@@ -713,11 +718,6 @@ export default function Settings() {
   function handleCashoutRate(val: number) {
     updateSettings({ cashoutRate: Math.min(100, Math.max(0, val)) })
   }
-
-  const [exportOpts, setExportOpts] = useState<ExportOptions>({
-    ...DEFAULT_EXPORT_OPTIONS,
-    currency: (settings.currency as ExportCurrency) ?? 'BRL',
-  })
 
   function handleExport() {
     try {
