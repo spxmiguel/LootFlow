@@ -1,0 +1,111 @@
+name: 🖥️ Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    name: Build macOS (.pkg)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (Vite + Electron)
+        run: npm run electron:build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .pkg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-pkg
+          path: release/*.pkg
+          if-no-files-found: error
+
+  build-win:
+    name: Build Windows (.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (Vite + Electron)
+        run: npm run electron:build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-exe
+          path: release/*.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-pkg
+          path: artifacts/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: win-exe
+          path: artifacts/
+
+      - name: List artifacts
+        run: ls -lh artifacts/
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || inputs.version }}
+          name: LootFlow ${{ github.ref_name || inputs.version }}
+          body: |
+            ## LootFlow Desktop ${{ github.ref_name || inputs.version }}
+
+            ### Download
+            | Plataforma | Arquivo |
+            |---|---|
+            | 🍎 macOS | `.pkg` — instalar normalmente, se Gatekeeper bloquear: clique com botão direito → Abrir |
+            | 🪟 Windows | `.exe` — se SmartScreen alertar: "Mais informações" → "Executar assim mesmo" |
+
+            ### Requisitos
+            - macOS 10.15+ (Catalina ou superior)
+            - Windows 10+
+
+            > ⚠️ Sem assinatura de código. Os alertas do sistema são esperados.
+          files: artifacts/*
+          generate_release_notes: false
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
