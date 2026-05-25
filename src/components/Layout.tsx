@@ -2,7 +2,7 @@ import React, { type ReactNode, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, Package, BarChart3, Target,
-  Settings, X, LogOut, ChevronRight, Zap,
+  Settings, X, LogOut, ChevronRight,
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -106,8 +106,19 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
         'flex items-center gap-3 px-4 py-5 border-b border-white/[0.09]',
         compact && 'justify-center px-2',
       )}>
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shrink-0 shadow-glow">
-          <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+        <div className="w-8 h-8 rounded-xl bg-[#0a0e15] border border-white/10 flex items-center justify-center shrink-0 hover:border-profit/30 transition-colors">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="lf-app" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stopColor="#4ade80"/>
+                <stop offset="100%" stopColor="#38bdf8"/>
+              </linearGradient>
+            </defs>
+            <rect x="3"  y="2"  width="4"  height="20"  rx="0.8" fill="url(#lf-app)"/>
+            <rect x="7"  y="2"  width="14" height="4"   rx="0.8" fill="url(#lf-app)"/>
+            <rect x="7"  y="10" width="9"  height="3.5" rx="0.8" fill="url(#lf-app)"/>
+            <rect x="7"  y="18" width="14" height="4"   rx="0.8" fill="url(#lf-app)"/>
+          </svg>
         </div>
         {!compact && (
           <div>
@@ -228,8 +239,19 @@ function MobileHeader() {
     <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#0d1117]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shadow-glow">
-          <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+        <div className="w-9 h-9 rounded-xl bg-[#0a0e15] border border-white/10 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="lf-mob" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stopColor="#4ade80"/>
+                <stop offset="100%" stopColor="#38bdf8"/>
+              </linearGradient>
+            </defs>
+            <rect x="3"  y="2"  width="4"  height="20"  rx="0.8" fill="url(#lf-mob)"/>
+            <rect x="7"  y="2"  width="14" height="4"   rx="0.8" fill="url(#lf-mob)"/>
+            <rect x="7"  y="10" width="9"  height="3.5" rx="0.8" fill="url(#lf-mob)"/>
+            <rect x="7"  y="18" width="14" height="4"   rx="0.8" fill="url(#lf-mob)"/>
+          </svg>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-600 font-body">LootFlow</p>

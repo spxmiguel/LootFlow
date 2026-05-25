@@ -321,16 +321,31 @@ function DashboardMock() {
   );
 }
 
-// Bolt icon — matches the LootFlow app logo (outlined lightning, rounded)
-function BoltMark({ stroke = 2.2 }) {
+// LF monogram mark — LootFlow brand identity
+function LFMark({ size = 16 }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
-      <path d="M14 2.5 L5.5 13.5 L11 13.5 L10 21.5 L18.5 10.5 L13 10.5 Z"/>
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="lf-nav" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#4ade80"/>
+          <stop offset="100%" stopColor="#38bdf8"/>
+        </linearGradient>
+      </defs>
+      {/* left vertical (shared stem) */}
+      <rect x="3"  y="2"  width="4" height="20" rx="0.8" fill="url(#lf-nav)"/>
+      {/* top bar (F) */}
+      <rect x="7"  y="2"  width="14" height="4" rx="0.8" fill="url(#lf-nav)"/>
+      {/* middle bar (F — shorter) */}
+      <rect x="7"  y="10" width="9"  height="3.5" rx="0.8" fill="url(#lf-nav)"/>
+      {/* bottom foot (L) */}
+      <rect x="7"  y="18" width="14" height="4" rx="0.8" fill="url(#lf-nav)"/>
     </svg>
   );
 }
 
-window.BoltMark = BoltMark;
+// Keep BoltMark alias for backward compat (sections.jsx uses it — will be swapped below)
+window.BoltMark = LFMark;
+window.LFMark   = LFMark;
 
 const dashboardStyles = `
 .dash-scaler { width: 100%; overflow: hidden; }
