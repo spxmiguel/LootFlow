@@ -2,7 +2,7 @@ import React, { type ReactNode, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, Package, BarChart3, Target,
-  Settings, X, LogOut, ChevronRight, Zap,
+  Settings, X, LogOut, ChevronRight,
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -106,9 +106,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
         'flex items-center gap-3 px-4 py-5 border-b border-white/[0.09]',
         compact && 'justify-center px-2',
       )}>
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shrink-0 shadow-glow">
-          <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
-        </div>
+        <img src="/icon.svg" className="w-8 h-8 rounded-xl shrink-0" alt="LootFlow" />
         {!compact && (
           <div>
             <p className="font-display font-bold text-slate-100 text-base leading-none">LootFlow</p>
@@ -228,9 +226,7 @@ function MobileHeader() {
     <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#0d1117]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary/30 flex items-center justify-center shadow-glow">
-          <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
-        </div>
+        <img src="/icon.svg" className="w-9 h-9 rounded-xl" alt="LootFlow" />
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-600 font-body">LootFlow</p>
           <span className="font-display font-bold text-slate-100 text-base">

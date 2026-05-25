@@ -19,7 +19,7 @@ function Nav() {
     <nav className={"nav" + (scrolled ? " scrolled" : "")}>
       <a href="#top" className="nav-logo">
         <span className="nav-logo-mark">
-          <BoltMark stroke={2.2} />
+          <MarkIcon />
         </span>
         LootFlow
       </a>
@@ -433,7 +433,7 @@ function Footer() {
       <div className="wrap footer-row">
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, fontWeight: 600 }}>
           <span className="nav-logo-mark" style={{ width: 22, height: 22 }}>
-            <BoltMark stroke={2.4} />
+            <MarkIcon />
           </span>
           LootFlow
         </div>

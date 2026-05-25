@@ -86,7 +86,7 @@ function DashboardMock() {
           <aside className="dash-side">
             <div className="dash-brand">
               <span className="dash-brand-mark">
-                <BoltMark />
+                <MarkIcon />
               </span>
               <div>
                 <div className="dash-brand-name">LootFlow</div>
@@ -321,16 +321,18 @@ function DashboardMock() {
   );
 }
 
-// Bolt icon — matches the LootFlow app logo (outlined lightning, rounded)
-function BoltMark({ stroke = 2.2 }) {
+// LootFlow mark — asymmetric chevron + green foot
+function MarkIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
-      <path d="M14 2.5 L5.5 13.5 L11 13.5 L10 21.5 L18.5 10.5 L13 10.5 Z"/>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ display: 'block' }}>
+      <line x1="6.9" y1="12" x2="16.7" y2="4.5" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
+      <line x1="6.9" y1="12" x2="14.25" y2="17.25" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
+      <line x1="14.25" y1="17.25" x2="19.3" y2="17.25" stroke="#4ade80" strokeWidth="2.7" strokeLinecap="round"/>
     </svg>
   );
 }
 
-window.BoltMark = BoltMark;
+window.MarkIcon = MarkIcon;
 
 const dashboardStyles = `
 .dash-scaler { width: 100%; overflow: hidden; }
