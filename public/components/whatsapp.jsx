@@ -1,5 +1,15 @@
 /* components/whatsapp.jsx — fake WhatsApp conversation with char-by-char typing */
 
+function MarkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ display: 'block' }}>
+      <line x1="6.9" y1="12" x2="16.7" y2="4.5" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
+      <line x1="6.9" y1="12" x2="14.25" y2="17.25" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
+      <line x1="14.25" y1="17.25" x2="19.3" y2="17.25" stroke="#4ade80" strokeWidth="2.7" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 /* TypeWriter: animates text character by character once visible */
 function TypeWriter({ text, active, delay = 0, speed = 28 }) {
   const [displayed, setDisplayed] = React.useState("");
@@ -87,7 +97,7 @@ function WhatsAppMock() {
     <div ref={ref} className="wa-mock">
       <div className="wa-header">
         <div className="wa-avatar">
-          <BoltMark stroke={2.4} />
+          <MarkIcon />
         </div>
         <div className="wa-meta">
           <div className="wa-name">{t("wa.mock.name")}</div>
