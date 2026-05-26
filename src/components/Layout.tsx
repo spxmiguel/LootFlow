@@ -106,7 +106,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
         'flex items-center gap-3 px-4 py-5 border-b border-white/[0.09]',
         compact && 'justify-center px-2',
       )}>
-        <img src="/icon.svg" className="w-8 h-8 rounded-xl shrink-0" alt="LootFlow" />
+        <img src="../icon.svg" className="w-8 h-8 rounded-xl shrink-0" alt="LootFlow" />
         {!compact && (
           <div>
             <p className="font-display font-bold text-slate-100 text-base leading-none">LootFlow</p>
@@ -226,7 +226,7 @@ function MobileHeader() {
     <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#0d1117]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <div className="flex items-center gap-3">
-        <img src="/icon.svg" className="w-9 h-9 rounded-xl" alt="LootFlow" />
+        <img src="../icon.svg" className="w-9 h-9 rounded-xl" alt="LootFlow" />
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-600 font-body">LootFlow</p>
           <span className="font-display font-bold text-slate-100 text-base">

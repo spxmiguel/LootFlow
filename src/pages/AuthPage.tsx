@@ -99,7 +99,7 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
               transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
               className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 overflow-hidden"
             >
-              <img src="/icon.svg" className="w-full h-full" alt="LootFlow" />
+              <img src="../icon.svg" className="w-full h-full" alt="LootFlow" />
             </motion.div>
             <h1 className="font-display text-3xl font-extrabold text-slate-100 leading-tight">LootFlow</h1>
             <p className="text-sm text-slate-500 mt-2">Analytics premium de drops CS2 · Prime Weekly</p>
