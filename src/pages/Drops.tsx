@@ -8,7 +8,6 @@ import { useStore } from '../store'
 import { formatCurrency, getCurrentWeekId, getWeekLabel, getWeekIdForDate } from '../lib/utils'
 import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
-import { MarketplaceLinks } from '../components/MarketplaceLinks'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
 import { useT } from '../hooks/useT'
 import type { Drop, SteamItem, WearCondition } from '../lib/types'
@@ -807,8 +806,6 @@ export default function Drops() {
           ))}
         </div>
       )}
-
-      <MarketplaceLinks />
 
       <AnimatePresence>
         {showModal && (
