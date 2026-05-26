@@ -106,13 +106,20 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
         'flex items-center gap-3 px-4 py-5 border-b border-white/[0.09]',
         compact && 'justify-center px-2',
       )}>
-        <img src="../icon.svg" className="w-8 h-8 rounded-xl shrink-0" alt="LootFlow" />
-        {!compact && (
-          <div>
-            <p className="font-display font-bold text-slate-100 text-base leading-none">LootFlow</p>
-            <p className="text-[10px] text-slate-600 font-body mt-0.5">CS2 Analytics</p>
-          </div>
-        )}
+        <a
+          href="https://spxmiguel.github.io/LootFlow/"
+          target={window.electronAPI?.isElectron ? '_blank' : '_self'}
+          rel="noreferrer"
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
+          <img src="../icon.svg" className="w-8 h-8 rounded-xl shrink-0" alt="LootFlow" />
+          {!compact && (
+            <div>
+              <p className="font-display font-bold text-slate-100 text-base leading-none">LootFlow</p>
+              <p className="text-[10px] text-slate-600 font-body mt-0.5">CS2 Analytics</p>
+            </div>
+          )}
+        </a>
         {mobile && (
           <button onClick={onClose} className="ml-auto text-slate-500 hover:text-slate-200 p-1">
             <X className="w-5 h-5" />
