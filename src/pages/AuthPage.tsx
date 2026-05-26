@@ -1,19 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Zap, UserCircle2, Chrome, Loader2, Shield, X } from 'lucide-react'
+import { ArrowLeft, UserCircle2, Chrome, Loader2, Shield, X, ExternalLink } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { FIREBASE_ENABLED } from '../lib/config'
 import { LegalModal, type LegalType } from '../components/LegalModal'
 
 const CONSENT_KEY = 'lootflow_google_consent'
+const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI?.isElectron
+const IS_ELECTRON_CB = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('electron-cb') === '1'
 
 export default function AuthPage({ onBack }: { onBack?: () => void }) {
-  const { loginLocal, loginGoogle } = useAuth()
+  const { loginLocal, loginGoogle, loginGoogleAndGetTokens } = useAuth()
   const [loadingGoogle, setLoadingGoogle] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
   const [legalModal, setLegalModal] = useState<LegalType | null>(null)
 
   const hasFirebase = FIREBASE_ENABLED
+
+  // ── Electron callback mode: browser opened with ?electron-cb=1 ──────────
+  // Auto-trigger Google auth and redirect back to Electron via protocol URL
+  useEffect(() => {
+    if (!IS_ELECTRON_CB || !hasFirebase) return
+    loginGoogleAndGetTokens().then(tokens => {
+      if (tokens?.idToken) {
+        const url = `lootflow://auth-callback?idToken=${encodeURIComponent(tokens.idToken)}&accessToken=${encodeURIComponent(tokens.accessToken ?? '')}`
+        window.location.href = url
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Show dedicated UI while handling electron callback
+  if (IS_ELECTRON_CB) {
+    return (
+      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-4">
+        <div className="text-center">
+          <img src="/LootFlow/icon.svg" className="w-16 h-16 rounded-2xl mx-auto mb-6" alt="LootFlow" />
+          <h1 className="font-display text-2xl font-bold text-slate-100 mb-2">Autorizando LootFlow</h1>
+          <p className="text-sm text-slate-500 mb-6">Fazendo login com Google... retornará ao app em instantes.</p>
+          <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+        </div>
+      </div>
+    )
+  }
 
   const handleGoogleClick = () => {
     if (localStorage.getItem(CONSENT_KEY) === 'true') {
@@ -41,13 +70,15 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
 
       <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-4 relative overflow-hidden">
         <div className="bg-texture" aria-hidden="true" />
-        <a
-          href="https://spxmiguel.github.io/LootFlow/"
-          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-[#11161d]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.12] transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </a>
+        {!IS_ELECTRON && (
+          <a
+            href="https://spxmiguel.github.io/LootFlow/"
+            className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-[#11161d]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.12] transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </a>
+        )}
         {/* Ambient glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full blur-[120px]"
@@ -66,10 +97,9 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.1, duration: 0.5, type: 'spring' }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
-              style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #38bdf8) 30%, transparent), color-mix(in srgb, var(--color-primary, #38bdf8) 10%, transparent))', border: '1px solid color-mix(in srgb, var(--color-primary, #38bdf8) 25%, transparent)' }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 overflow-hidden"
             >
-              <Zap className="w-8 h-8" style={{ color: 'var(--color-primary, #38bdf8)' }} strokeWidth={2} />
+              <img src="/icon.svg" className="w-full h-full" alt="LootFlow" />
             </motion.div>
             <h1 className="font-display text-3xl font-extrabold text-slate-100 leading-tight">LootFlow</h1>
             <p className="text-sm text-slate-500 mt-2">Analytics premium de drops CS2 · Prime Weekly</p>
@@ -117,8 +147,13 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
                   : <Chrome className="w-5 h-5" style={{ color: 'var(--color-primary, #38bdf8)' }} />}
               </div>
               <div className="flex-1 text-left">
-                <p className="font-semibold text-slate-200 text-sm">Entrar com Google</p>
-                <p className="text-xs text-slate-500 mt-0.5">Sync na nuvem · acesso em qualquer dispositivo</p>
+                <p className="font-semibold text-slate-200 text-sm flex items-center gap-1.5">
+                  Entrar com Google
+                  {IS_ELECTRON && <ExternalLink className="w-3 h-3 text-slate-500" />}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {IS_ELECTRON ? 'Abre seu navegador · sem colocar conta no app' : 'Sync na nuvem · acesso em qualquer dispositivo'}
+                </p>
               </div>
               <div className="px-3 py-1.5 rounded-xl text-xs font-medium shrink-0"
                 style={{

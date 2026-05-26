@@ -2,7 +2,7 @@ import { logger } from '../lib/logger'
 import { useEffect } from 'react'
 import {
   signInWithPopup, signInWithRedirect, getRedirectResult,
-  signOut, onAuthStateChanged,
+  signOut, onAuthStateChanged, GoogleAuthProvider, signInWithCredential,
 } from 'firebase/auth'
 import { useStore } from '../store'
 import { initFirebase, getGoogleProvider, isFirebaseReady, firestoreDeleteAllUserData } from '../lib/firebase'
@@ -198,10 +198,66 @@ export function useAuth() {
     toast.success('Modo offline ativado!')
   }
 
+  // ── Login Google via Electron (browser auth) ─────────────────────────
+  // Opens the user's real browser → GitHub Pages web app does OAuth →
+  // browser redirects to lootflow://auth-callback?idToken=...
+  // Electron main catches the URL and sends 'auth:credential' IPC.
+  const loginGoogleViaElectron = (): Promise<LoginResult> => {
+    if (!FIREBASE_ENABLED) {
+      toast.error('Firebase não configurado.')
+      return Promise.resolve('error')
+    }
+    return new Promise<LoginResult>((resolve) => {
+      window.electronAPI!.openBrowserLogin()
+      toast('Faça login no navegador que abriu...', { duration: 10000, icon: '🌐' })
+      window.electronAPI!.removeAuthListener()
+      window.electronAPI!.onAuthCredential(async ({ idToken, accessToken }) => {
+        window.electronAPI!.removeAuthListener()
+        try {
+          const { auth } = initFirebase(getActiveFirebaseConfig())
+          const credential = GoogleAuthProvider.credential(idToken, accessToken)
+          const result = await signInWithCredential(auth, credential)
+          const appUser = makeAppUser(result.user)
+          setUser(appUser)
+          setAuthMode('firebase')
+          saveSession('firebase', appUser)
+          await hydrateCloud(appUser)
+          toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`)
+          resolve('success')
+        } catch (e: unknown) {
+          const err = e as { code?: string }
+          logger.error('[Auth] electron credential error:', e)
+          toast.error(`Erro ao autenticar (${err?.code ?? 'desconhecido'})`)
+          resolve('error')
+        }
+      })
+    })
+  }
+
+  // ── Login Google + return raw Google tokens ───────────────────────────
+  // Used by AuthPage when the browser is opened with ?electron-cb=1.
+  // Gets Google OAuth tokens and redirects back to lootflow://auth-callback.
+  const loginGoogleAndGetTokens = async (): Promise<{ idToken: string; accessToken: string | null } | null> => {
+    if (!FIREBASE_ENABLED) return null
+    try {
+      const { auth } = initFirebase(getActiveFirebaseConfig())
+      const provider = getGoogleProvider()
+      const result = await signInWithPopup(auth, provider)
+      const cred = GoogleAuthProvider.credentialFromResult(result)
+      return { idToken: cred?.idToken ?? '', accessToken: cred?.accessToken ?? null }
+    } catch (e) {
+      logger.error('[Auth] loginGoogleAndGetTokens error:', e)
+      return null
+    }
+  }
+
   // ── Login Google ─────────────────────────────────────────────────────
   // Mobile browsers block cross-origin popups — use redirect directly.
   // Desktop: popup first, fall back to redirect on failure.
   const loginGoogle = async (): Promise<LoginResult> => {
+    // In Electron: open the user's real browser instead of a popup
+    if (window.electronAPI?.isElectron) return loginGoogleViaElectron()
+
     if (!FIREBASE_ENABLED) {
       toast.error('Firebase não configurado.')
       return 'error'
@@ -316,5 +372,5 @@ export function useAuth() {
     }
   }
 
-  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, logout, deleteAccount }
+  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, loginGoogleAndGetTokens, logout, deleteAccount }
 }

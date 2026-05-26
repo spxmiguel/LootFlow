@@ -16,9 +16,16 @@
   "build": {
     "appId": "io.github.spxmiguel.lootflow",
     "productName": "LootFlow",
+    "icon": "build-assets/icon-512.png",
     "directories": {
       "output": "release"
     },
+    "extraResources": [
+      { "from": "build-assets/", "to": "build-assets/" }
+    ],
+    "protocols": [
+      { "name": "LootFlow Auth", "schemes": ["lootflow"] }
+    ],
     "win": {
       "target": ["nsis"]
     },
