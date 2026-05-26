@@ -372,5 +372,32 @@ export function useAuth() {
     }
   }
 
-  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, loginGoogleAndGetTokens, logout, deleteAccount }
+  // ── Login Google via Device Code ─────────────────────────────────────
+  // Called after watchDeviceCode resolves: signs into Firebase with the
+  // Google credential tokens that the web app wrote to Firestore.
+  const loginGoogleViaDeviceCode = async (idToken: string, accessToken: string): Promise<LoginResult> => {
+    if (!FIREBASE_ENABLED) {
+      toast.error('Firebase não configurado.')
+      return 'error'
+    }
+    try {
+      const { auth } = initFirebase(getActiveFirebaseConfig())
+      const credential = GoogleAuthProvider.credential(idToken, accessToken || null)
+      const result = await signInWithCredential(auth, credential)
+      const appUser = makeAppUser(result.user)
+      setUser(appUser)
+      setAuthMode('firebase')
+      saveSession('firebase', appUser)
+      await hydrateCloud(appUser)
+      toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`)
+      return 'success'
+    } catch (e: unknown) {
+      const err = e as { code?: string }
+      logger.error('[Auth] device code credential error:', e)
+      toast.error(`Erro ao autenticar (${err?.code ?? 'desconhecido'})`)
+      return 'error'
+    }
+  }
+
+  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, loginGoogleAndGetTokens, loginGoogleViaDeviceCode, logout, deleteAccount }
 }
