@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -92,6 +92,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Remove native menu bar (File / Edit / View / Window) on all platforms
+  Menu.setApplicationMenu(null)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
