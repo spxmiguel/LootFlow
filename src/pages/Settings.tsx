@@ -1471,6 +1471,14 @@ export default function Settings() {
             GitHub <ExternalLink size={10} />
           </a>
         </div>
+        <a
+          href="https://www.buymeacoffee.com/spxmiguel"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="inline-flex items-center gap-1.5 text-[11px] text-yellow-600/70 hover:text-yellow-500 transition-colors"
+        >
+          ☕ Buy me a coffee
+        </a>
       </div>
     </div>
     </>
