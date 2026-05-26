@@ -1,6 +1,9 @@
 import { app, BrowserWindow, ipcMain, shell, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import http from 'node:http'
+import fs from 'node:fs'
+import type { AddressInfo } from 'node:net'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -69,8 +72,53 @@ ipcMain.handle('auth:open-browser', () => {
   shell.openExternal('https://spxmiguel.github.io/LootFlow/app/?electron-cb=1')
 })
 
+// ── Local HTTP server ──────────────────────────────────────────────────────
+// Firebase Auth rejects file:// origins as "unauthorized domain".
+// Serving from http://127.0.0.1 (localhost) — already in Firebase's
+// authorized domains list — fixes signInWithCredential in production.
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.css': 'text/css',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.json': 'application/json',
+}
+
+function startLocalServer(root: string): Promise<string> {
+  return new Promise(resolve => {
+    const server = http.createServer((req, res) => {
+      const url = (req.url ?? '/').split('?')[0]
+      const filePath = path.join(root, url === '/' ? 'index.html' : url)
+      try {
+        const data = fs.readFileSync(filePath)
+        const ext = path.extname(filePath).toLowerCase()
+        res.writeHead(200, { 'Content-Type': MIME[ext] ?? 'application/octet-stream' })
+        res.end(data)
+      } catch {
+        // SPA fallback: unknown routes → index.html
+        try {
+          const data = fs.readFileSync(path.join(root, 'index.html'))
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+          res.end(data)
+        } catch {
+          res.writeHead(404); res.end('Not found')
+        }
+      }
+    })
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address() as AddressInfo
+      resolve(`http://127.0.0.1:${port}`)
+    })
+  })
+}
+
 // ── Window ─────────────────────────────────────────────────────────────────
-function createWindow() {
+function createWindow(baseUrl: string) {
   win = new BrowserWindow({
     title: 'LootFlow',
     width: 1280,
@@ -87,16 +135,19 @@ function createWindow() {
     },
   })
 
-  // Load React SPA — NOT dist/index.html (that's the landing page)
-  win.loadFile(path.join(DIST, 'app', 'index.html'))
+  // Load React SPA via local HTTP server (Firebase Auth requires http:// origin)
+  win.loadURL(baseUrl)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Remove native menu bar (File / Edit / View / Window) on all platforms
   Menu.setApplicationMenu(null)
-  createWindow()
+  // Start local HTTP server before creating window so Firebase Auth
+  // sees http://127.0.0.1 (authorized) instead of file:// (blocked).
+  const baseUrl = await startLocalServer(path.join(DIST, 'app'))
+  createWindow(baseUrl)
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(baseUrl)
   })
 })
 
