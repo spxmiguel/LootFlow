@@ -12,18 +12,23 @@ export function cn(...inputs: ClassValue[]) {
 // ─── Week System (CS2 resets every Tuesday) ──────────────────────────────────
 
 export function getWeekIdForDate(date: Date = new Date()): string {
-  const d = new Date(date)
-  const day = d.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-  // Days back to most recent Tuesday.
-  // Sun=5, Mon=6, Tue=0, Wed=1, Thu=2, Fri=3, Sat=4
-  const daysBack = day === 0 ? 5 : (day - 2 + 7) % 7
-  d.setDate(d.getDate() - daysBack)
-  d.setHours(0, 0, 0, 0)
-  // Format from local date parts — toISOString() would shift the day
-  // for users in positive-UTC timezones.
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
+  // CS2 week resets Tuesday 21:00 BRT (UTC-3) = Wednesday 00:00 UTC.
+  // Always compute in BRT so the boundary is consistent regardless of the
+  // user's local timezone.
+  const BRT = -3 * 3600000
+  const brtMs = date.getTime() + BRT
+  const d = new Date(brtMs)
+
+  let day = d.getUTCDay() // 0=Sun ... 2=Tue ...
+  let daysBack = day === 0 ? 5 : (day - 2 + 7) % 7
+
+  // Tuesday before 21:00 BRT → previous week hasn't ended yet
+  if (day === 2 && d.getUTCHours() < 21) daysBack += 7
+
+  const weekStart = new Date(brtMs - daysBack * 86400000)
+  const y = weekStart.getUTCFullYear()
+  const m = String(weekStart.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(weekStart.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${dd}`
 }
 
