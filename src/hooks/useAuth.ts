@@ -399,5 +399,5 @@ export function useAuth() {
     }
   }
 
-  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, loginGoogleAndGetTokens, loginGoogleViaDeviceCode, logout, deleteAccount }
+  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, loginGoogleAndGetTokens, loginGoogleViaDeviceCode, loginGoogleViaElectron: loginGoogleViaDeviceCode, logout, deleteAccount }
 }

@@ -1,27 +1,101 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, UserCircle2, Loader2, Shield, X, RefreshCw, Monitor } from 'lucide-react'
+import { ArrowLeft, UserCircle2, Loader2, Shield, X, ExternalLink } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { FIREBASE_ENABLED } from '../lib/config'
 import { LegalModal, type LegalType } from '../components/LegalModal'
-import {
-  generateDeviceCode, createDeviceCode, watchDeviceCode,
-  cleanupDeviceCode, completeDeviceAuth, DEVICE_CODE_TTL_MS,
-} from '../lib/deviceAuth'
+import { completeDeviceAuth } from '../lib/deviceAuth'
 
 const CONSENT_KEY = 'lootflow_google_consent'
-const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI?.isElectron
 
-// Web app opened with ?device=CODE → authorize a waiting Electron session
-const DEVICE_PARAM = typeof window !== 'undefined'
-  ? new URLSearchParams(window.location.search).get('device')
-  : null
+const params = typeof window !== 'undefined'
+  ? new URLSearchParams(window.location.search)
+  : new URLSearchParams()
 
-const DEVICE_AUTH_URL = 'spxmiguel.github.io/LootFlow/app'
+// ?device=CODE  → web app authorizes a waiting Electron device-code session
+const DEVICE_PARAM = params.get('device')
+// ?electron-auth=1 → Epic Games callback: do Google login here, redirect back to Electron
+const ELECTRON_AUTH = params.get('electron-auth') === '1'
 
-// ── Device callback mode (web) ────────────────────────────────────────────────
-// When the user opens the web app with ?device=CODE, show a simple
-// "Autorizar LootFlow" screen, do Google login, write tokens to Firestore.
+// ── Electron callback screen ───────────────────────────────────────────────
+// User's real browser opened here. They click "Entrar com Google" → popup →
+// tokens obtained → browser redirects to lootflow://auth?idToken=...
+// Electron main process receives the deep link and forwards tokens via IPC.
+function ElectronCallbackScreen() {
+  const { loginGoogleAndGetTokens } = useAuth()
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
+
+  async function handleAuth() {
+    setStatus('loading')
+    try {
+      const tokens = await loginGoogleAndGetTokens()
+      if (!tokens?.idToken) throw new Error('Nenhum token retornado.')
+      // Redirect back to Electron via deep link
+      const redirect = `lootflow://auth?idToken=${encodeURIComponent(tokens.idToken)}&accessToken=${encodeURIComponent(tokens.accessToken ?? '')}`
+      window.location.href = redirect
+      setStatus('done')
+    } catch (e: unknown) {
+      setErrorMsg((e as { message?: string })?.message ?? 'Erro desconhecido')
+      setStatus('error')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-4">
+      <div className="text-center max-w-sm w-full">
+        <img src="../icon.svg" className="w-16 h-16 rounded-2xl mx-auto mb-6" alt="LootFlow" />
+        <h1 className="font-display text-2xl font-bold text-slate-100 mb-2">Autorizar LootFlow</h1>
+        <p className="text-sm text-slate-500 mb-8">
+          Faça login com sua conta Google para sincronizar seus dados no app.
+        </p>
+
+        {status === 'loading' && (
+          <div className="flex items-center justify-center gap-2 text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Abrindo Google...</span>
+          </div>
+        )}
+
+        {status === 'done' && (
+          <div className="text-center">
+            <p className="text-sm text-green-400 mb-1">✅ Login realizado!</p>
+            <p className="text-xs text-slate-500">Pode fechar esta aba e voltar para o app.</p>
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="text-center">
+            <p className="text-sm text-red-400 mb-3">{errorMsg}</p>
+            <button
+              onClick={handleAuth}
+              className="px-4 py-2 rounded-xl bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {status === 'idle' && (
+          <button
+            onClick={handleAuth}
+            className="w-full flex items-center justify-center gap-3 py-3 px-6 rounded-2xl font-semibold text-sm transition-all"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 15%, transparent)',
+              color: 'var(--color-primary, #38bdf8)',
+              border: '1px solid color-mix(in srgb, var(--color-primary, #38bdf8) 30%, transparent)',
+            }}
+          >
+            <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="" />
+            Entrar com Google
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Device callback screen (web → Electron device code) ───────────────────
 function DeviceCallbackScreen() {
   const { loginGoogleAndGetTokens } = useAuth()
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
@@ -67,10 +141,7 @@ function DeviceCallbackScreen() {
           <>
             <h1 className="font-display text-2xl font-bold text-red-400 mb-2">Erro</h1>
             <p className="text-sm text-slate-500 mb-4">{errorMsg}</p>
-            <button
-              onClick={handleAuth}
-              className="px-4 py-2 rounded-xl bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors"
-            >
+            <button onClick={handleAuth} className="px-4 py-2 rounded-xl bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors">
               Tentar novamente
             </button>
           </>
@@ -80,175 +151,40 @@ function DeviceCallbackScreen() {
   )
 }
 
-// ── Electron device code panel ────────────────────────────────────────────────
-function DeviceCodePanel({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
-  const { loginGoogleViaDeviceCode } = useAuth()
-  const [code, setCode] = useState('')
-  const [secondsLeft, setSecondsLeft] = useState(Math.floor(DEVICE_CODE_TTL_MS / 1000))
-  const [generating, setGenerating] = useState(false)
-  const [done, setDone] = useState(false)
-  const unsubRef = useRef<(() => void) | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const startCode = async () => {
-    setGenerating(true)
-    unsubRef.current?.()
-    if (timerRef.current) clearInterval(timerRef.current)
-
-    const newCode = generateDeviceCode()
-    try {
-      await createDeviceCode(newCode)
-    } catch {
-      setGenerating(false)
-      return
-    }
-
-    setCode(newCode)
-    setSecondsLeft(Math.floor(DEVICE_CODE_TTL_MS / 1000))
-    setGenerating(false)
-
-    // Auto-open the user's default browser — no need to copy/paste URLs
-    window.electronAPI?.openDeviceBrowser?.(newCode)
-
-    // Countdown timer
-    timerRef.current = setInterval(() => {
-      setSecondsLeft(s => {
-        if (s <= 1) {
-          clearInterval(timerRef.current!)
-          setCode('')
-          return 0
-        }
-        return s - 1
-      })
-    }, 1000)
-
-    // Watch Firestore for auth completion
-    unsubRef.current = watchDeviceCode(
-      newCode,
-      async ({ idToken, accessToken }) => {
-        unsubRef.current?.()
-        clearInterval(timerRef.current!)
-        setDone(true)
-        await loginGoogleViaDeviceCode(idToken, accessToken)
-        cleanupDeviceCode(newCode)
-        onSuccess()
-      },
-      () => {
-        clearInterval(timerRef.current!)
-        setCode('')
-        setSecondsLeft(0)
-      },
-    )
-  }
-
-  useEffect(() => {
-    startCode()
-    return () => {
-      unsubRef.current?.()
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
-  const secs = String(secondsLeft % 60).padStart(2, '0')
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      className="overflow-hidden"
-    >
-      <div className="p-4 rounded-2xl bg-[#11161d] border border-white/[0.12]">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <Monitor size={14} className="text-primary shrink-0 mt-0.5" />
-            <p className="text-sm font-semibold text-slate-200">Autorizar pelo navegador</p>
-          </div>
-          <button onClick={onCancel} className="text-slate-600 hover:text-slate-400 transition-colors">
-            <X size={14} />
-          </button>
-        </div>
-
-        {done ? (
-          <div className="text-center py-2">
-            <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto mb-2" />
-            <p className="text-xs text-slate-400">Autenticando...</p>
-          </div>
-        ) : generating ? (
-          <div className="text-center py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-500 mx-auto" />
-          </div>
-        ) : code ? (
-          <>
-            <div className="text-center py-2">
-              <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto mb-3" />
-              <p className="text-xs text-slate-300 font-medium mb-1">Navegador aberto — faça login com Google lá</p>
-              <p className="text-[10px] text-slate-600 mb-3">Esta janela vai fechar automaticamente após o login</p>
-            </div>
-            {/* Fallback code — in case browser didn't open */}
-            <details className="group">
-              <summary className="text-[10px] text-slate-700 hover:text-slate-500 cursor-pointer text-center list-none mb-2">
-                Navegador não abriu? Clique aqui
-              </summary>
-              <p className="text-[10px] text-slate-500 mb-2 text-center">
-                Acesse <span className="font-mono text-slate-400">{DEVICE_AUTH_URL}</span> e insira:
-              </p>
-              <div className="flex items-center justify-center gap-1 mb-2">
-                {code.split('').map((ch, i) => (
-                  <span key={i} className="w-8 h-9 flex items-center justify-center rounded-lg bg-white/[0.07] border border-white/[0.12] text-lg font-bold text-slate-100 font-mono">
-                    {ch}
-                  </span>
-                ))}
-              </div>
-            </details>
-            <div className="flex items-center justify-between mt-1">
-              <p className={`text-xs font-mono ${secondsLeft < 60 ? 'text-red-400' : 'text-slate-600'}`}>
-                ⏱ {mins}:{secs}
-              </p>
-              <button onClick={startCode} className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-400 transition-colors">
-                <RefreshCw size={10} /> Novo código
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-2">
-            <p className="text-xs text-slate-500 mb-2">Código expirado.</p>
-            <button
-              onClick={startCode}
-              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors mx-auto"
-            >
-              <RefreshCw size={10} /> Gerar novo código
-            </button>
-          </div>
-        )}
-      </div>
-    </motion.div>
-  )
-}
-
 // ── Main AuthPage ─────────────────────────────────────────────────────────────
-export default function AuthPage({ onBack }: { onBack?: () => void }) {
-  const { loginLocal, loginGoogle } = useAuth()
+export default function AuthPage({ onBack: _ }: { onBack?: () => void }) {
+  const { loginLocal, loginGoogle, loginGoogleViaElectron } = useAuth()
   const [loadingGoogle, setLoadingGoogle] = useState(false)
+  const [waitingBrowser, setWaitingBrowser] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
-  const [showDeviceCode, setShowDeviceCode] = useState(false)
   const [legalModal, setLegalModal] = useState<LegalType | null>(null)
 
   const hasFirebase = FIREBASE_ENABLED
 
-  // Web: ?device=CODE → authorize Electron session
-  if (DEVICE_PARAM) {
-    return <DeviceCallbackScreen />
-  }
+  // Callback screens
+  if (ELECTRON_AUTH) return <ElectronCallbackScreen />
+  if (DEVICE_PARAM) return <DeviceCallbackScreen />
 
-  const handleGoogleClick = () => {
-    if (IS_ELECTRON) {
-      // Electron: show device code panel instead of opening browser
-      setShowDeviceCode(true)
+  // Check at click-time, not module-load-time — more reliable
+  const isElectron = () => !!window.electronAPI?.openBrowserLogin
+
+  const handleGoogleClick = async () => {
+    // ── Electron: Epic Games style ────────────────────────────────────────
+    if (isElectron()) {
+      setWaitingBrowser(true)
+      // Open real browser — user logs in there
+      window.electronAPI!.openBrowserLogin()
+      // Wait for deep-link callback (lootflow://auth?...)
+      window.electronAPI!.onAuthCredential(async ({ idToken, accessToken }) => {
+        window.electronAPI!.removeAuthListener()
+        const result = await loginGoogleViaElectron(idToken, accessToken ?? '')
+        setWaitingBrowser(false)
+        if (result === 'error') setWaitingBrowser(false)
+      })
       return
     }
+
+    // ── Web: popup/redirect ───────────────────────────────────────────────
     if (localStorage.getItem(CONSENT_KEY) === 'true') {
       doGoogleLogin()
     } else {
@@ -268,13 +204,18 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
     setLoadingGoogle(false)
   }
 
+  const cancelBrowser = () => {
+    window.electronAPI?.removeAuthListener?.()
+    setWaitingBrowser(false)
+  }
+
   return (
     <>
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
 
       <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-4 relative overflow-hidden">
         <div className="bg-texture" aria-hidden="true" />
-        {!IS_ELECTRON && (
+        {!isElectron() && (
           <a
             href="https://spxmiguel.github.io/LootFlow/"
             className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-[#11161d]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.12] transition-colors"
@@ -308,9 +249,8 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
             <p className="text-sm text-slate-500 mt-2">Analytics premium de drops CS2 · Prime Weekly</p>
           </div>
 
-          {/* Options */}
           <div className="space-y-3">
-            {/* Anonymous */}
+            {/* Visitor */}
             <motion.button
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
@@ -325,18 +265,16 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
                 <p className="font-semibold text-slate-200 text-sm">Entrar como Visitante</p>
                 <p className="text-xs text-slate-500 mt-0.5">Dados salvos localmente · sem conta</p>
               </div>
-              <div className="px-3 py-1.5 rounded-xl bg-[#1a2235] text-xs text-slate-300 font-medium shrink-0">
-                Entrar
-              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-[#1a2235] text-xs text-slate-300 font-medium shrink-0">Entrar</div>
             </motion.button>
 
-            {/* Google / Device Code */}
+            {/* Google */}
             <motion.button
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
               onClick={handleGoogleClick}
-              disabled={loadingGoogle || !hasFirebase || showDeviceCode}
+              disabled={loadingGoogle || waitingBrowser || !hasFirebase}
               className="w-full flex items-center gap-4 p-4 rounded-2xl border transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 8%, transparent)',
@@ -345,17 +283,15 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
             >
               <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 15%, transparent)' }}>
-                {loadingGoogle
+                {loadingGoogle || waitingBrowser
                   ? <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-primary, #38bdf8)' }} />
-                  : <Monitor className="w-5 h-5" style={{ color: 'var(--color-primary, #38bdf8)' }} />}
+                  : <ExternalLink className="w-5 h-5" style={{ color: 'var(--color-primary, #38bdf8)' }} />}
               </div>
               <div className="flex-1 text-left">
-                <p className="font-semibold text-slate-200 text-sm">
-                  {IS_ELECTRON ? 'Entrar com Google' : 'Entrar com Google'}
-                </p>
+                <p className="font-semibold text-slate-200 text-sm">Entrar com Google</p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {IS_ELECTRON
-                    ? 'Use seu celular ou navegador — sem senha no app'
+                  {waitingBrowser
+                    ? 'Aguardando login no navegador...'
                     : 'Sync na nuvem · acesso em qualquer dispositivo'}
                 </p>
               </div>
@@ -364,23 +300,32 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
                   backgroundColor: 'color-mix(in srgb, var(--color-primary, #38bdf8) 15%, transparent)',
                   color: 'var(--color-primary, #38bdf8)',
                 }}>
-                {loadingGoogle ? '...' : 'Entrar'}
+                {waitingBrowser ? '...' : loadingGoogle ? '...' : 'Entrar'}
               </div>
             </motion.button>
 
-            {/* Device Code Panel (Electron) */}
+            {/* Cancel waiting for browser */}
             <AnimatePresence>
-              {showDeviceCode && (
-                <DeviceCodePanel
-                  onSuccess={() => setShowDeviceCode(false)}
-                  onCancel={() => setShowDeviceCode(false)}
-                />
+              {waitingBrowser && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <button
+                    onClick={cancelBrowser}
+                    className="w-full text-xs text-slate-600 hover:text-slate-400 transition-colors py-1"
+                  >
+                    Cancelar
+                  </button>
+                </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Google consent panel (web only) */}
+            {/* Web consent panel */}
             <AnimatePresence>
-              {showConsent && !IS_ELECTRON && (
+              {showConsent && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -451,13 +396,9 @@ export default function AuthPage({ onBack }: { onBack?: () => void }) {
                 : 'Firebase não configurado — apenas modo Visitante disponível.'}
             </p>
             <div className="flex items-center justify-center gap-3 text-[11px] text-slate-700">
-              <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
-                Privacidade
-              </button>
+              <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-500 transition-colors underline underline-offset-2">Privacidade</button>
               <span>·</span>
-              <button onClick={() => setLegalModal('terms')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
-                Termos de Uso
-              </button>
+              <button onClick={() => setLegalModal('terms')} className="hover:text-slate-500 transition-colors underline underline-offset-2">Termos de Uso</button>
             </div>
           </motion.div>
         </motion.div>

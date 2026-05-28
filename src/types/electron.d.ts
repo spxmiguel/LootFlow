@@ -1,6 +1,8 @@
 interface ElectronAPI {
   isElectron: true
-  openDeviceBrowser: (code: string) => Promise<void>
+  openBrowserLogin: () => Promise<void>
+  onAuthCredential: (cb: (data: { idToken: string; accessToken: string | null }) => void) => void
+  removeAuthListener: () => void
 }
 
 declare global {

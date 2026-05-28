@@ -4,22 +4,70 @@ import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// Electron loads the live GitHub Pages app — no local bundling needed.
-// This means:
-//   • Firebase Auth sees spxmiguel.github.io (authorized domain) → no more unauthorized-domain
-//   • App is always up to date without reinstalling
-//   • Device code auth flow works out of the box
+// Electron loads the live GitHub Pages app — Firebase Auth sees the authorized
+// domain (spxmiguel.github.io) instead of file://, no unauthorized-domain error.
 const APP_URL = 'https://spxmiguel.github.io/LootFlow/app/'
+
+// Auth callback URL opened in the user's real browser:
+// GitHub Pages handles Google OAuth there and redirects back to lootflow://auth?...
+const AUTH_URL = 'https://spxmiguel.github.io/LootFlow/app/?electron-auth=1'
 
 const ICON = app.isPackaged
   ? path.join(process.resourcesPath, 'build-assets/icon-512.png')
   : path.join(__dirname, '../build-assets/icon-512.png')
 
-// Single-instance lock
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) app.quit()
 
 let win: BrowserWindow | null = null
+
+// ── Deep-link handler ──────────────────────────────────────────────────────
+// Receives lootflow://auth?idToken=...&accessToken=...
+// after the user authenticated in their real browser, then forwards
+// the tokens to the renderer to sign into Firebase.
+function handleDeepLink(url: string) {
+  try {
+    const u = new URL(url)
+    if (u.host === 'auth') {
+      const idToken = u.searchParams.get('idToken')
+      const accessToken = u.searchParams.get('accessToken')
+      if (idToken && win) {
+        win.webContents.send('auth:credential', { idToken, accessToken })
+        if (win.isMinimized()) win.restore()
+        win.focus()
+      }
+    }
+  } catch (e) {
+    console.error('[deep-link] parse error:', e)
+  }
+}
+
+// ── Protocol registration ──────────────────────────────────────────────────
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('lootflow', process.execPath, [path.resolve(process.argv[1])])
+  }
+} else {
+  app.setAsDefaultProtocolClient('lootflow')
+}
+
+app.on('second-instance', (_event, commandLine) => {
+  if (win) {
+    if (win.isMinimized()) win.restore()
+    win.focus()
+  }
+  const url = commandLine.find(arg => arg.startsWith('lootflow://'))
+  if (url) handleDeepLink(url)
+})
+
+app.on('open-url', (_event, url) => {
+  handleDeepLink(url)
+})
+
+// ── IPC ────────────────────────────────────────────────────────────────────
+ipcMain.handle('auth:open-browser', () => {
+  shell.openExternal(AUTH_URL)
+})
 
 // ── Window ─────────────────────────────────────────────────────────────────
 function createWindow() {
@@ -41,20 +89,6 @@ function createWindow() {
 
   win.loadURL(APP_URL)
 }
-
-// ── IPC ────────────────────────────────────────────────────────────────────
-// Opens the user's default browser at the device-code auth page.
-// The user logs in with Google there; Electron polls Firestore for completion.
-ipcMain.handle('auth:open-device-browser', (_event, code: string) => {
-  shell.openExternal(`https://spxmiguel.github.io/LootFlow/app/?device=${code}`)
-})
-
-app.on('second-instance', () => {
-  if (win) {
-    if (win.isMinimized()) win.restore()
-    win.focus()
-  }
-})
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
