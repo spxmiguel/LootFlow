@@ -33,6 +33,8 @@ function StorageBanner({ onDismiss }: { onDismiss: () => void }) {
   )
 }
 const AuthPage = lazy(() => import('./pages/AuthPage'))
+// ?electron-auth=1 → always show the OAuth callback screen, even if logged in
+const ELECTRON_AUTH_PARAM = new URLSearchParams(window.location.search).get('electron-auth') === '1'
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Accounts = lazy(() => import('./pages/Accounts'))
 const Drops = lazy(() => import('./pages/Drops'))
@@ -95,7 +97,15 @@ export default function App() {
           style: { background: '#0f172a', color: '#e2e8f0', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '13px' },
         }}
       />
-      {!authReady ? (
+      {ELECTRON_AUTH_PARAM ? (
+        // ?electron-auth=1 → always render AuthPage (shows ElectronCallbackScreen)
+        // regardless of login state — user may already be signed in on this browser
+        <ErrorBoundary page="auth">
+          <Suspense fallback={<PageFallback />}>
+            <AuthPage />
+          </Suspense>
+        </ErrorBoundary>
+      ) : !authReady ? (
         <PageFallback />
       ) : !isLoggedIn ? (
         <ErrorBoundary page="auth">
