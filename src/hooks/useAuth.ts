@@ -207,6 +207,10 @@ export function useAuth() {
       toast.error('Firebase não configurado.')
       return Promise.resolve('error')
     }
+    if (!window.electronAPI?.openBrowserLogin) {
+      toast.error('Atualize o app para usar login com Google.')
+      return Promise.resolve('error')
+    }
     return new Promise<LoginResult>((resolve) => {
       window.electronAPI!.openBrowserLogin()
       toast('Faça login no navegador que abriu...', { duration: 10000, icon: '🌐' })

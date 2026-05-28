@@ -153,7 +153,7 @@ function DeviceCallbackScreen() {
 
 // ── Main AuthPage ─────────────────────────────────────────────────────────────
 export default function AuthPage({ onBack: _ }: { onBack?: () => void }) {
-  const { loginLocal, loginGoogle, loginGoogleViaElectron } = useAuth()
+  const { loginLocal, loginGoogle } = useAuth()
   const [loadingGoogle, setLoadingGoogle] = useState(false)
   const [waitingBrowser, setWaitingBrowser] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
@@ -165,22 +165,16 @@ export default function AuthPage({ onBack: _ }: { onBack?: () => void }) {
   if (ELECTRON_AUTH) return <ElectronCallbackScreen />
   if (DEVICE_PARAM) return <DeviceCallbackScreen />
 
-  // Check at click-time, not module-load-time — more reliable
-  const isElectron = () => !!window.electronAPI?.openBrowserLogin
+  // Use window.electronAPI?.isElectron — injected by preload before page scripts run.
+  const isElectron = () => !!window.electronAPI?.isElectron
 
   const handleGoogleClick = async () => {
-    // ── Electron: Epic Games style ────────────────────────────────────────
+    // ── Electron: open real browser, await deep-link callback ─────────────
     if (isElectron()) {
       setWaitingBrowser(true)
-      // Open real browser — user logs in there
-      window.electronAPI!.openBrowserLogin()
-      // Wait for deep-link callback (lootflow://auth?...)
-      window.electronAPI!.onAuthCredential(async ({ idToken, accessToken }) => {
-        window.electronAPI!.removeAuthListener()
-        const result = await loginGoogleViaElectron(idToken, accessToken ?? '')
-        setWaitingBrowser(false)
-        if (result === 'error') setWaitingBrowser(false)
-      })
+      // loginGoogle() detects Electron internally and calls loginGoogleViaElectron()
+      await loginGoogle()
+      setWaitingBrowser(false)
       return
     }
 
