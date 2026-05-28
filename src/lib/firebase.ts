@@ -1,6 +1,6 @@
 import { logger } from './logger'
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
-import { initializeAuth, browserLocalPersistence, GoogleAuthProvider, type Auth } from 'firebase/auth'
+import { initializeAuth, getAuth, browserLocalPersistence, GoogleAuthProvider, type Auth } from 'firebase/auth'
 import {
   getFirestore, collection, doc, getDocs, setDoc,
   deleteDoc, type Firestore,
@@ -20,14 +20,12 @@ export function initFirebase(config: FirebaseConfig): { auth: Auth; db: Firestor
   try {
     const existing = getApps()
     app = existing.length > 0 ? existing[0] : initializeApp(config)
-    // Use browserLocalPersistence to store credentials in localStorage instead of
-    // Electron's safeStorage (which triggers the macOS keychain password prompt).
-    // initializeAuth must only be called once — reuse if already initialized.
+    // Use browserLocalPersistence so Firebase stores credentials in localStorage
+    // instead of Electron's safeStorage (avoids the macOS keychain prompt).
+    // initializeAuth throws if called twice — fall back to getAuth on re-init.
     try {
       auth = initializeAuth(app, { persistence: [browserLocalPersistence] })
     } catch {
-      // "already initialized" → get existing instance via dynamic import
-      const { getAuth } = await import('firebase/auth')
       auth = getAuth(app)
     }
     db = getFirestore(app)
