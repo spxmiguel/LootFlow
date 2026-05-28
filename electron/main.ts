@@ -16,10 +16,10 @@ const ICON = app.isPackaged
   ? path.join(process.resourcesPath, 'build-assets/icon-512.png')
   : path.join(__dirname, '../build-assets/icon-512.png')
 
-// Prevent macOS keychain prompt — Electron uses safeStorage to encrypt
-// localStorage by default on macOS; switching to the basic password store
-// avoids the "lootflow Safe Storage" keychain dialog entirely.
-app.commandLine.appendSwitch('password-store', 'basic')
+// Prevent macOS keychain prompt — Chromium's OSCrypt uses the system
+// keychain to store its encryption key. --use-mock-keychain replaces that
+// with a fixed internal key so the OS never prompts for keychain access.
+app.commandLine.appendSwitch('use-mock-keychain')
 
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) app.quit()

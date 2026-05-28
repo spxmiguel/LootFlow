@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, UserCircle2, Loader2, Shield, X, ExternalLink } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
 import { FIREBASE_ENABLED } from '../lib/config'
 import { LegalModal, type LegalType } from '../components/LegalModal'
@@ -153,7 +154,7 @@ function DeviceCallbackScreen() {
 
 // ── Main AuthPage ─────────────────────────────────────────────────────────────
 export default function AuthPage({ onBack: _ }: { onBack?: () => void }) {
-  const { loginLocal, loginGoogle } = useAuth()
+  const { loginLocal, loginGoogle, loginGoogleViaElectron } = useAuth()
   const [loadingGoogle, setLoadingGoogle] = useState(false)
   const [waitingBrowser, setWaitingBrowser] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
@@ -165,16 +166,26 @@ export default function AuthPage({ onBack: _ }: { onBack?: () => void }) {
   if (ELECTRON_AUTH) return <ElectronCallbackScreen />
   if (DEVICE_PARAM) return <DeviceCallbackScreen />
 
-  // Use window.electronAPI?.isElectron — injected by preload before page scripts run.
-  const isElectron = () => !!window.electronAPI?.isElectron
+  // Strict equality — preload sets isElectron: true as const
+  const inElectron = window.electronAPI?.isElectron === true
 
   const handleGoogleClick = async () => {
-    // ── Electron: open real browser, await deep-link callback ─────────────
-    if (isElectron()) {
+    // ── Electron: direct IPC — intentionally bypasses loginGoogle() to
+    //    prevent any accidental fallthrough to the web popup path ──────────
+    if (inElectron) {
+      if (!window.electronAPI?.openBrowserLogin) {
+        toast.error('Atualize o app para usar login com Google.')
+        return
+      }
       setWaitingBrowser(true)
-      // loginGoogle() detects Electron internally and calls loginGoogleViaElectron()
-      await loginGoogle()
-      setWaitingBrowser(false)
+      window.electronAPI.removeAuthListener()   // clear any stale listener
+      window.electronAPI.openBrowserLogin()     // opens real browser
+      window.electronAPI.onAuthCredential(async ({ idToken, accessToken }) => {
+        window.electronAPI!.removeAuthListener()
+        setWaitingBrowser(false)
+        if (!idToken) { toast.error('Token inválido. Tente novamente.'); return }
+        await loginGoogleViaElectron(idToken, accessToken ?? '')
+      })
       return
     }
 
@@ -209,7 +220,7 @@ export default function AuthPage({ onBack: _ }: { onBack?: () => void }) {
 
       <div className="min-h-screen bg-[#0d1117] flex items-center justify-center p-4 relative overflow-hidden">
         <div className="bg-texture" aria-hidden="true" />
-        {!isElectron() && (
+        {!inElectron && (
           <a
             href="https://spxmiguel.github.io/LootFlow/"
             className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-[#11161d]/85 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur hover:text-slate-100 hover:border-white/[0.12] transition-colors"
