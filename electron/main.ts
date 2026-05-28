@@ -87,6 +87,11 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      // sandbox: false is required for ESM preload scripts (import syntax) to
+      // work correctly. Electron v20+ defaults sandbox to true, which breaks
+      // ESM module loading in the preload — contextBridge.exposeInMainWorld
+      // never runs and window.electronAPI stays undefined in the renderer.
+      sandbox: false,
       backgroundThrottling: false,
       preload: path.join(__dirname, 'preload.js'),
     },
