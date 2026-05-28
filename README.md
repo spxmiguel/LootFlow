@@ -4,7 +4,7 @@
 
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20PWA-brightgreen?style=flat-square)
 ![Stack](https://img.shields.io/badge/stack-React%20%2B%20TypeScript%20%2B%20Firebase-blue?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+![License](https://img.shields.io/badge/license-Source%20Available-red?style=flat-square)
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento%20%7C%20in%20development-orange?style=flat-square)
 ![Language](https://img.shields.io/badge/idioma-PT%20%7C%20EN-blueviolet?style=flat-square)
 ![AI](https://img.shields.io/badge/built%20with-Claude%20Sonnet-8B5CF6?style=flat-square&logo=anthropic)
@@ -304,6 +304,18 @@ The repository already has CI/CD configured. To use it:
 
 ---
 
+## 📄 Licença
+
+Este projeto **NÃO é open source**.  
+O código está disponível apenas para visualização e aprendizado pessoal.
+
+- ✅ Permitido: estudar o código, usar para aprendizado pessoal
+- ❌ Proibido: copiar, modificar, redistribuir, vender ou criar derivados comerciais
+
+Veja o arquivo [LICENSE](./LICENSE) para os termos completos.
+
+---
+
 ## 🤖 Built with Claude
 
 This project was developed in collaboration with [Claude](https://claude.ai) (Anthropic's AI). Claude helped design the architecture, write and review code, fix bugs, and iterate on the UI throughout development.
@@ -312,7 +324,7 @@ This project was developed in collaboration with [Claude](https://claude.ai) (An
 
 <div align="center">
 
-MIT © 2025 — Feito com ☕ e raiva de perder drop.
+Copyright (c) 2026 Spxmiguel · Feito com ☕ e raiva de perder drop.
 
 **[🇧🇷 PT](#-português) · [🇺🇸🇬🇧 EN](#-english) · [Issues](../../issues) · [Abrir App](https://spxmiguel.github.io/LootFlow)**
 
