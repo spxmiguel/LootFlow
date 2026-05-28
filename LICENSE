@@ -1,25 +1,20 @@
-Copyright (c) 2026 Spxmiguel.
+Copyright (c) 2026 Miguel.
 
 Todos os direitos reservados.
 
-Este software é disponibilizado apenas para visualização e uso pessoal.
+Permissões:
 
-Não é permitido copiar, modificar, redistribuir, sublicenciar, vender ou criar
-versões derivadas para fins comerciais sem autorização explícita do autor.
+* Visualizar o código-fonte
+* Utilizar para fins pessoais
+* Criar forks e modificações para uso não comercial
 
-É permitido:
-- Visualizar e estudar o código-fonte para fins de aprendizado pessoal.
-- Executar o software para uso pessoal, não comercial.
+Restrições:
 
-Não é permitido:
-- Distribuir cópias do software, modificadas ou não.
-- Usar o código-fonte em projetos comerciais ou com fins lucrativos.
-- Remover ou alterar este aviso de copyright.
-- Sublicenciar ou transferir quaisquer direitos sobre este software.
+* É proibida a venda deste software
+* É proibida a redistribuição comercial
+* É proibida a criação de serviços ou produtos comerciais derivados sem autorização explícita do autor
 
-ESTE SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA", SEM GARANTIAS DE
-QUALQUER TIPO, EXPRESSAS OU IMPLÍCITAS. O AUTOR NÃO SE RESPONSABILIZA POR
-QUAISQUER DANOS DECORRENTES DO USO DESTE SOFTWARE.
+Caso o repositório oficial seja removido ou tornado privado pelo autor, forks públicos e
+redistribuições deste projeto também deverão ser removidos.
 
-Para solicitar permissão para usos não cobertos por esta licença, entre em
-contato com o autor.
+Este software é fornecido apenas para fins educacionais e pessoais.
