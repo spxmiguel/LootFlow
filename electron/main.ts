@@ -42,6 +42,13 @@ function createWindow() {
   win.loadURL(APP_URL)
 }
 
+// ── IPC ────────────────────────────────────────────────────────────────────
+// Opens the user's default browser at the device-code auth page.
+// The user logs in with Google there; Electron polls Firestore for completion.
+ipcMain.handle('auth:open-device-browser', (_event, code: string) => {
+  shell.openExternal(`https://spxmiguel.github.io/LootFlow/app/?device=${code}`)
+})
+
 app.on('second-instance', () => {
   if (win) {
     if (win.isMinimized()) win.restore()

@@ -107,6 +107,9 @@ function DeviceCodePanel({ onSuccess, onCancel }: { onSuccess: () => void; onCan
     setSecondsLeft(Math.floor(DEVICE_CODE_TTL_MS / 1000))
     setGenerating(false)
 
+    // Auto-open the user's default browser — no need to copy/paste URLs
+    window.electronAPI?.openDeviceBrowser?.(newCode)
+
     // Countdown timer
     timerRef.current = setInterval(() => {
       setSecondsLeft(s => {
@@ -179,31 +182,32 @@ function DeviceCodePanel({ onSuccess, onCancel }: { onSuccess: () => void; onCan
           </div>
         ) : code ? (
           <>
-            <p className="text-xs text-slate-400 mb-3">
-              No seu celular ou computador, acesse:
-            </p>
-            <div className="bg-black/30 rounded-lg px-3 py-2 mb-3 text-center">
-              <p className="text-xs text-slate-400 font-mono">{DEVICE_AUTH_URL}</p>
+            <div className="text-center py-2">
+              <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto mb-3" />
+              <p className="text-xs text-slate-300 font-medium mb-1">Navegador aberto — faça login com Google lá</p>
+              <p className="text-[10px] text-slate-600 mb-3">Esta janela vai fechar automaticamente após o login</p>
             </div>
-            <p className="text-xs text-slate-400 mb-2 text-center">e insira o código:</p>
-            <div className="flex items-center justify-center gap-1 mb-3">
-              {code.split('').map((ch, i) => (
-                <span
-                  key={i}
-                  className="w-9 h-11 flex items-center justify-center rounded-lg bg-white/[0.07] border border-white/[0.12] text-xl font-bold text-slate-100 font-mono tracking-wider"
-                >
-                  {ch}
-                </span>
-              ))}
-            </div>
-            <div className="flex items-center justify-between">
+            {/* Fallback code — in case browser didn't open */}
+            <details className="group">
+              <summary className="text-[10px] text-slate-700 hover:text-slate-500 cursor-pointer text-center list-none mb-2">
+                Navegador não abriu? Clique aqui
+              </summary>
+              <p className="text-[10px] text-slate-500 mb-2 text-center">
+                Acesse <span className="font-mono text-slate-400">{DEVICE_AUTH_URL}</span> e insira:
+              </p>
+              <div className="flex items-center justify-center gap-1 mb-2">
+                {code.split('').map((ch, i) => (
+                  <span key={i} className="w-8 h-9 flex items-center justify-center rounded-lg bg-white/[0.07] border border-white/[0.12] text-lg font-bold text-slate-100 font-mono">
+                    {ch}
+                  </span>
+                ))}
+              </div>
+            </details>
+            <div className="flex items-center justify-between mt-1">
               <p className={`text-xs font-mono ${secondsLeft < 60 ? 'text-red-400' : 'text-slate-600'}`}>
                 ⏱ {mins}:{secs}
               </p>
-              <button
-                onClick={startCode}
-                className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-400 transition-colors"
-              >
+              <button onClick={startCode} className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-400 transition-colors">
                 <RefreshCw size={10} /> Novo código
               </button>
             </div>
