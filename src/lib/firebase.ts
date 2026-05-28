@@ -1,6 +1,6 @@
 import { logger } from './logger'
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
-import { initializeAuth, getAuth, browserLocalPersistence, GoogleAuthProvider, type Auth } from 'firebase/auth'
+import { initializeAuth, getAuth, browserLocalPersistence, browserPopupRedirectResolver, GoogleAuthProvider, type Auth } from 'firebase/auth'
 import {
   getFirestore, collection, doc, getDocs, setDoc,
   deleteDoc, type Firestore,
@@ -25,7 +25,7 @@ export function initFirebase(config: FirebaseConfig): { auth: Auth; db: Firestor
     // in that case. Any OTHER error should propagate (don't silently fall back
     // to getAuth, which would use default Electron persistence with safeStorage).
     try {
-      auth = initializeAuth(app, { persistence: [browserLocalPersistence] })
+      auth = initializeAuth(app, { persistence: [browserLocalPersistence], popupRedirectResolver: browserPopupRedirectResolver })
     } catch (e: unknown) {
       const code = (e as { code?: string })?.code
       if (code === 'auth/already-initialized' || auth != null) {
