@@ -16,6 +16,11 @@ const ICON = app.isPackaged
   ? path.join(process.resourcesPath, 'build-assets/icon-512.png')
   : path.join(__dirname, '../build-assets/icon-512.png')
 
+// Prevent macOS keychain prompt — Electron uses safeStorage to encrypt
+// localStorage by default on macOS; switching to the basic password store
+// avoids the "lootflow Safe Storage" keychain dialog entirely.
+app.commandLine.appendSwitch('password-store', 'basic')
+
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) app.quit()
 
