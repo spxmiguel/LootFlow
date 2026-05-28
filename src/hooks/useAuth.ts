@@ -19,6 +19,9 @@ let authListenerStarted = false
 let redirectHandled = false
 let redirectResultPending = false  // true while getRedirectResult() hasn't resolved yet
 
+// Detect the electron-auth callback page (opened in the user's real browser)
+const IS_ELECTRON_AUTH_PAGE = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('electron-auth') === '1'
+
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 interface StoredSession { mode: 'local' | 'firebase'; user: AppUser; savedAt?: number }
@@ -85,6 +88,19 @@ export function useAuth() {
           .then(result => {
             redirectResultPending = false
             if (result?.user) {
+              // ── Electron-auth page: extract Google tokens and deep-link back to Electron
+              if (IS_ELECTRON_AUTH_PAGE) {
+                clearRedirectPending()
+                const cred = GoogleAuthProvider.credentialFromResult(result)
+                if (cred?.idToken) {
+                  window.location.href = `lootflow://auth?idToken=${encodeURIComponent(cred.idToken)}&accessToken=${encodeURIComponent(cred.accessToken ?? '')}`
+                } else {
+                  // credentialFromResult gave no idToken — surface error to the page
+                  ;(window as unknown as Record<string, unknown>).__electronAuthRedirectError = 'Google não retornou token. Tente novamente.'
+                }
+                return
+              }
+
               clearRedirectPending()
               const appUser = makeAppUser(result.user)
               setUser(appUser)
@@ -239,20 +255,28 @@ export function useAuth() {
   }
 
   // ── Login Google + return raw Google tokens ───────────────────────────
-  // Used by AuthPage when the browser is opened with ?electron-cb=1.
-  // Gets Google OAuth tokens and redirects back to lootflow://auth-callback.
-  const loginGoogleAndGetTokens = async (): Promise<{ idToken: string; accessToken: string | null } | null> => {
-    if (!FIREBASE_ENABLED) return null
-    try {
-      const { auth } = initFirebase(getActiveFirebaseConfig())
-      const provider = getGoogleProvider()
-      const result = await signInWithPopup(auth, provider)
-      const cred = GoogleAuthProvider.credentialFromResult(result)
-      return { idToken: cred?.idToken ?? '', accessToken: cred?.accessToken ?? null }
-    } catch (e) {
-      logger.error('[Auth] loginGoogleAndGetTokens error:', e)
-      return null
-    }
+  // Used by ElectronCallbackScreen (browser side of Epic Games flow).
+  // Throws on failure so caller can inspect error code and fall back to redirect.
+  const loginGoogleAndGetTokens = async (): Promise<{ idToken: string; accessToken: string | null }> => {
+    if (!FIREBASE_ENABLED) throw new Error('Firebase não configurado.')
+    const { auth } = initFirebase(getActiveFirebaseConfig())
+    const provider = getGoogleProvider()
+    const result = await signInWithPopup(auth, provider) // throws auth/* codes on failure
+    const cred = GoogleAuthProvider.credentialFromResult(result)
+    if (!cred?.idToken) throw new Error('Google não retornou token de identidade.')
+    return { idToken: cred.idToken, accessToken: cred.accessToken ?? null }
+  }
+
+  // ── Fallback: start Google redirect for Electron auth ─────────────────
+  // Called when signInWithPopup is blocked by the browser (e.g. Safari).
+  // Sets the redirect-pending flag then navigates to Google OAuth.
+  // On return, getRedirectResult() in useAuth handles the deep-link redirect.
+  const loginGoogleViaRedirectForElectron = async (): Promise<void> => {
+    if (!FIREBASE_ENABLED) throw new Error('Firebase não configurado.')
+    const { auth } = initFirebase(getActiveFirebaseConfig())
+    const provider = getGoogleProvider()
+    setRedirectPending()
+    await signInWithRedirect(auth, provider)
   }
 
   // ── Login Google ─────────────────────────────────────────────────────
@@ -403,5 +427,5 @@ export function useAuth() {
     }
   }
 
-  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, loginGoogleAndGetTokens, loginGoogleViaDeviceCode, loginGoogleViaElectron: loginGoogleViaDeviceCode, logout, deleteAccount }
+  return { user, authMode, authReady, isLoggedIn: !!user, loginLocal, loginGoogle, loginGoogleAndGetTokens, loginGoogleViaRedirectForElectron, loginGoogleViaDeviceCode, loginGoogleViaElectron: loginGoogleViaDeviceCode, logout, deleteAccount }
 }

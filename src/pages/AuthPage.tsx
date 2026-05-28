@@ -19,24 +19,61 @@ const DEVICE_PARAM = params.get('device')
 const ELECTRON_AUTH = params.get('electron-auth') === '1'
 
 // ── Electron callback screen ───────────────────────────────────────────────
-// User's real browser opened here. They click "Entrar com Google" → popup →
-// tokens obtained → browser redirects to lootflow://auth?idToken=...
-// Electron main process receives the deep link and forwards tokens via IPC.
+// User's real browser opened here. Two auth paths:
+//   1. Popup:   click → signInWithPopup → tokens → lootflow://auth?idToken=...
+//   2. Redirect: popup blocked (Safari) → signInWithRedirect → Google → back here
+//      → useAuth.getRedirectResult intercepts → deep-links to Electron automatically.
 function ElectronCallbackScreen() {
-  const { loginGoogleAndGetTokens } = useAuth()
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const { loginGoogleAndGetTokens, loginGoogleViaRedirectForElectron } = useAuth()
+  // If redirect was pending when the page loaded, useAuth is already processing it.
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(() => {
+    try {
+      if (localStorage.getItem('lootflow_google_pending') === '1') return 'loading'
+    } catch {}
+    return 'idle'
+  })
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Check if useAuth surfaced a redirect error (credentialFromResult returned no idToken)
+  useEffect(() => {
+    const err = (window as { __electronAuthRedirectError?: string }).__electronAuthRedirectError
+    if (err) {
+      delete (window as { __electronAuthRedirectError?: string }).__electronAuthRedirectError
+      setErrorMsg(err)
+      setStatus('error')
+    }
+  }, [])
 
   async function handleAuth() {
     setStatus('loading')
     try {
       const tokens = await loginGoogleAndGetTokens()
-      if (!tokens?.idToken) throw new Error('Nenhum token retornado.')
       // Redirect back to Electron via deep link
       const redirect = `lootflow://auth?idToken=${encodeURIComponent(tokens.idToken)}&accessToken=${encodeURIComponent(tokens.accessToken ?? '')}`
       window.location.href = redirect
       setStatus('done')
     } catch (e: unknown) {
+      const code = (e as { code?: string })?.code
+      // Popup blocked or not supported → fall back to redirect (works in all browsers)
+      if (
+        code === 'auth/popup-blocked' ||
+        code === 'auth/operation-not-supported-in-this-environment' ||
+        code === 'auth/web-storage-unsupported'
+      ) {
+        try {
+          await loginGoogleViaRedirectForElectron()
+          // page navigates away; code below won't run
+        } catch (re) {
+          setErrorMsg((re as { message?: string })?.message ?? 'Erro ao redirecionar')
+          setStatus('error')
+        }
+        return
+      }
+      // User closed popup → back to idle
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        setStatus('idle')
+        return
+      }
       setErrorMsg((e as { message?: string })?.message ?? 'Erro desconhecido')
       setStatus('error')
     }
@@ -54,7 +91,7 @@ function ElectronCallbackScreen() {
         {status === 'loading' && (
           <div className="flex items-center justify-center gap-2 text-slate-400">
             <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Abrindo Google...</span>
+            <span className="text-sm">Processando login...</span>
           </div>
         )}
 
@@ -112,7 +149,6 @@ function DeviceCallbackScreen() {
     setStatus('loading')
     try {
       const tokens = await loginGoogleAndGetTokens()
-      if (!tokens?.idToken) throw new Error('Nenhum token retornado.')
       await completeDeviceAuth(code, tokens.idToken, tokens.accessToken ?? '')
       setStatus('done')
     } catch (e: unknown) {
