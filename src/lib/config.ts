@@ -4,13 +4,13 @@
 // https://firebase.google.com/docs/projects/api-keys
 
 export const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyBUVMtSUg92u4D5UpMZNRe5plikiOmNddk",
-  authDomain:        "lootflow-92afd.firebaseapp.com",
-  projectId:         "lootflow-92afd",
-  storageBucket:     "lootflow-92afd.firebasestorage.app",
-  messagingSenderId: "1008615127332",
-  appId:             "1:1008615127332:web:37c760fa37dd37eb8d9bb1",
-  measurementId:     "G-REHSJLRPQ6",
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            ?? "",
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        ?? "",
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         ?? "",
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     ?? "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? "",
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID             ?? "",
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     ?? "",
 }
 
 export const FIREBASE_ENABLED = true
