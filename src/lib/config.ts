@@ -31,6 +31,10 @@ export function getActiveFirebaseConfig(): typeof FIREBASE_CONFIG {
   return getCustomFirebaseConfig() ?? FIREBASE_CONFIG
 }
 
+export function hasFirebaseConfig(config: typeof FIREBASE_CONFIG = getActiveFirebaseConfig()): boolean {
+  return Boolean(config.apiKey && config.authDomain && config.projectId && config.appId)
+}
+
 export function isUsingCustomFirebase(): boolean {
   return getCustomFirebaseConfig() !== null
 }

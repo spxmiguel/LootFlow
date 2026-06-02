@@ -12,7 +12,7 @@ import {
 import { useStore } from '../store'
 import { calcDashboardStats, calcWeekStats } from '../lib/calculations'
 import { PRIME_COST_BRL } from '../lib/config'
-import { formatCurrency, formatCurrencyCompact, formatDateRelative, formatPercent, getCurrentWeekId, cn } from '../lib/utils'
+import { formatCurrency, formatCurrencyCompact, formatDateRelative, formatPercent, getCurrentWeekId, getWeekLabel, cn } from '../lib/utils'
 import { Card, Badge, Button, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { useT } from '../hooks/useT'
@@ -106,6 +106,7 @@ export function Dashboard() {
   )
 
   const currentWeekId = getCurrentWeekId()
+  const currentWeekLabel = getWeekLabel(currentWeekId)
   const currentWeekStats = useMemo(
     () => calcWeekStats(currentWeekId, drops, accounts, settings),
     [drops, accounts, settings, currentWeekId],
@@ -295,19 +296,21 @@ export function Dashboard() {
               </p>
             </div>
             <div className="space-y-1">
-              {accountsMissingDrops.length === activeAccounts.length ? (
-                <p className="text-xs text-loss/70 font-body">
-                  Todas as {activeAccounts.length} contas sem drop esta semana
+              <p className="text-[11px] text-loss/60 font-body leading-snug">
+                Ciclo {currentWeekLabel} · vira às 21h
+              </p>
+              {accountsMissingDrops.slice(0, 3).map(a => {
+                const got = drops.filter(d => d.accountId === a.id && d.weekId === currentWeekId).length
+                return (
+                  <p key={a.id} className="text-xs text-loss/75 font-body truncate">
+                    · {a.name} — {got}/2 drops
+                  </p>
+                )
+              })}
+              {accountsMissingDrops.length === activeAccounts.length && accountsMissingDrops.length > 3 && (
+                <p className="text-[11px] text-loss/55 font-body">
+                  Todas as {activeAccounts.length} contas têm drop pendente
                 </p>
-              ) : (
-                accountsMissingDrops.slice(0, 3).map(a => {
-                  const got = drops.filter(d => d.accountId === a.id && d.weekId === currentWeekId).length
-                  return (
-                    <p key={a.id} className="text-xs text-loss/70 font-body truncate">
-                      · {a.name} — {got}/2 drops
-                    </p>
-                  )
-                })
               )}
               {accountsMissingDrops.length > 3 && (
                 <p className="text-[11px] text-loss/50 font-body">

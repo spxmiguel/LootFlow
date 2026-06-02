@@ -6,7 +6,7 @@ import {
 } from 'firebase/auth'
 import { useStore } from '../store'
 import { initFirebase, getGoogleProvider, isFirebaseReady, firestoreDeleteAllUserData } from '../lib/firebase'
-import { FIREBASE_ENABLED, getActiveFirebaseConfig } from '../lib/config'
+import { FIREBASE_ENABLED, getActiveFirebaseConfig, hasFirebaseConfig } from '../lib/config'
 import { storage } from '../lib/storage'
 import type { AppUser } from '../lib/types'
 import toast from 'react-hot-toast'
@@ -71,96 +71,100 @@ export function useAuth() {
 
     if (!FIREBASE_ENABLED) {
       finishReady()
-      return
-    }
+    } else {
+      const firebaseConfig = getActiveFirebaseConfig()
+      if (!hasFirebaseConfig(firebaseConfig)) {
+        finishReady()
+      } else {
+        try {
+          const { auth } = initFirebase(firebaseConfig)
 
-    try {
-      const { auth } = initFirebase(getActiveFirebaseConfig())
+          // ── Redirect result ────────────────────────────────────────────────
+          // Must be processed before registering onAuthStateChanged, so the
+          // listener knows whether to wait or finalize immediately.
+          if (!redirectHandled) {
+            redirectHandled = true
+            redirectResultPending = true
 
-      // ── Redirect result ────────────────────────────────────────────────
-      // Must be processed before registering onAuthStateChanged, so the
-      // listener knows whether to wait or finalize immediately.
-      if (!redirectHandled) {
-        redirectHandled = true
-        redirectResultPending = true
+            getRedirectResult(auth)
+              .then(result => {
+                redirectResultPending = false
+                if (result?.user) {
+                  // ── Electron-auth page: extract Google tokens and deep-link back to Electron
+                  if (IS_ELECTRON_AUTH_PAGE) {
+                    clearRedirectPending()
+                    const cred = GoogleAuthProvider.credentialFromResult(result)
+                    if (cred?.idToken) {
+                      window.location.href = `lootflow://auth?idToken=${encodeURIComponent(cred.idToken)}&accessToken=${encodeURIComponent(cred.accessToken ?? '')}`
+                    } else {
+                      // credentialFromResult gave no idToken — surface error to the page
+                      ;(window as unknown as Record<string, unknown>).__electronAuthRedirectError = 'Google não retornou token. Tente novamente.'
+                    }
+                    return
+                  }
 
-        getRedirectResult(auth)
-          .then(result => {
-            redirectResultPending = false
-            if (result?.user) {
-              // ── Electron-auth page: extract Google tokens and deep-link back to Electron
-              if (IS_ELECTRON_AUTH_PAGE) {
-                clearRedirectPending()
-                const cred = GoogleAuthProvider.credentialFromResult(result)
-                if (cred?.idToken) {
-                  window.location.href = `lootflow://auth?idToken=${encodeURIComponent(cred.idToken)}&accessToken=${encodeURIComponent(cred.accessToken ?? '')}`
+                  clearRedirectPending()
+                  const appUser = makeAppUser(result.user)
+                  setUser(appUser)
+                  setAuthMode('firebase')
+                  saveSession('firebase', appUser)
+                  hydrateCloud(appUser)
+                    .then(() => toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`))
+                    .catch(e => {
+                      logger.error('[Auth] cloud hydration error after redirect:', e)
+                      hydrate()
+                      toast.error('Sincronização falhou. Verifique as regras do Firestore e os domínios autorizados no Firebase Console.', { duration: 8000 })
+                    })
+                    .finally(finishReady)
                 } else {
-                  // credentialFromResult gave no idToken — surface error to the page
-                  ;(window as unknown as Record<string, unknown>).__electronAuthRedirectError = 'Google não retornou token. Tente novamente.'
+                  // No pending redirect → clear flag and let onAuthStateChanged decide
+                  clearRedirectPending()
                 }
+              })
+              .catch(e => {
+                redirectResultPending = false
+                logger.error('[Auth] getRedirectResult error:', e)
+                clearRedirectPending()
+              })
+          }
+
+          // ── Auth state listener ────────────────────────────────────────────
+          if (!authListenerStarted) {
+            authListenerStarted = true
+
+            onAuthStateChanged(auth, fbUser => {
+              if (!fbUser) {
+                // Don't finalize if a redirect or popup is still in flight —
+                // the result handler will set the user when it resolves.
+                if (isRedirectPending()) return
+                if (redirectResultPending) return  // getRedirectResult() still running
+                if (localStorage.getItem(POPUP_PENDING_KEY)) return
+                clearRedirectPending()
+                finishReady()
                 return
               }
 
+              // Popup completed (possibly after PWA was killed and restarted)
+              localStorage.removeItem(POPUP_PENDING_KEY)
               clearRedirectPending()
-              const appUser = makeAppUser(result.user)
+              const appUser = makeAppUser(fbUser)
               setUser(appUser)
               setAuthMode('firebase')
               saveSession('firebase', appUser)
               hydrateCloud(appUser)
-                .then(() => toast.success(`Bem-vindo, ${result.user.displayName?.split(' ')[0] ?? 'usuário'}!`))
                 .catch(e => {
-                  logger.error('[Auth] cloud hydration error after redirect:', e)
+                  logger.error('[Auth] cloud hydration error:', e)
                   hydrate()
                   toast.error('Sincronização falhou. Verifique as regras do Firestore e os domínios autorizados no Firebase Console.', { duration: 8000 })
                 })
                 .finally(finishReady)
-            } else {
-              // No pending redirect → clear flag and let onAuthStateChanged decide
-              clearRedirectPending()
-            }
-          })
-          .catch(e => {
-            redirectResultPending = false
-            logger.error('[Auth] getRedirectResult error:', e)
-            clearRedirectPending()
-          })
-      }
-
-      // ── Auth state listener ────────────────────────────────────────────
-      if (!authListenerStarted) {
-        authListenerStarted = true
-
-        onAuthStateChanged(auth, fbUser => {
-          if (!fbUser) {
-            // Don't finalize if a redirect or popup is still in flight —
-            // the result handler will set the user when it resolves.
-            if (isRedirectPending()) return
-            if (redirectResultPending) return  // getRedirectResult() still running
-            if (localStorage.getItem(POPUP_PENDING_KEY)) return
-            clearRedirectPending()
-            finishReady()
-            return
-          }
-
-          // Popup completed (possibly after PWA was killed and restarted)
-          localStorage.removeItem(POPUP_PENDING_KEY)
-          clearRedirectPending()
-          const appUser = makeAppUser(fbUser)
-          setUser(appUser)
-          setAuthMode('firebase')
-          saveSession('firebase', appUser)
-          hydrateCloud(appUser)
-            .catch(e => {
-              logger.error('[Auth] cloud hydration error:', e)
-              hydrate()
-              toast.error('Sincronização falhou. Verifique as regras do Firestore e os domínios autorizados no Firebase Console.', { duration: 8000 })
             })
-            .finally(finishReady)
-        })
+          }
+        } catch (e) {
+          logger.error('[Auth] Firebase init error:', e)
+          setAuthReady(true)
+        }
       }
-    } catch (e) {
-      logger.error('[Auth] Firebase init error:', e)
-      setAuthReady(true)
     }
 
     // ── Restore saved session (local or Google) ────────────────────────

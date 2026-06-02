@@ -322,7 +322,6 @@ function WhatsAppSection() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">+55</span>
                 <input
                   type="tel"
-                  autoFocus
                   value={phoneInput}
                   onChange={e => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
                   placeholder="11 99999-9999"

@@ -39,7 +39,7 @@ export function getCurrentWeekId(): string {
 export function getWeekRange(weekId: string): { start: Date; end: Date } {
   const start = startOfDay(parseISO(weekId))
   const end = new Date(start)
-  end.setDate(end.getDate() + 6)
+  end.setDate(end.getDate() + 7)
   return { start, end }
 }
 
