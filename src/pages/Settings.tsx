@@ -416,7 +416,7 @@ function WhatsAppSection() {
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
             <div>
               <p className="text-sm text-white">Resumo semanal</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Toda terça: drops da semana e cashout</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Toda quarta: resumo da semana que fechou (terça 21h)</p>
             </div>
             <Toggle value={draft.weeklySummary ?? true} onChange={v => updateDraft({ weeklySummary: v })} />
           </div>
