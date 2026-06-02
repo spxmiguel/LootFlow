@@ -4,13 +4,13 @@
 // https://firebase.google.com/docs/projects/api-keys
 
 export const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyBcbwBlfW_SBINVVLbxkDrpiLF_ArKJ1xM",
-  authDomain:        "kkkkkkkk-3fc45.firebaseapp.com",
-  projectId:         "kkkkkkkk-3fc45",
-  storageBucket:     "kkkkkkkk-3fc45.firebasestorage.app",
-  messagingSenderId: "529544539876",
-  appId:             "1:529544539876:web:fdd4832e4096f0e465c6f1",
-  measurementId:     "G-W34TK015CG",
+  apiKey:            "AIzaSyBUVMtSUg92u4D5UpMZNRe5plikiOmNddk",
+  authDomain:        "lootflow-92afd.firebaseapp.com",
+  projectId:         "lootflow-92afd",
+  storageBucket:     "lootflow-92afd.firebasestorage.app",
+  messagingSenderId: "1008615127332",
+  appId:             "1:1008615127332:web:37c760fa37dd37eb8d9bb1",
+  measurementId:     "G-REHSJLRPQ6",
 }
 
 export const FIREBASE_ENABLED = true
