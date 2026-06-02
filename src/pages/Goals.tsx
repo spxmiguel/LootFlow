@@ -11,6 +11,35 @@ import { useT } from '../hooks/useT'
 import type { Goal, SteamItem } from '../lib/types'
 
 const GOAL_COLORS = ['#38bdf8','#4ade80','#fbbf24','#f87171','#a78bfa','#fb923c','#34d399','#e879f9']
+const MAX_MONEY_GOAL = 9999.99
+const MAX_DROPS_GOAL = 10000
+
+function parseGoalTarget(raw: string, type: Goal['type']): number | null {
+  const normalized = raw.trim()
+  if (!normalized) return null
+
+  if (type === 'drops') {
+    if (!/^\d+$/.test(normalized)) return null
+    return Number(normalized)
+  }
+
+  const cleaned = normalized.replace(/[^\d.,]/g, '')
+  if (!cleaned) return null
+
+  const lastComma = cleaned.lastIndexOf(',')
+  const lastDot = cleaned.lastIndexOf('.')
+  const decimalSeparator = lastComma > lastDot ? ',' : lastDot > -1 ? '.' : ''
+  const integerPart = decimalSeparator
+    ? cleaned.slice(0, cleaned.lastIndexOf(decimalSeparator)).replace(/[.,]/g, '')
+    : cleaned.replace(/[.,]/g, '')
+  const decimalPart = decimalSeparator ? cleaned.slice(cleaned.lastIndexOf(decimalSeparator) + 1) : ''
+
+  if (!integerPart && !decimalPart) return null
+  if (decimalPart.length > 2) return null
+
+  const parsed = Number(`${integerPart || '0'}${decimalPart ? `.${decimalPart}` : ''}`)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
 // Static type structure (icons/values) — labels are resolved via t() at render time
 export const GOAL_TYPES = [
@@ -116,11 +145,13 @@ function GoalForm({ initial, onSave, onClose }: {
   function handleSave() {
     const e: Record<string,string> = {}
     if (!name.trim()) e.name = 'Obrigatório'
-    const n = parseFloat(target)
-    if (isNaN(n) || n <= 0) e.target = 'Valor inválido'
+    const n = parseGoalTarget(target, type)
+    const max = type === 'drops' ? MAX_DROPS_GOAL : MAX_MONEY_GOAL
+    if (n == null || n <= 0) e.target = type === 'drops' ? 'Quantidade inválida' : 'Valor inválido'
+    else if (n > max) e.target = type === 'drops' ? `Máximo de ${max} drops` : `Máximo de ${formatCurrency(max, currency)}`
     if (Object.keys(e).length) { setErrors(e); return }
     onSave({
-      name: name.trim(), targetAmount: parseFloat(target), type,
+      name: name.trim(), targetAmount: n!, type,
       deadline: deadline || undefined, color,
       targetItem: targetItem ?? undefined,
     })
@@ -154,9 +185,10 @@ function GoalForm({ initial, onSave, onClose }: {
 
         <Input
           label={type === 'drops' ? t('goals.target_label_qty') : t('goals.target_label_money', { currency: currency === 'USD' ? '$' : 'R$' })}
-          type="number" min="0" step={type === 'drops' ? '1' : '0.01'}
+          type="text" inputMode={type === 'drops' ? 'numeric' : 'decimal'}
           value={target} onChange={e => setTarget(e.target.value)}
-          placeholder={type === 'drops' ? '100' : '500.00'}
+          placeholder={type === 'drops' ? '100' : '500,00'}
+          hint={type === 'drops' ? `Até ${MAX_DROPS_GOAL} drops` : `Até ${formatCurrency(MAX_MONEY_GOAL, currency)}. Aceita 500, 500.00 ou 500,00.`}
           error={errors.target}
         />
 
@@ -300,7 +332,7 @@ export default function Goals() {
   const t = useT()
   const [showForm, setShowForm]         = useState(false)
   const [editingGoal, setEditingGoal]   = useState<Goal | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null)
 
   const dashStats = useMemo(
     () => calcDashboardStats(accounts, drops, goals, settings),
@@ -339,14 +371,10 @@ export default function Goals() {
     setEditingGoal(null)
   }
 
-  function handleDelete(id: string) {
-    if (deleteConfirm === id) {
-      deleteGoal(id)
-      setDeleteConfirm(null)
-    } else {
-      setDeleteConfirm(id)
-      setTimeout(() => setDeleteConfirm(null), 3000)
-    }
+  function confirmDeleteGoal() {
+    if (!goalToDelete) return
+    deleteGoal(goalToDelete.id)
+    setGoalToDelete(null)
   }
 
   return (
@@ -382,7 +410,7 @@ export default function Goals() {
               <GoalCard
                 key={goal.id} goal={goal} progress={progress} currentValue={currentValue}
                 onEdit={() => { setEditingGoal(goal); setShowForm(true) }}
-                onDelete={() => handleDelete(goal.id)}
+                onDelete={() => setGoalToDelete(goal)}
               />
             ))}
           </div>
@@ -399,17 +427,30 @@ export default function Goals() {
               <GoalCard
                 key={goal.id} goal={goal} progress={progress} currentValue={currentValue}
                 onEdit={() => { setEditingGoal(goal); setShowForm(true) }}
-                onDelete={() => handleDelete(goal.id)}
+                onDelete={() => setGoalToDelete(goal)}
               />
             ))}
           </div>
         </div>
       )}
 
-      {deleteConfirm && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-loss/20 border border-loss/40 text-loss text-sm px-4 py-2 rounded-full shadow-lg z-50">
-          Clique novamente para confirmar exclusão
-        </div>
+      {goalToDelete && (
+        <Modal
+          open
+          onClose={() => setGoalToDelete(null)}
+          title="Excluir meta?"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setGoalToDelete(null)}>Cancelar</Button>
+              <Button variant="danger" icon={Trash2} onClick={confirmDeleteGoal}>Excluir</Button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-400">
+            A meta <span className="font-semibold text-white">{goalToDelete.name}</span> será removida. Essa ação não apaga contas nem drops.
+          </p>
+        </Modal>
       )}
 
       <AnimatePresence>

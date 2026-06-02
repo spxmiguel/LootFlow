@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import { BarChart2, Award, Zap, Package, DollarSign, TrendingUp, ArrowUpRight } from 'lucide-react'
+import { BarChart2, Award, Zap, Package, DollarSign, TrendingUp, ArrowUpRight, Info } from 'lucide-react'
 import { useStore } from '../store'
 import { calcDashboardStats, calcAccountStats } from '../lib/calculations'
 import { formatCurrency, formatPercent, getWeekLabel, getPreviousWeeks, roiColorClass } from '../lib/utils'
@@ -26,6 +26,23 @@ function ChartTip({ active, payload, label, currency }: any) {
             : p.value}
         </p>
       ))}
+    </div>
+  )
+}
+
+function LowDataChartState({ children, message }: { children: ReactNode; message: string }) {
+  return (
+    <div className="relative">
+      <div className="opacity-45">{children}</div>
+      <div className="absolute inset-0 flex items-center justify-center px-5 pointer-events-none">
+        <div className="max-w-xs rounded-xl border border-primary/20 bg-[#0d1117]/95 px-4 py-3 text-center shadow-xl">
+          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Info size={15} />
+          </div>
+          <p className="text-sm font-semibold text-white">Dados iniciais</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">{message}</p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -77,6 +94,16 @@ export default function Analytics() {
     [accountStats]
   )
 
+  const weeksWithDrops = useMemo(() =>
+    chartData.filter(d => d.Drops > 0 || d.Cashout > 0 || d.Bruto > 0).length,
+    [chartData]
+  )
+
+  const needsTrendHint = drops.length < 2 || weeksWithDrops < 2
+  const trendHint = drops.length < 2
+    ? 'Registre mais drops para o gráfico sair do modo amostra e revelar tendência.'
+    : 'Registre drops em mais semanas para comparar evolução e tendência.'
+
   const topDrops = useMemo(() =>
     [...drops]
       .sort((a, b) => {
@@ -107,6 +134,16 @@ export default function Analytics() {
         <p className="text-slate-500 text-sm mt-0.5">Performance e tendências</p>
       </div>
 
+      {needsTrendHint && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+          <Info size={16} className="mt-0.5 shrink-0 text-primary" />
+          <div>
+            <p className="text-sm font-semibold text-white">Poucos dados para tendência</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{trendHint}</p>
+          </div>
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label={t('analytics.total_cashout')}  value={formatCurrency(stats.totalCashoutAllTime, currency)}  icon={DollarSign} color="profit" />
@@ -127,35 +164,70 @@ export default function Analytics() {
               <option value={24}>24 semanas</option>
             </select>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTip currency={cur} />} />
-              <Bar dataKey="Cashout" fill="#38bdf8" radius={[4,4,0,0]} maxBarSize={36} />
-              <Bar dataKey="Bruto"   fill="#4ade80" radius={[4,4,0,0]} maxBarSize={36} opacity={0.4} />
-            </BarChart>
-          </ResponsiveContainer>
+          {needsTrendHint ? (
+            <LowDataChartState message={trendHint}>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTip currency={cur} />} />
+                  <Bar dataKey="Cashout" fill="#38bdf8" radius={[4,4,0,0]} maxBarSize={36} />
+                  <Bar dataKey="Bruto"   fill="#4ade80" radius={[4,4,0,0]} maxBarSize={36} opacity={0.4} />
+                </BarChart>
+              </ResponsiveContainer>
+            </LowDataChartState>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTip currency={cur} />} />
+                <Bar dataKey="Cashout" fill="#38bdf8" radius={[4,4,0,0]} maxBarSize={36} />
+                <Bar dataKey="Bruto"   fill="#4ade80" radius={[4,4,0,0]} maxBarSize={36} opacity={0.4} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </Card>
 
         <Card className="p-5">
           <p className="text-sm font-semibold text-white mb-4">Cashout Acumulado</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={cumData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gradCum" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#38bdf8" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTip currency={cur} />} />
-              <Area type="monotone" dataKey="Acumulado" stroke="#38bdf8" strokeWidth={2} fill="url(#gradCum)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {needsTrendHint ? (
+            <LowDataChartState message="O acumulado já aparece nos cards. Com mais drops, esta curva fica mais legível.">
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={cumData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradCum" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#38bdf8" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTip currency={cur} />} />
+                  <Area type="monotone" dataKey="Acumulado" stroke="#38bdf8" strokeWidth={2} fill="url(#gradCum)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </LowDataChartState>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={cumData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradCum" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#38bdf8" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTip currency={cur} />} />
+                <Area type="monotone" dataKey="Acumulado" stroke="#38bdf8" strokeWidth={2} fill="url(#gradCum)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </Card>
       </div>
 
@@ -163,15 +235,29 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5">
           <p className="text-sm font-semibold text-white mb-4">Volume de Drops</p>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip content={<ChartTip currency={cur} />} />
-              <Line type="monotone" dataKey="Drops" stroke="#fbbf24" strokeWidth={2} dot={{ r: 3, fill: '#fbbf24' }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {needsTrendHint ? (
+            <LowDataChartState message="Adicione mais drops para transformar este ponto inicial em uma linha de volume.">
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<ChartTip currency={cur} />} />
+                  <Line type="monotone" dataKey="Drops" stroke="#fbbf24" strokeWidth={2} dot={{ r: 3, fill: '#fbbf24' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </LowDataChartState>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTip currency={cur} />} />
+                <Line type="monotone" dataKey="Drops" stroke="#fbbf24" strokeWidth={2} dot={{ r: 3, fill: '#fbbf24' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </Card>
 
         <Card className="p-5">

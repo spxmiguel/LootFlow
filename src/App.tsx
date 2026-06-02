@@ -17,7 +17,7 @@ function StorageBanner({ onDismiss }: { onDismiss: () => void }) {
       <div className="fixed bottom-0 left-0 right-0 z-40 p-3 bg-[#11161d]/95 border-t border-white/[0.08] backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
         <p className="flex-1 min-w-0">
           O LootFlow usa <strong className="text-slate-300">localStorage</strong> para salvar seus dados localmente.
-          Nenhum dado é coletado sem sua ação — modo Convidado é 100% local.{' '}
+          Limpar cache ou dados do navegador pode apagar tudo; exporte um backup JSON em Configurações. Nenhum dado é coletado sem sua ação.{' '}
           <button onClick={() => setLegalModal('privacy')} className="underline underline-offset-2 hover:text-slate-200 transition-colors">
             Saiba mais
           </button>

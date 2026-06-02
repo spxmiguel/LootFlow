@@ -126,6 +126,7 @@ function WhatsAppSection() {
   }))
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showDevTone, setShowDevTone] = useState(() => wa?.xingamentos ?? false)
 
   // ── Phone & verificação (imediato — bot precisa) ───────────────────────────
   const [editingPhone, setEditingPhone] = useState(false)
@@ -457,75 +458,98 @@ function WhatsAppSection() {
             </div>
           )}
 
-          <div className="rounded-xl border border-red-500/20 overflow-hidden">
-            <div className="flex items-center justify-between gap-3 p-3 bg-[#111827]">
+          <div className="rounded-xl border border-white/[0.08] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowDevTone(v => !v)}
+              className="w-full flex items-center justify-between gap-3 p-3 bg-[#111827] text-left hover:bg-[#131c2e] transition-colors"
+            >
               <div>
-                <p className="text-sm text-white">Modo xingamentos 🤬</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
+                <p className="text-sm text-white">Modo zoeira/dev</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Mensagens agressivas ficam escondidas e exigem opt-in consciente.</p>
               </div>
-              <Toggle value={draft.xingamentos ?? false} onChange={async v => {
-                const wasOff = !(draft.xingamentos ?? false)
-                updateDraft({ xingamentos: v })
-                if (v && wasOff && user?.uid && hasPhone) {
-                  try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
-                }
-              }} />
-            </div>
-            {(draft.xingamentos ?? false) && (
-              <div className="bg-[#0d1117] border-t border-red-500/10 p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Mensagens ativas</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => updateDraft({ enabledXingamentos: undefined })}
-                      className="text-[10px] text-slate-600 hover:text-profit transition-colors"
-                    >
-                      Todas
-                    </button>
-                    <span className="text-slate-800 text-[10px]">·</span>
-                    <button
-                      onClick={() => updateDraft({ enabledXingamentos: [] })}
-                      className="text-[10px] text-slate-600 hover:text-loss transition-colors"
-                    >
-                      Nenhuma
-                    </button>
+              <ChevronDown size={15} className={`text-slate-500 transition-transform ${showDevTone ? 'rotate-180' : ''}`} />
+            </button>
+            {showDevTone && (
+              <div className="bg-[#0d1117] border-t border-white/[0.06] p-3 space-y-3">
+                <div className="flex items-start gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0 text-yellow-400" />
+                  <p className="text-[11px] leading-relaxed text-slate-400">
+                    Conteúdo propositalmente ofensivo. Use só em ambiente privado, demo interna ou desenvolvimento.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-red-500/20">
+                  <div>
+                    <p className="text-sm text-white">Ativar modo zoeira/dev</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">O bot usa mensagens agressivas até os drops serem registrados.</p>
                   </div>
+                  <Toggle value={draft.xingamentos ?? false} onChange={async v => {
+                    const wasOff = !(draft.xingamentos ?? false)
+                    updateDraft({ xingamentos: v })
+                    if (v && wasOff && user?.uid && hasPhone) {
+                      try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
+                    }
+                  }} />
                 </div>
-                <div className="space-y-1">
-                  {XINGAMENTOS_META.map(x => {
-                    const enabled = !draft.enabledXingamentos || draft.enabledXingamentos.includes(x.id)
-                    return (
-                      <div
-                        key={x.id}
-                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer ${
-                          enabled
-                            ? 'bg-red-500/5 border-red-500/15 text-slate-300'
-                            : 'bg-transparent border-white/[0.04] text-slate-600'
-                        }`}
-                        onClick={() => {
-                          const current = draft.enabledXingamentos ?? XINGAMENTOS_META.map(m => m.id)
-                          updateDraft({
-                            enabledXingamentos: enabled
-                              ? current.filter(i => i !== x.id)
-                              : [...current, x.id].sort((a, b) => a - b),
-                          })
-                        }}
-                      >
-                        <span className="text-base leading-none shrink-0">{x.emoji}</span>
-                        <span className="text-[11px] font-mono flex-1 truncate">{x.title}</span>
-                        <span className={`text-[10px] shrink-0 ${enabled ? 'text-profit' : 'text-slate-700'}`}>
-                          {enabled ? 'ON' : 'OFF'}
-                        </span>
+
+                {(draft.xingamentos ?? false) && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Mensagens ativas</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => updateDraft({ enabledXingamentos: undefined })}
+                          className="text-[10px] text-slate-600 hover:text-profit transition-colors"
+                        >
+                          Todas
+                        </button>
+                        <span className="text-slate-800 text-[10px]">·</span>
+                        <button
+                          onClick={() => updateDraft({ enabledXingamentos: [] })}
+                          className="text-[10px] text-slate-600 hover:text-loss transition-colors"
+                        >
+                          Nenhuma
+                        </button>
                       </div>
-                    )
-                  })}
-                </div>
-                <p className="text-[10px] text-slate-700 mt-2 text-center">
-                  {(() => {
-                    const n = draft.enabledXingamentos == null ? XINGAMENTOS_META.length : draft.enabledXingamentos.length
-                    return `${n} de ${XINGAMENTOS_META.length} ativas`
-                  })()}
-                </p>
+                    </div>
+                    <div className="space-y-1">
+                      {XINGAMENTOS_META.map(x => {
+                        const enabled = !draft.enabledXingamentos || draft.enabledXingamentos.includes(x.id)
+                        return (
+                          <div
+                            key={x.id}
+                            className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer ${
+                              enabled
+                                ? 'bg-red-500/5 border-red-500/15 text-slate-300'
+                                : 'bg-transparent border-white/[0.04] text-slate-600'
+                            }`}
+                            onClick={() => {
+                              const current = draft.enabledXingamentos ?? XINGAMENTOS_META.map(m => m.id)
+                              updateDraft({
+                                enabledXingamentos: enabled
+                                  ? current.filter(i => i !== x.id)
+                                  : [...current, x.id].sort((a, b) => a - b),
+                              })
+                            }}
+                          >
+                            <span className="text-base leading-none shrink-0">{x.emoji}</span>
+                            <span className="text-[11px] font-mono flex-1 truncate">{x.title}</span>
+                            <span className={`text-[10px] shrink-0 ${enabled ? 'text-profit' : 'text-slate-700'}`}>
+                              {enabled ? 'ON' : 'OFF'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] text-slate-700 mt-2 text-center">
+                      {(() => {
+                        const n = draft.enabledXingamentos == null ? XINGAMENTOS_META.length : draft.enabledXingamentos.length
+                        return `${n} de ${XINGAMENTOS_META.length} ativas`
+                      })()}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1001,6 +1025,12 @@ export default function Settings() {
         {/* ── Exportação ── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <Section icon={Download} color="green" title="Exportar Dados" subtitle={`${drops.length} drops · ${accounts.length} contas`}>
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
+              <AlertTriangle size={14} className="text-yellow-400 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                No modo local, limpar cache/navegador pode apagar seus dados. Faça backup JSON antes de limpar o navegador, trocar de dispositivo ou testar em produção.
+              </p>
+            </div>
 
             {/* Format */}
             <div>

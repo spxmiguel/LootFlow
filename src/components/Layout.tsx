@@ -1,4 +1,4 @@
-import React, { type ReactNode, useState } from 'react'
+import React, { type ReactNode, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, Package, BarChart3, Target,
@@ -303,6 +303,11 @@ export function Layout({ children }: { children: ReactNode }) {
   const settings = useStore(s => s.settings)
   const currentPage = useStore(s => s.currentPage)
   const compact = settings.theme.sidebarCompact
+  const mainScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    mainScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [currentPage])
 
   return (
     <div className="flex h-full bg-[#0d1117] relative">
@@ -347,7 +352,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Main */}
       <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden relative z-10">
         <MobileHeader />
-        <div className="flex-1 overflow-y-auto mobile-scroll">
+        <div ref={mainScrollRef} className="flex-1 overflow-y-auto mobile-scroll">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPage}
