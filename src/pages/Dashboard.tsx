@@ -5,13 +5,15 @@ import {
   ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts'
 import {
-  TrendingUp, Package, Users, DollarSign,
+  Package, Users, DollarSign,
   Plus, ArrowUpRight, Flame, Trophy, AlertTriangle,
+  Target, CheckCircle2, Activity,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { calcDashboardStats, calcWeekStats } from '../lib/calculations'
-import { formatCurrency, formatCurrencyCompact, formatPercent, getCurrentWeekId, cn } from '../lib/utils'
-import { StatCard, Card, Badge, Button, Empty } from '../components/ui'
+import { PRIME_COST_BRL } from '../lib/config'
+import { formatCurrency, formatCurrencyCompact, formatDateRelative, formatPercent, getCurrentWeekId, cn } from '../lib/utils'
+import { Card, Badge, Button, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { useT } from '../hooks/useT'
 
@@ -32,6 +34,65 @@ function ChartTooltip({ active, payload, label, currency }: Record<string, unkno
   )
 }
 
+type InsightTone = 'profit' | 'primary' | 'gold' | 'purple' | 'loss'
+type FeedItem = {
+  id: string
+  icon: React.ComponentType<{ className?: string }>
+  tone: InsightTone
+  title: string
+  detail: string
+  when: string
+  imageUrl?: string
+  itemName?: string
+}
+
+const insightToneMap: Record<InsightTone, { icon: string; border: string; badge: 'green' | 'blue' | 'gold' | 'purple' | 'red' }> = {
+  profit: { icon: 'bg-profit/10 text-profit', border: 'hover:border-profit/25', badge: 'green' },
+  primary: { icon: 'bg-primary/10 text-primary', border: 'hover:border-primary/25', badge: 'blue' },
+  gold: { icon: 'bg-gold/10 text-gold', border: 'hover:border-gold/25', badge: 'gold' },
+  purple: { icon: 'bg-purple-400/10 text-purple-400', border: 'hover:border-purple-400/25', badge: 'purple' },
+  loss: { icon: 'bg-loss/10 text-loss', border: 'hover:border-loss/25', badge: 'red' },
+}
+
+function InsightCard({
+  icon: Icon,
+  title,
+  statement,
+  context,
+  badge,
+  tone = 'primary',
+  delay = 0,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  statement: string
+  context: string
+  badge: string
+  tone?: InsightTone
+  delay?: number
+}) {
+  const toneStyle = insightToneMap[tone]
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Card className={cn('h-full p-4 transition-colors', toneStyle.border)}>
+        <div className="flex items-start justify-between gap-3">
+          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', toneStyle.icon)}>
+            <Icon className="h-4.5 w-4.5" />
+          </div>
+          <Badge color={toneStyle.badge}>{badge}</Badge>
+        </div>
+        <p className="mt-4 text-[10px] uppercase tracking-wider text-slate-600 font-body">{title}</p>
+        <p className="mt-1 text-sm font-semibold leading-snug text-slate-100">{statement}</p>
+        <p className="mt-2 text-xs leading-relaxed text-slate-500">{context}</p>
+      </Card>
+    </motion.div>
+  )
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function Dashboard() {
@@ -49,6 +110,11 @@ export function Dashboard() {
     () => calcWeekStats(currentWeekId, drops, accounts, settings),
     [drops, accounts, settings, currentWeekId],
   )
+
+  const previousWeekStats = useMemo(() => {
+    const previous = stats.weeklyStats.find(w => w.weekId !== currentWeekId)
+    return previous ?? calcWeekStats('', [], accounts, settings)
+  }, [stats.weeklyStats, currentWeekId, accounts, settings])
 
   // Chart data (last 8 weeks)
   const chartData = stats.weeklyStats.slice(0, 8).reverse().map(w => ({
@@ -90,6 +156,91 @@ export function Dashboard() {
     }).filter(g => g.progress < 100).slice(0, 3)
   }, [goals, dashStats, currentWeekStats])
 
+  const primeAccountsPaid = stats.totalCashoutAllTime / PRIME_COST_BRL
+  const totalAccountsLabel = stats.totalAccounts === 1 ? 'conta Prime' : 'contas Prime'
+
+  const monetaryGoalInsight = useMemo(() => {
+    const monetary = activeGoals
+      .filter(g => g.goal.type !== 'drops')
+      .map(g => ({ ...g, remaining: Math.max(0, g.goal.targetAmount - g.current) }))
+      .sort((a, b) => a.remaining - b.remaining)[0]
+
+    if (monetary) {
+      return {
+        statement: `Faltam ${formatCurrency(monetary.remaining, currency)} pra bater ${monetary.goal.name}`,
+        context: `${monetary.progress.toFixed(1).replace('.', ',')}% concluído até agora.`,
+        badge: 'Meta',
+        tone: 'primary' as InsightTone,
+      }
+    }
+
+    const weeklyRemaining = Math.max(0, settings.weeklyGoalAmount - currentWeekStats.totalCashout)
+    return {
+      statement: weeklyRemaining > 0
+        ? `Faltam ${formatCurrency(weeklyRemaining, currency)} pra meta semanal`
+        : `Meta semanal batida com ${formatCurrency(currentWeekStats.totalCashout, currency)}`,
+      context: `Meta configurada: ${formatCurrency(settings.weeklyGoalAmount, currency)} em cashout.`,
+      badge: weeklyRemaining > 0 ? 'Em curso' : 'Batida',
+      tone: weeklyRemaining > 0 ? 'primary' as InsightTone : 'profit' as InsightTone,
+    }
+  }, [activeGoals, currency, currentWeekStats.totalCashout, settings.weeklyGoalAmount])
+
+  const weekDelta = currentWeekStats.totalCashout - previousWeekStats.totalCashout
+  const weekComparison = previousWeekStats.totalDrops === 0 && previousWeekStats.totalCashout === 0
+    ? {
+        statement: `Essa semana já tem ${stats.currentWeekDrops} drop${stats.currentWeekDrops !== 1 ? 's' : ''} registrado${stats.currentWeekDrops !== 1 ? 's' : ''}`,
+        context: 'Registre mais uma semana para comparar tendência de verdade.',
+        badge: 'Semana',
+        tone: 'gold' as InsightTone,
+      }
+    : {
+        statement: weekDelta >= 0 ? 'Essa semana foi melhor que a anterior' : 'Essa semana está abaixo da anterior',
+        context: `${weekDelta >= 0 ? '+' : ''}${formatCurrency(weekDelta, currency)} vs. semana passada.`,
+        badge: weekDelta >= 0 ? 'Subiu' : 'Atenção',
+        tone: weekDelta >= 0 ? 'profit' as InsightTone : 'loss' as InsightTone,
+      }
+
+  const feedItems = useMemo(() => {
+    const dropEvents: FeedItem[] = stats.recentDrops.slice(0, 5).map(drop => {
+      const account = accounts.find(a => a.id === drop.accountId)
+      const cashout = drop.cashoutValue ?? (drop.steamValue * settings.cashoutRate / 100)
+      return {
+        id: `drop-${drop.id}`,
+        icon: Package,
+        tone: 'primary' as InsightTone,
+        title: `${account?.name ?? 'Conta'} registrou ${drop.item?.name?.split('|')[0].trim() || 'um drop'}`,
+        detail: `${formatCurrency(cashout, currency)} cashout · Drop #${drop.dropNumber}`,
+        when: formatDateRelative(drop.createdAt ?? drop.registeredAt ?? new Date().toISOString()),
+        imageUrl: drop.item?.imageUrl,
+        itemName: drop.item?.name,
+      }
+    })
+
+    const paybackEvents: FeedItem[] = stats.accountStats
+      .filter(as => as.isPaidBack && as.totalDrops > 0)
+      .sort((a, b) => b.paybackMultiplier - a.paybackMultiplier)
+      .slice(0, 2)
+      .map(as => ({
+        id: `payback-${as.account.id}`,
+        icon: CheckCircle2,
+        tone: 'profit' as InsightTone,
+        title: `${as.account.name} bateu payback`,
+        detail: `${as.paybackMultiplier.toFixed(1).replace('.', ',')}x o custo Prime recuperado`,
+        when: 'Agora',
+      }))
+
+    const goalEvents: FeedItem[] = activeGoals.slice(0, 2).map(({ goal, progress }) => ({
+      id: `goal-${goal.id}`,
+      icon: Target,
+      tone: 'gold' as InsightTone,
+      title: `${goal.name} avançou para ${progress.toFixed(1).replace('.', ',')}%`,
+      detail: goal.type === 'drops' ? 'Meta de volume em andamento' : 'Meta financeira em andamento',
+      when: 'Meta',
+    }))
+
+    return [...dropEvents, ...paybackEvents, ...goalEvents].slice(0, 7)
+  }, [activeGoals, accounts, currency, settings.cashoutRate, stats.accountStats, stats.recentDrops])
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header - single button only */}
@@ -107,24 +258,24 @@ export function Dashboard() {
         </Button>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
-          label="Cashout Total"
-          value={formatCurrencyCompact(stats.totalCashoutAllTime, currency)}
-          sub={`${formatCurrencyCompact(stats.totalSteamValueAllTime, currency)} ${t('dash.bruto')}`}
-          subColor="text-slate-500"
-          icon={<DollarSign className="w-5 h-5 text-profit" />}
-          iconBg="bg-profit/10"
+      {/* Context Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <InsightCard
+          icon={DollarSign}
+          title="Cashout recuperado"
+          statement={`${formatCurrency(stats.totalCashoutAllTime, currency)} recuperados`}
+          context={`Já pagou ${primeAccountsPaid.toFixed(1).replace('.', ',')} ${totalAccountsLabel}. Bruto acumulado: ${formatCurrencyCompact(stats.totalSteamValueAllTime, currency)}.`}
+          badge="Payback"
+          tone="profit"
           delay={0}
         />
-        <StatCard
-          label="ROI Geral"
-          value={stats.overallROI === Infinity ? '∞' : formatPercent(stats.overallROI, 0)}
-          sub={stats.totalInvestedAllTime > 0 ? `${t('dash.invested')}: ${formatCurrencyCompact(stats.totalInvestedAllTime, currency)}` : t('dash.no_cost')}
-          subColor={stats.overallROI > 0 ? 'text-profit' : 'text-loss'}
-          icon={<TrendingUp className="w-5 h-5 text-primary" />}
-          iconBg="bg-primary/10"
+        <InsightCard
+          icon={Target}
+          title="Próxima meta"
+          statement={monetaryGoalInsight.statement}
+          context={monetaryGoalInsight.context}
+          badge={monetaryGoalInsight.badge}
+          tone={monetaryGoalInsight.tone}
           delay={0.05}
         />
         {accountsMissingDrops.length > 0 && activeAccounts.length > 0 ? (
@@ -133,7 +284,7 @@ export function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             onClick={() => setCurrentPage('drops')}
-            className="col-span-2 lg:col-span-1 flex flex-col justify-between gap-3 p-4 rounded-2xl bg-loss/10 border-2 border-loss/60 shadow-[0_0_24px_rgba(248,113,113,0.15)] hover:bg-loss/15 hover:border-loss/80 transition-all text-left cursor-pointer"
+            className="flex flex-col justify-between gap-3 p-4 rounded-2xl bg-loss/10 border-2 border-loss/60 shadow-[0_0_24px_rgba(248,113,113,0.15)] hover:bg-loss/15 hover:border-loss/80 transition-all text-left cursor-pointer"
           >
             <div className="flex items-start gap-2.5">
               <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-loss/20 shrink-0 mt-0.5">
@@ -166,22 +317,23 @@ export function Dashboard() {
             </div>
           </motion.button>
         ) : (
-          <StatCard
-            label="Drops Registrados"
-            value={stats.totalDropsAllTime.toString()}
-            sub={`${stats.activeAccounts} contas ativas`}
-            icon={<Package className="w-5 h-5 text-gold" />}
-            iconBg="bg-gold/10"
+          <InsightCard
+            icon={Activity}
+            title="Ritmo semanal"
+            statement={weekComparison.statement}
+            context={weekComparison.context}
+            badge={weekComparison.badge}
+            tone={weekComparison.tone}
             delay={0.1}
           />
         )}
-        <StatCard
-          label="Contas"
-          value={`${stats.activeAccounts}/${stats.totalAccounts}`}
-          sub={`${stats.activeAccounts} ativa${stats.activeAccounts !== 1 ? 's' : ''} de ${stats.totalAccounts}`}
-          subColor="text-slate-500"
-          icon={<Users className="w-5 h-5 text-purple-400" />}
-          iconBg="bg-purple-400/10"
+        <InsightCard
+          icon={Users}
+          title="Carteira"
+          statement={`${stats.activeAccounts}/${stats.totalAccounts} contas ativas`}
+          context={`${stats.totalDropsAllTime} drops registrados. ROI geral: ${stats.overallROI === Infinity ? 'infinito' : formatPercent(stats.overallROI, 0)}.`}
+          badge="Contas"
+          tone="purple"
           delay={0.15}
         />
       </div>
@@ -443,8 +595,8 @@ export function Dashboard() {
         </motion.div>
       )}
 
-      {/* Recent Drops */}
-      {stats.recentDrops.length > 0 && (
+      {/* Activity Feed */}
+      {feedItems.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -452,31 +604,35 @@ export function Dashboard() {
         >
           <Card className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="font-display font-bold text-slate-100">Drops Recentes</p>
+              <div>
+                <p className="font-display font-bold text-slate-100">Feed recente</p>
+                <p className="text-xs text-slate-500 mt-0.5">Drops, payback e metas que acabaram de mexer no painel</p>
+              </div>
               <Button variant="ghost" size="sm" onClick={() => setCurrentPage('drops')}>
                 Ver todos <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </div>
             <div className="space-y-2">
-              {stats.recentDrops.slice(0, 5).map(drop => {
-                const account = accounts.find(a => a.id === drop.accountId)
-                const cashout = drop.cashoutValue ?? (drop.steamValue * settings.cashoutRate / 100)
+              {feedItems.map(item => {
+                const Icon = item.icon
+                const tone = insightToneMap[item.tone]
                 return (
-                  <div key={drop.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#111827] transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-[#111827] border border-white/[0.09] shrink-0 overflow-hidden flex items-center justify-center">
-                      <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={40} />
-                    </div>
+                  <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#111827] transition-colors">
+                    {item.imageUrl ? (
+                      <div className="w-10 h-10 rounded-lg bg-[#111827] border border-white/[0.09] shrink-0 overflow-hidden flex items-center justify-center">
+                        <SteamItemImage imageUrl={item.imageUrl} alt={item.itemName} size={40} />
+                      </div>
+                    ) : (
+                      <div className={cn('w-10 h-10 rounded-lg shrink-0 flex items-center justify-center', tone.icon)}>
+                        <Icon className="h-4.5 w-4.5" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-200 font-body truncate">{drop.item?.name || '—'}</p>
-                      <p className="text-xs text-slate-500 font-body">{account?.name} · Drop #{drop.dropNumber}</p>
+                      <p className="text-sm text-slate-200 font-body truncate">{item.title}</p>
+                      <p className="text-xs text-slate-500 font-body truncate">{item.detail}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-mono text-sm font-medium text-profit">
-                        {formatCurrency(cashout, currency)}
-                      </p>
-                      <p className="text-[10px] text-slate-600 font-mono">
-                        {formatCurrency(drop.steamValue, currency)} {t('dash.bruto')}
-                      </p>
+                      <Badge color={tone.badge}>{item.when}</Badge>
                     </div>
                   </div>
                 )
