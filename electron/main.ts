@@ -4,13 +4,16 @@ import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// Electron loads the live GitHub Pages app — Firebase Auth sees the authorized
-// domain (spxmiguel.github.io) instead of file://, no unauthorized-domain error.
-const APP_URL = 'https://spxmiguel.github.io/LootFlow/app/'
+// Electron loads the live GitHub Pages app in production so Firebase Auth sees
+// the authorized domain (spxmiguel.github.io). In development, it loads localhost.
+const APP_URL = app.isPackaged
+  ? 'https://spxmiguel.github.io/LootFlow/app/'
+  : 'http://localhost:5173/app/'
 
 // Auth callback URL opened in the user's real browser:
-// GitHub Pages handles Google OAuth there and redirects back to lootflow://auth?...
-const AUTH_URL = 'https://spxmiguel.github.io/LootFlow/app/?electron-auth=1'
+const AUTH_URL = app.isPackaged
+  ? 'https://spxmiguel.github.io/LootFlow/app/?electron-auth=1'
+  : 'http://localhost:5173/app/?electron-auth=1'
 
 const ICON = app.isPackaged
   ? path.join(process.resourcesPath, 'build-assets/icon-512.png')

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- bg -->
+  <rect width="512" height="512" rx="100" fill="#0d1117"/>
+  <rect x="1" y="1" width="510" height="510" rx="99" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2"/>
+  <!--
+    Abstract mark: a thick ">" chevron-like shape, but with the bottom arm
+    extended into a horizontal foot — creating a unique compound mark
+    that reads as forward-motion + ground/base.
+    Think: Vercel triangle × Nike swoosh energy.
+  -->
+  <!-- top arm: from left-center going up-right -->
+  <line x1="136" y1="256" x2="336" y2="108"
+        stroke="white" stroke-width="72" stroke-linecap="round"/>
+  <!-- bottom arm: from left-center going down-right — shorter, creates asymmetry -->
+  <line x1="136" y1="256" x2="280" y2="352"
+        stroke="white" stroke-width="72" stroke-linecap="round"/>
+  <!-- foot: horizontal extension from tip of bottom arm -->
+  <line x1="280" y1="352" x2="400" y2="352"
+        stroke="#4ade80" stroke-width="40" stroke-linecap="round"/>
+</svg>

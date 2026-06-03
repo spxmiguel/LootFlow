@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="120" y1="420" x2="392" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <!-- bg -->
+  <rect width="512" height="512" rx="100" fill="#0d1117"/>
+  <rect x="1" y="1" width="510" height="510" rx="99" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2"/>
+  <!-- Bold diagonal slash — the core mark -->
+  <line x1="152" y1="412" x2="360" y2="100"
+        stroke="url(#g)" stroke-width="88" stroke-linecap="round"/>
+  <!-- small circle at top-right = the drop -->
+  <circle cx="340" cy="128" r="32" fill="#0d1117"/>
+  <circle cx="340" cy="128" r="20" fill="#38bdf8"/>
+  <!-- small circle at bottom-left = starting point -->
+  <circle cx="172" cy="384" r="20" fill="#4ade80"/>
+</svg>

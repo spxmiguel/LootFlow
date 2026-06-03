@@ -21,19 +21,33 @@
       "output": "release"
     },
     "extraResources": [
-      { "from": "build-assets/", "to": "build-assets/" }
+      {
+        "from": "build-assets/",
+        "to": "build-assets/"
+      }
     ],
     "protocols": [
-      { "name": "LootFlow Auth", "schemes": ["lootflow"] }
+      {
+        "name": "LootFlow Auth",
+        "schemes": [
+          "lootflow"
+        ]
+      }
     ],
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     },
     "mac": {
-      "target": ["pkg"]
+      "target": [
+        "pkg"
+      ]
     },
     "linux": {
-      "target": ["AppImage"]
+      "target": [
+        "AppImage"
+      ]
     }
   },
   "dependencies": {
@@ -59,6 +73,7 @@
     "electron": "^42.2.0",
     "electron-builder": "^26.8.1",
     "postcss": "^8.4.44",
+    "puppeteer": "^25.1.0",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.3",
     "vite": "^5.4.1",

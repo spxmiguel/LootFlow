@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+  </defs>
+  <!-- bg -->
+  <rect width="512" height="512" rx="100" fill="#0d1117"/>
+  <rect x="1" y="1" width="510" height="510" rx="99" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2"/>
+
+  <!-- outer ring — partial arc (270°, gap at bottom-right) -->
+  <!-- arc from 135° to 45° going clockwise = 270° of coverage -->
+  <!-- center 256,256 r=155. Start: 256+155*cos(135°),256+155*sin(135°) -->
+  <!-- cos(135)=-0.707, sin(135)=0.707 → 146,366 -->
+  <!-- end: cos(45)=0.707, sin(45)=0.707 → 366,366 wait that's 45° from x-axis... -->
+  <!-- Let me use simpler: gap at bottom (6 o'clock), so arc from 210° to 330° is the gap, arc covers 300° -->
+  <!-- Start at 210°: x=256+155*cos(210)=256-134=122, y=256+155*sin(210)=256-77.5=178 — no wait -->
+  <!-- Standard math: 0° = right (3 o'clock), 90° = down (6 o'clock) in SVG coords -->
+  <!-- Gap at 6 o'clock = 90°. Arc from 120° to 60° (going counter) = 300° arc -->
+  <!-- 120°: cos(120)=-0.5, sin(120)=0.866 → x=256+155*(-0.5)=178.5, y=256+155*0.866=390.2 -->
+  <!-- 60°: cos(60)=0.5, sin(60)=0.866 → x=256+155*0.5=333.5, y=256+155*0.866=390.2 -->
+  <!-- Arc: M 178.5,390.2 A 155,155 0 1,1 333.5,390.2 (large arc flag=1 because >180) -->
+  <path d="M 178.5,390 A 155,155 0 1,1 333.5,390"
+        fill="none" stroke="url(#g)" stroke-width="44" stroke-linecap="round"
+        filter="url(#glow)" opacity="0.35"/>
+  <path d="M 178.5,390 A 155,155 0 1,1 333.5,390"
+        fill="none" stroke="url(#g)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- center dot — the tracked item/drop -->
+  <circle cx="256" cy="256" r="38" fill="url(#g)" filter="url(#glow)" opacity="0.4"/>
+  <circle cx="256" cy="256" r="38" fill="url(#g)"/>
+  <circle cx="256" cy="256" r="16" fill="rgba(255,255,255,0.3)"/>
+
+  <!-- tick marks at gap ends -->
+  <circle cx="178" cy="390" r="11" fill="#4ade80"/>
+  <circle cx="334" cy="390" r="11" fill="#38bdf8"/>
+</svg>

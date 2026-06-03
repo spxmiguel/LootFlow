@@ -65,9 +65,22 @@ export function getPreviousWeeks(count: number): string[] {
 
 // ─── Currency Formatting ─────────────────────────────────────────────────────
 
-// Steam prices are fetched in BRL; USD values are pre-converted before calling these.
 export function formatCurrency(value: number, currency: 'BRL' | 'USD' = 'BRL'): string {
-  const safe = value == null || isNaN(value) ? 0 : value
+  let safe = value == null || isNaN(value) ? 0 : value
+  if (currency === 'USD') {
+    try {
+      const rawSettings = localStorage.getItem('lootflow_settings')
+      if (rawSettings) {
+        const settings = JSON.parse(rawSettings)
+        const rate = settings.usdRate || 5.2
+        safe = safe / rate
+      } else {
+        safe = safe / 5.2
+      }
+    } catch {
+      safe = safe / 5.2
+    }
+  }
   const locale = currency === 'USD' ? 'en-US' : 'pt-BR'
   return new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -78,12 +91,33 @@ export function formatCurrency(value: number, currency: 'BRL' | 'USD' = 'BRL'): 
 }
 
 export function formatCurrencyCompact(value: number, currency: 'BRL' | 'USD' = 'BRL'): string {
-  const safe = value == null || isNaN(value) ? 0 : value
+  let safe = value == null || isNaN(value) ? 0 : value
+  if (currency === 'USD') {
+    try {
+      const rawSettings = localStorage.getItem('lootflow_settings')
+      if (rawSettings) {
+        const settings = JSON.parse(rawSettings)
+        const rate = settings.usdRate || 5.2
+        safe = safe / rate
+      } else {
+        safe = safe / 5.2
+      }
+    } catch {
+      safe = safe / 5.2
+    }
+  }
   const sym = currency === 'USD' ? '$' : 'R$'
   if (Math.abs(safe) >= 1000) {
     return `${sym} ${(safe / 1000).toFixed(1)}k`
   }
-  return formatCurrency(safe, currency)
+  
+  const locale = currency === 'USD' ? 'en-US' : 'pt-BR'
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(safe)
 }
 
 // Steam API retorna preços formatados em BRL: "R$ 52,40", "R$52,40", "52,40"

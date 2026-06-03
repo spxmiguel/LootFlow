@@ -2,10 +2,10 @@ import { useState, useMemo, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Plus, Search, X, Package,
-  Trash2, DollarSign, AlertCircle, Calendar, HelpCircle, Zap, Filter,
+  Trash2, DollarSign, AlertCircle, Calendar, HelpCircle, Zap, Filter, Edit2,
 } from 'lucide-react'
 import { useStore } from '../store'
-import { formatCurrency, getCurrentWeekId, getWeekLabel, getWeekIdForDate } from '../lib/utils'
+import { cn, formatCurrency, getCurrentWeekId, getWeekLabel, getWeekIdForDate, getWeekRange } from '../lib/utils'
 import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
@@ -176,6 +176,7 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
             onBlur={() => setTimeout(() => setOpen(false), 200)}
             placeholder="Pesquisar item CS2..."
             autoComplete="off"
+            maxLength={80}
             className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-9 pr-4 focus:outline-none focus:border-primary/60 transition-all placeholder:text-slate-600"
           />
           {searching && (
@@ -287,9 +288,11 @@ function DropModal({ onSave, onClose }: DropModalProps) {
     const toSave: Array<Omit<Drop, 'id' | 'createdAt'>> = []
 
     const firstDropNum = existingDrops.length === 0 ? 1 : 2
+    const usdRate = settings.usdRate || 5.2
 
     if (item1 && slotsLeft >= 1) {
-      const sv = parseFloat(value1) || 0
+      let sv = parseFloat(value1) || 0
+      if (currency === 'USD') sv = sv * usdRate
       const f1 = parseFloat(float1)
       toSave.push({
         accountId, weekId,
@@ -302,7 +305,8 @@ function DropModal({ onSave, onClose }: DropModalProps) {
       })
     }
     if (item2 && slotsLeft >= 2 && existingDrops.length === 0) {
-      const sv = parseFloat(value2) || 0
+      let sv = parseFloat(value2) || 0
+      if (currency === 'USD') sv = sv * usdRate
       const f2 = parseFloat(float2)
       toSave.push({
         accountId, weekId,
@@ -319,8 +323,11 @@ function DropModal({ onSave, onClose }: DropModalProps) {
     onSave(toSave)
   }
 
-  const total1 = parseFloat(value1) || 0
-  const total2 = parseFloat(value2) || 0
+  const raw1 = parseFloat(value1) || 0
+  const raw2 = parseFloat(value2) || 0
+  const usdRate = settings.usdRate || 5.2
+  const total1 = currency === 'USD' ? raw1 * usdRate : raw1
+  const total2 = currency === 'USD' ? raw2 * usdRate : raw2
   const totalCashout = (total1 + total2) * settings.cashoutRate / 100
 
   const footer = (
@@ -473,7 +480,14 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
   const { settings } = useStore()
   const t = useT()
   const currency = settings.currency
-  const [value, setValue] = useState((drop.steamValue * settings.cashoutRate / 100).toFixed(2))
+  const usdRate = settings.usdRate || 5.2
+
+  // Estimated cashout in BRL
+  const estimatedBRL = drop.steamValue * settings.cashoutRate / 100
+  // Convert to USD if currency is USD
+  const initialValue = currency === 'USD' ? (estimatedBRL / usdRate).toFixed(2) : estimatedBRL.toFixed(2)
+
+  const [value, setValue] = useState(initialValue)
   const parsed = parseFloat(value)
   const valid = Number.isFinite(parsed) && parsed >= 0
   return (
@@ -489,8 +503,208 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
         <div className="flex gap-3">
           <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
           <Button variant="success" disabled={!valid}
-            onClick={() => { if (valid) onSave(drop.id, parsed) }} className="flex-1">
+            onClick={() => {
+              if (valid) {
+                // If USD, convert input back to BRL for the DB
+                const finalValue = currency === 'USD' ? parsed * usdRate : parsed
+                onSave(drop.id, parseFloat(finalValue.toFixed(2)))
+              }
+            }} className="flex-1">
             Confirmar Venda
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+// ─── Edit Drop Modal ─────────────────────────────────────────────────────────
+
+function EditDropModal({ drop, onSave, onClose }: {
+  drop: Drop; onSave: (id: string, updates: Partial<Drop>) => void; onClose: () => void
+}) {
+  const { accounts, settings } = useStore()
+  const t = useT()
+  const currency = settings.currency
+
+  const [accountId, setAccountId] = useState(drop.accountId)
+  const [dateMode, setDateMode] = useState<DateMode>(() => {
+    if (drop.weekId === 'unknown') return 'unknown'
+    const currentWid = getCurrentWeekId()
+    if (drop.weekId === currentWid) return 'this-week'
+    return 'manual'
+  })
+  
+  const [manualDate, setManualDate] = useState(() => {
+    const dateStr = drop.createdAt ?? drop.registeredAt ?? new Date().toISOString()
+    return dateStr.slice(0, 10)
+  })
+
+  const usdRate = settings.usdRate || 5.2
+
+  // Load steamValue and cashoutValue converted if currency is USD
+  const initialSteamValue = currency === 'USD' ? (drop.steamValue / usdRate).toFixed(2) : drop.steamValue.toString()
+  const initialCashoutValue = drop.cashoutValue != null
+    ? (currency === 'USD' ? (drop.cashoutValue / usdRate).toFixed(2) : drop.cashoutValue.toString())
+    : ''
+
+  const [steamValue, setSteamValue] = useState(initialSteamValue)
+  const [cashoutValue, setCashoutValue] = useState(initialCashoutValue)
+  const [float, setFloat] = useState(drop.float != null ? drop.float.toString() : '')
+  const [error, setError] = useState('')
+
+  function handleSave() {
+    setError('')
+    if (!accountId) { setError('Selecione uma conta'); return }
+    let sv = parseFloat(steamValue)
+    if (isNaN(sv) || sv < 0) { setError('Insira um valor bruto válido'); return }
+
+    const calculatedWeekId = dateMode === 'this-week'
+      ? getCurrentWeekId()
+      : dateMode === 'manual'
+      ? getWeekIdForDate(new Date(manualDate + 'T12:00:00'))
+      : 'unknown'
+
+    let cv = parseFloat(cashoutValue)
+    const fl = parseFloat(float)
+
+    // Convert values back to BRL if currency is USD
+    if (currency === 'USD') {
+      sv = sv * usdRate
+      if (!isNaN(cv) && cashoutValue !== '') {
+        cv = cv * usdRate
+      }
+    }
+
+    const updates: Partial<Drop> = {
+      accountId,
+      weekId: calculatedWeekId,
+      steamValue: sv,
+      cashoutValue: !isNaN(cv) && cashoutValue !== '' ? cv : undefined,
+      float: !isNaN(fl) && fl >= 0 && fl <= 1 && float !== '' ? fl : undefined,
+    }
+
+    if (dateMode === 'manual' && manualDate) {
+      updates.createdAt = new Date(manualDate + 'T12:00:00').toISOString()
+    } else if (dateMode === 'this-week') {
+      const { start, end } = getWeekRange(getCurrentWeekId())
+      const curDate = new Date(drop.createdAt)
+      if (curDate < start || curDate >= end) {
+        updates.createdAt = new Date().toISOString()
+      }
+    }
+
+    onSave(drop.id, updates)
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Editar Drop" size="md">
+      <div className="space-y-4">
+        {/* Conta */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-1.5 font-medium uppercase tracking-wider">Conta *</label>
+          <select
+            value={accountId}
+            onChange={e => setAccountId(e.target.value)}
+            className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+          >
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.name} {!a.active ? '(inativa)' : ''}</option>)}
+          </select>
+        </div>
+
+        {/* Quando foi o drop */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-2 font-medium uppercase tracking-wider">Quando foi?</label>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {([
+              { mode: 'this-week' as DateMode, icon: Zap,        label: 'Esta semana' },
+              { mode: 'manual'    as DateMode, icon: Calendar,   label: 'Escolher data' },
+              { mode: 'unknown'   as DateMode, icon: HelpCircle, label: 'Não lembro' },
+            ] as const).map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDateMode(mode)}
+                className={`flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-medium transition-all ${
+                  dateMode === mode
+                    ? 'border-primary/60 bg-primary/10 text-primary'
+                    : 'border-white/[0.08] bg-[#111827] text-slate-400 hover:border-white/[0.16] hover:text-slate-200'
+                }`}
+              >
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {dateMode === 'this-week' && (
+            <p className="text-xs text-slate-500 px-1">{getWeekLabel(getCurrentWeekId())}</p>
+          )}
+          {dateMode === 'manual' && (
+            <div className="space-y-1">
+              <input
+                type="date"
+                value={manualDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={e => setManualDate(e.target.value)}
+                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+              />
+              {manualDate && (
+                <p className="text-xs text-slate-500 px-1">
+                  Semana: {getWeekLabel(getWeekIdForDate(new Date(manualDate + 'T12:00:00')))}
+                </p>
+              )}
+            </div>
+          )}
+          {dateMode === 'unknown' && (
+            <p className="text-xs text-slate-500 px-1">Drop salvo sem data — não entra nos gráficos semanais.</p>
+          )}
+        </div>
+
+        {/* Valores */}
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label={`Valor Bruto (${currency === 'USD' ? '$' : 'R$'})`}
+            type="number"
+            min="0"
+            step="0.01"
+            value={steamValue}
+            onChange={e => setSteamValue(e.target.value)}
+          />
+          <Input
+            label={`Cashout (${currency === 'USD' ? '$' : 'R$'})`}
+            type="number"
+            min="0"
+            step="0.01"
+            value={cashoutValue}
+            placeholder="Opcional"
+            onChange={e => setCashoutValue(e.target.value)}
+          />
+        </div>
+
+        {/* Float */}
+        {detectItemType(drop.item?.name ?? '') === 'weapon' && (
+          <Input
+            label="Float (opcional)"
+            type="number"
+            min="0"
+            max="1"
+            step="0.0001"
+            value={float}
+            onChange={e => setFloat(e.target.value)}
+          />
+        )}
+
+        {error && (
+          <p className="text-xs text-loss flex items-center gap-1">
+            <AlertCircle size={12} />{error}
+          </p>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button onClick={handleSave} className="flex-1">
+            Salvar Alterações
           </Button>
         </div>
       </div>
@@ -500,61 +714,109 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
 
 // ─── Drop Card ────────────────────────────────────────────────────────────────
 
-function DropCard({ drop, accountName, accountColor, cashoutRate, currency, onDelete, onSell, index }: {
-  drop: Drop; accountName: string; accountColor: string
+// ─── Rarity Helper ─────────────────────────────────────────────────────────────
+
+function getRarityColor(name: string, value: number): { border: string; glow: string; badge: string; color: string; bg: string } {
+  const lower = name.toLowerCase()
+  if (lower.includes('stattrak')) {
+    return { border: 'border-orange-500/40', glow: 'shadow-[0_0_15px_rgba(249,115,22,0.12)]', badge: 'orange', color: '#f97316', bg: 'from-orange-500/5 to-transparent' }
+  }
+  if (lower.includes('covert') || value >= 100) {
+    return { border: 'border-red-500/40', glow: 'shadow-[0_0_15px_rgba(239,68,68,0.12)]', badge: 'red', color: '#ef4444', bg: 'from-red-500/5 to-transparent' }
+  }
+  if (lower.includes('classified') || value >= 30) {
+    return { border: 'border-purple-500/40', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.12)]', badge: 'purple', color: '#a855f7', bg: 'from-purple-500/5 to-transparent' }
+  }
+  if (lower.includes('restricted') || value >= 10) {
+    return { border: 'border-pink-500/40', glow: 'shadow-[0_0_15px_rgba(236,72,153,0.12)]', badge: 'pink', color: '#ec4899', bg: 'from-pink-500/5 to-transparent' }
+  }
+  if (lower.includes('mil-spec') || lower.includes('militar') || value >= 3) {
+    return { border: 'border-blue-500/40', glow: 'shadow-[0_0_15px_rgba(59,130,246,0.12)]', badge: 'blue', color: '#3b82f6', bg: 'from-blue-500/5 to-transparent' }
+  }
+  if (lower.includes('case') || lower.includes('caixa')) {
+    return { border: 'border-yellow-500/20', glow: 'shadow-[0_0_10px_rgba(234,179,8,0.08)]', badge: 'gold', color: '#eab308', bg: 'from-yellow-500/3 to-transparent' }
+  }
+  return { border: 'border-slate-500/15', glow: '', badge: 'default', color: '#64748b', bg: 'from-slate-500/3 to-transparent' }
+}
+
+// ─── Drop Card ────────────────────────────────────────────────────────────────
+
+function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate, currency, onDelete, onSell, onEdit, index }: {
+  drop: Drop; accountName: string; accountAvatar?: string; accountColor: string
   cashoutRate: number; currency: 'BRL' | 'USD'; index: number
-  onDelete: () => void; onSell: () => void
+  onDelete: () => void; onSell: () => void; onEdit: () => void
 }) {
   const cashout = drop.cashoutValue ?? drop.steamValue * cashoutRate / 100
+  const rarity = getRarityColor(drop.item?.name ?? '', drop.steamValue)
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.4), duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="relative pl-6 sm:pl-8 group"
     >
-    <Card className="p-4">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: accountColor }} />
-          <span className="text-xs text-slate-400">{accountName}</span>
-          <span className="text-[10px] bg-[#1a2235] text-slate-500 px-1.5 py-0.5 rounded-md">Drop {drop.dropNumber}</span>
-          {drop.sold && <span className="text-[10px] bg-profit/20 text-profit px-1.5 py-0.5 rounded-full">Vendido</span>}
-        </div>
-        <div className="flex gap-1 flex-shrink-0">
-          {!drop.sold && (
-            <button onClick={onSell}
-              className="text-[11px] text-slate-500 hover:text-profit hover:bg-profit/10 px-2 py-1 rounded-lg transition-colors">
-              Vender
+      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-6 sm:w-8 h-px bg-white/[0.08] group-hover:bg-primary/20 transition-colors" />
+      <span
+        className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-white/20 transition-all duration-300 group-hover:scale-125"
+        style={{ backgroundColor: rarity.color }}
+      />
+
+      <Card className={cn(
+        'p-4 relative overflow-hidden transition-all duration-300 hover:border-white/[0.12]',
+        rarity.border, rarity.glow, rarity.bg
+      )}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {accountAvatar ? (
+              <img src={accountAvatar} alt={accountName} className="w-5 h-5 rounded-full object-cover border border-white/[0.08]" />
+            ) : (
+              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-slate-200 border border-white/[0.08] uppercase" style={{ backgroundColor: accountColor }}>
+                {accountName.slice(0, 2)}
+              </div>
+            )}
+            <span className="text-xs text-slate-400 font-body">{accountName}</span>
+            <span className="text-[9px] bg-white/[0.03] border border-white/[0.06] text-slate-500 px-1.5 py-0.5 rounded-md font-body">Drop {drop.dropNumber}</span>
+            {drop.sold && <span className="text-[9px] bg-profit/15 text-profit px-1.5 py-0.5 rounded-full font-semibold font-body">Vendido</span>}
+          </div>
+          <div className="flex gap-1 items-center flex-shrink-0">
+            {!drop.sold && (
+              <button onClick={onSell}
+                className="text-[10px] font-semibold text-slate-400 hover:text-profit hover:bg-profit/10 px-2 py-1 rounded-lg transition-colors font-body">
+                Vender
+              </button>
+            )}
+            <button onClick={onEdit} aria-label="Editar drop"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.03] transition-colors">
+              <Edit2 size={12} />
             </button>
-          )}
-          <button onClick={onDelete} aria-label="Deletar drop"
-            className="p-1.5 rounded-lg text-slate-600 hover:text-loss hover:bg-loss/10 transition-colors">
-            <Trash2 size={12} />
-          </button>
+            <button onClick={onDelete} aria-label="Deletar drop"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-loss hover:bg-loss/10 transition-colors">
+              <Trash2 size={12} />
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06] mb-3">
-        <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={40} />
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117]/60 border border-white/[0.03] mb-3">
+          <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/[0.04]">
+            <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={40} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm text-slate-100 font-bold leading-tight truncate font-body">{drop.item?.name || '—'}</p>
+            {drop.float != null && (
+              <span className="text-[9px] font-mono text-slate-500 mt-1 block">Float: {drop.float.toFixed(4)}</span>
+            )}
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm text-white font-medium leading-tight truncate">{drop.item?.name || '—'}</p>
-          {drop.float != null && (
-            <span className="text-[10px] font-mono text-slate-500 mt-1 block">{drop.float.toFixed(4)}</span>
-          )}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-slate-500 font-body">Cashout</p>
+            <p className="font-mono text-xs sm:text-sm font-bold text-profit mt-0.5">{formatCurrency(cashout, currency)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-slate-500 font-body">Bruto</p>
+            <p className="font-mono text-xs font-semibold text-slate-400 mt-0.5">{formatCurrency(drop.steamValue, currency)}</p>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-slate-500 mb-0.5">Cashout</p>
-          <p className="font-mono font-semibold text-profit">{formatCurrency(cashout, currency)}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-500 mb-0.5">Bruto</p>
-          <p className="font-mono text-sm text-slate-400">{formatCurrency(drop.steamValue, currency)}</p>
-        </div>
-      </div>
-    </Card>
+      </Card>
     </motion.div>
   )
 }
@@ -567,20 +829,123 @@ function WeekDivider({ weekId, cashout, count, isCurrentWeek, currency }: {
   const label = weekId === 'unknown'
     ? 'Sem data'
     : isCurrentWeek
-    ? `Esta semana · ${getWeekLabel(weekId)}`
+    ? `Ciclo Ativo · ${getWeekLabel(weekId)}`
     : getWeekLabel(weekId)
 
   return (
-    <div className="flex items-center gap-3 py-1">
-      <div className="h-px flex-1 bg-white/[0.06]" />
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <span className="text-xs font-semibold text-slate-400">{label}</span>
-        {cashout > 0 && weekId !== 'unknown' && (
-          <span className="text-xs text-profit font-mono">{formatCurrency(cashout, currency)}</span>
-        )}
-        <span className="text-[10px] text-slate-600">{count} drop{count !== 1 ? 's' : ''}</span>
+    <div className="relative pl-6 sm:pl-8 py-2">
+      <span className="absolute left-[-4.5px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#0d1117] border-2 border-white/30" />
+      
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-bold text-slate-300 tracking-wide font-body uppercase">{label}</span>
+        <span className="h-px flex-1 bg-white/[0.04]" />
+        <div className="flex items-center gap-2 shrink-0">
+          {cashout > 0 && weekId !== 'unknown' && (
+            <span className="text-xs text-profit font-mono font-bold bg-profit/5 border border-profit/10 px-2 py-0.5 rounded-md font-body">
+              {formatCurrency(cashout, currency)}
+            </span>
+          )}
+          <span className="text-[10px] text-slate-500 font-body">{count} drop{count !== 1 ? 's' : ''}</span>
+        </div>
       </div>
-      <div className="h-px flex-1 bg-white/[0.06]" />
+    </div>
+  )
+}
+
+// ─── Minor Drops Table (Compact View) ──────────────────────────────────────────
+
+interface MinorDropsTableProps {
+  drops: Drop[]
+  accounts: any[]
+  currency: 'BRL' | 'USD'
+  cashoutRate: number
+  onEdit: (d: Drop) => void
+  onDelete: (d: Drop) => void
+  onSell: (d: Drop) => void
+}
+
+function MinorDropsTable({ drops, accounts, currency, cashoutRate, onEdit, onDelete, onSell }: MinorDropsTableProps) {
+  return (
+    <div className="relative pl-6 sm:pl-8 mt-2">
+      <Card className="bg-white/[0.01] border-white/[0.03] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="text-[9px] text-slate-500 font-bold uppercase tracking-wider border-b border-white/[0.03] font-body bg-[#11161d]/20">
+                <th className="py-2.5 px-4">Conta</th>
+                <th className="py-2.5 px-3">Item</th>
+                <th className="py-2.5 px-3 text-right">Bruto</th>
+                <th className="py-2.5 px-3 text-right">Cashout</th>
+                <th className="py-2.5 px-4 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.03] text-xs">
+              {drops.map(drop => {
+                const acct = accounts.find(a => a.id === drop.accountId)
+                const cashout = drop.cashoutValue ?? drop.steamValue * cashoutRate / 100
+                
+                return (
+                  <tr key={drop.id} className="hover:bg-white/[0.01] transition-colors group">
+                    <td className="py-2 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        {acct?.avatarUrl ? (
+                          <img src={acct.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-white/[0.06]" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-slate-200" style={{ backgroundColor: acct?.color ?? '#64748b' }}>
+                            {acct?.name?.slice(0, 2).toUpperCase() ?? '?'}
+                          </div>
+                        )}
+                        <span className="font-semibold text-slate-400 font-body">{acct?.name ?? 'Conta'}</span>
+                      </div>
+                    </td>
+
+                    <td className="py-2 px-3 min-w-[160px]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded bg-[#111827] overflow-hidden flex items-center justify-center border border-white/[0.05] shrink-0">
+                          <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={24} />
+                        </div>
+                        <span className="truncate text-slate-300 font-medium font-body max-w-[180px]" title={drop.item?.name}>
+                          {drop.item?.name || '—'}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="py-2 px-3 text-right font-mono text-slate-500">
+                      {formatCurrency(drop.steamValue, currency)}
+                    </td>
+
+                    <td className="py-2 px-3 text-right font-mono text-profit font-semibold">
+                      {formatCurrency(cashout, currency)}
+                    </td>
+
+                    <td className="py-2 px-4 text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                        {!drop.sold && (
+                          <button onClick={() => onSell(drop)}
+                            className="text-[9px] font-bold text-slate-400 hover:text-profit px-1.5 py-0.5 rounded bg-white/[0.02] border border-white/[0.06] hover:bg-profit/10 hover:border-profit/20 transition-all font-body">
+                            Vender
+                          </button>
+                        )}
+                        {drop.sold && (
+                          <span className="text-[9px] font-semibold text-profit bg-profit/10 px-1.5 py-0.5 rounded font-body">Sold</span>
+                        )}
+                        <button onClick={() => onEdit(drop)}
+                          className="p-1 rounded text-slate-500 hover:text-slate-200 transition-colors">
+                          <Edit2 size={10} />
+                        </button>
+                        <button onClick={() => onDelete(drop)}
+                          className="p-1 rounded text-slate-500 hover:text-loss transition-colors">
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   )
 }
@@ -591,11 +956,12 @@ type FilterStatus = 'all' | 'sold' | 'unsold'
 type FilterType = 'all' | 'weapon' | 'case' | 'sticker' | 'other'
 
 export default function Drops() {
-  const { accounts, drops, settings, addDrop, deleteDrop, markDropSold } = useStore()
+  const { accounts, drops, settings, addDrop, deleteDrop, markDropSold, updateDrop } = useStore()
   const t = useT()
   const currency = settings.currency
   const [showModal, setShowModal] = useState(false)
   const [sellingDrop, setSellingDrop] = useState<Drop | null>(null)
+  const [editingDrop, setEditingDrop] = useState<Drop | null>(null)
   const [showFilters, setShowFilters] = useState(false)
 
   const [search, setSearch] = useState('')
@@ -774,36 +1140,43 @@ export default function Drops() {
           action={{ label: 'Limpar filtros', onClick: clearFilters }}
         />
       ) : (
-        <div className="space-y-6">
-          {grouped.map(({ weekId, drops: wdrops, cashout }) => (
-            <div key={weekId}>
-              <WeekDivider
-                weekId={weekId}
-                cashout={cashout}
-                count={wdrops.length}
-                isCurrentWeek={weekId === currentWid}
-                currency={currency}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-3">
-                {wdrops.map((drop, i) => {
-                  const acct = accounts.find(a => a.id === drop.accountId)
-                  return (
-                    <DropCard
-                      key={drop.id}
-                      drop={drop}
-                      index={i}
-                      accountName={acct?.name ?? '?'}
-                      accountColor={acct?.color ?? '#64748b'}
-                      cashoutRate={settings.cashoutRate}
-                      currency={currency}
-                      onDelete={() => deleteDrop(drop.id)}
-                      onSell={() => setSellingDrop(drop)}
-                    />
-                  )
-                })}
+        <div className="relative border-l border-white/[0.06] ml-2.5 sm:ml-3 pl-0 space-y-8 py-2">
+          {grouped.map(({ weekId, drops: wdrops, cashout }) => {
+            return (
+              <div key={weekId} className="space-y-4">
+                <WeekDivider
+                  weekId={weekId}
+                  cashout={cashout}
+                  count={wdrops.length}
+                  isCurrentWeek={weekId === currentWid}
+                  currency={currency}
+                />
+                
+                {wdrops.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {wdrops.map((drop, i) => {
+                      const acct = accounts.find(a => a.id === drop.accountId)
+                      return (
+                        <DropCard
+                          key={drop.id}
+                          drop={drop}
+                          index={i}
+                          accountName={acct?.name ?? '?'}
+                          accountAvatar={acct?.avatarUrl}
+                          accountColor={acct?.color ?? '#64748b'}
+                          cashoutRate={settings.cashoutRate}
+                          currency={currency}
+                          onDelete={() => deleteDrop(drop.id)}
+                          onSell={() => setSellingDrop(drop)}
+                          onEdit={() => setEditingDrop(drop)}
+                        />
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -824,6 +1197,9 @@ export default function Drops() {
         )}
         {sellingDrop && (
           <SellModal drop={sellingDrop} onSave={(id, v) => { markDropSold(id, v); setSellingDrop(null) }} onClose={() => setSellingDrop(null)} />
+        )}
+        {editingDrop && (
+          <EditDropModal drop={editingDrop} onSave={(id, updates) => { updateDrop(id, updates); setEditingDrop(null) }} onClose={() => setEditingDrop(null)} />
         )}
       </AnimatePresence>
     </div>

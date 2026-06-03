@@ -44,23 +44,26 @@ function SidebarItem({ item, active, compact, onClick }: SidebarItemProps) {
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150',
+        'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200',
         'font-body text-sm relative group',
         active
-          ? 'bg-primary/10 text-primary border border-primary/20'
-          : 'text-slate-500 hover:text-slate-200 hover:bg-[#131c2e] border border-transparent',
+          ? 'bg-gradient-to-r from-primary/12 to-primary/[0.02] text-primary border border-primary/20 shadow-[0_0_14px_rgba(74,222,128,0.06)]'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] border border-transparent',
         compact && 'justify-center px-2',
       )}
     >
-      <Icon className={cn('shrink-0', active ? 'w-4.5 h-4.5' : 'w-4.5 h-4.5')} size={18} />
+      {active && (
+        <span className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-primary" />
+      )}
+      <Icon className={cn('shrink-0 transition-transform duration-200 group-hover:scale-110', active ? 'w-4.5 h-4.5 text-primary' : 'w-4.5 h-4.5 text-slate-500 group-hover:text-slate-300')} size={18} />
       {!compact && (
-        <span className="flex-1 text-left truncate">{item.label}</span>
+        <span className="flex-1 text-left truncate font-medium">{item.label}</span>
       )}
       {active && !compact && (
-        <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-60" />
+        <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-60 text-primary" />
       )}
       {compact && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 border border-white/10 rounded-lg text-xs text-slate-200 whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
+        <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-[#0f172a] border border-white/10 rounded-lg text-xs text-slate-200 whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-xl">
           {item.label}
         </div>
       )}
@@ -101,25 +104,19 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
       'flex flex-col h-full',
       mobile ? 'w-full' : compact ? 'w-16' : 'w-60',
     )}>
-      {/* Logo */}
+      {/* Logo / Header Dropdown Selector */}
       <div className={cn(
-        'flex items-center gap-3 px-4 py-5 border-b border-white/[0.09]',
-        compact && 'justify-center px-2',
+        'flex flex-col gap-2.5 px-4 py-5 border-b border-white/[0.06]',
+        compact && 'items-center px-2 py-4',
       )}>
-        <a
-          href="https://spxmiguel.github.io/LootFlow/"
-          target={window.electronAPI?.isElectron ? '_blank' : '_self'}
-          rel="noreferrer"
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-        >
-          <img src="../icon.svg" className="w-8 h-8 rounded-xl shrink-0" alt="LootFlow" />
+        <div className="flex items-center gap-3 w-full">
+          <img src="../icon.svg" className="w-8 h-8 rounded-xl shrink-0 shadow-[0_0_12px_rgba(74,222,128,0.2)] border border-primary/10" alt="LootFlow" />
           {!compact && (
-            <div>
-              <p className="font-display font-bold text-slate-100 text-base leading-none">LootFlow</p>
-              <p className="text-[10px] text-slate-600 font-body mt-0.5">CS2 Analytics</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-display font-extrabold text-slate-100 text-base leading-none tracking-wide">LootFlow</p>
             </div>
           )}
-        </a>
+        </div>
         {mobile && (
           <button onClick={onClose} className="ml-auto text-slate-500 hover:text-slate-200 p-1">
             <X className="w-5 h-5" />
@@ -129,22 +126,22 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
 
       {/* Quick Stats */}
       {!compact && (
-        <div className="mx-3 mt-4 p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-body mb-2">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Esta semana</span>
+        <div className="mx-3 mt-4 p-3 rounded-xl bg-white/[0.01] border border-white/[0.04] relative overflow-hidden group">
+          <div className="absolute -inset-px bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          <div className="flex items-center gap-2 text-xs text-slate-400 font-body mb-2.5">
+            <TrendingUp className="w-3.5 h-3.5 text-primary" />
+            <span className="font-semibold tracking-wide uppercase text-[9px]">Esta semana</span>
           </div>
-          <div className="flex gap-3">
-            <div>
-              <p className="font-mono text-sm font-medium text-slate-200">{activeAccounts}</p>
-              <p className="text-[10px] text-slate-600">contas</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-[#11161d] p-2 rounded-lg border border-white/[0.04]">
+              <p className="font-mono text-sm font-bold text-slate-100">{activeAccounts}</p>
+              <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">contas</p>
             </div>
-            <div className="w-px bg-white/[0.06]" />
-            <div>
-              <p className="font-mono text-sm font-medium text-slate-200">
+            <div className="bg-[#11161d] p-2 rounded-lg border border-white/[0.04]">
+              <p className="font-mono text-sm font-bold text-slate-100">
                 {activeAccounts * 2}
               </p>
-              <p className="text-[10px] text-slate-600">drops alvo</p>
+              <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">drops alvo</p>
             </div>
           </div>
         </div>

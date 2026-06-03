@@ -76,9 +76,9 @@ export function Card({ children, className, glass = true, hover, glow, onClick }
       onClick={onClick}
       style={glow ? { boxShadow: `0 0 24px ${glow}` } : undefined}
       className={cn(
-        'rounded-2xl border border-white/[0.06]',
+        'rounded-2xl border border-white/[0.04]',
         glass ? 'lf-card' : 'bg-[#11161d]',
-        hover && 'cursor-pointer hover:border-white/[0.12] hover:-translate-y-0.5 transition-all duration-200',
+        hover && 'cursor-pointer hover:border-white/[0.10] hover:-translate-y-0.5 transition-all duration-200',
         className,
       )}
     >

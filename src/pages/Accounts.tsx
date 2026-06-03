@@ -182,6 +182,7 @@ function AccountModal({
           value={form.note}
           onChange={e => f('note', e.target.value)}
           placeholder="Detalhes, observações..."
+          maxLength={200}
         />
         <div className="p-3 rounded-xl bg-primary/[0.05] border border-primary/10">
           <p className="text-xs text-slate-500 font-body">
@@ -231,56 +232,62 @@ interface AccountCardProps {
 }
 
 function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }: AccountCardProps) {
+  const paybackProgress = as.isPaidBack ? 100 : (as.totalCashout / as.investedCost) * 100
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.35 }}
     >
-      <Card className={cn('p-5', !as.account.active && 'opacity-60')}>
+      <Card className={cn('p-5 bg-gradient-to-br from-[#11161d] to-[#141922] relative overflow-hidden transition-all duration-300 hover:border-white/[0.1] hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)]', !as.account.active && 'opacity-50')}>
+        {as.isPaidBack && (
+          <div className="absolute -inset-px border border-primary/20 rounded-2xl pointer-events-none" />
+        )}
+
         <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             {as.account.avatarUrl ? (
               <img
                 src={as.account.avatarUrl}
-                alt=""
+                alt={as.account.name}
                 referrerPolicy="no-referrer"
-                className="h-10 w-10 rounded-xl border border-white/[0.08] object-cover shrink-0"
+                className="h-8 w-8 rounded-full border border-white/[0.08] object-cover shrink-0 ring-2 ring-white/[0.03]"
               />
             ) : (
               <div
-                className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ backgroundColor: `${as.account.color ?? '#38bdf8'}18`, border: `1px solid ${as.account.color ?? '#38bdf8'}30` }}
+                className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 uppercase text-[10px] font-bold text-slate-200"
+                style={{ backgroundColor: as.account.color ?? '#38bdf8', border: `1px solid ${as.account.color ?? '#38bdf8'}30` }}
               >
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <circle cx="11" cy="8" r="3.5" fill={as.account.color ?? '#38bdf8'} opacity="0.7" />
-                  <path d="M3.5 20c0-4.142 3.358-7.5 7.5-7.5s7.5 3.358 7.5 7.5" stroke={as.account.color ?? '#38bdf8'} strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
-                </svg>
+                {as.account.name.slice(0, 2)}
               </div>
             )}
             <div className="min-w-0">
-              <p className="font-display font-bold text-slate-200 truncate">{as.account.name}</p>
-              {as.account.steamId && (
-                <p className="text-[11px] text-slate-600 font-mono mt-0.5">{as.account.steamId}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-display font-bold text-slate-200 truncate text-sm sm:text-base leading-snug">{as.account.name}</p>
+              </div>
+              {as.account.steamId ? (
+                <p className="text-[9px] text-slate-500 font-mono mt-0.5 truncate max-w-[120px] sm:max-w-[160px]">{as.account.steamId}</p>
+              ) : (
+                <p className="text-[9px] text-slate-600 font-body mt-0.5">Sem Steam ID</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={onToggle}
-              className="text-slate-500 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-[#1a2235]"
+              className="text-slate-500 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-white/[0.02]"
               title={as.account.active ? 'Desativar' : 'Ativar'}
             >
               {as.account.active
-                ? <ToggleRight className="w-4.5 h-4.5 text-profit" size={18} />
-                : <ToggleLeft className="w-4.5 h-4.5" size={18} />
+                ? <ToggleRight className="w-5 h-5 text-primary" size={20} />
+                : <ToggleLeft className="w-5 h-5" size={20} />
               }
             </button>
             <button
               onClick={onEdit}
               aria-label="Editar conta"
               title="Editar"
-              className="text-slate-500 hover:text-slate-200 p-1.5 rounded-lg hover:bg-[#1a2235] transition-colors"
+              className="text-slate-500 hover:text-slate-200 p-1.5 rounded-lg hover:bg-white/[0.02] transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -296,21 +303,21 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-3 gap-2.5 mb-4 p-2.5 rounded-xl bg-[#0e121a]/80 border border-white/[0.03]">
           <div>
-            <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Drops</p>
-            <p className="font-mono text-base font-medium text-slate-200 mt-0.5">{as.totalDrops}</p>
+            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">Drops</p>
+            <p className="font-mono text-sm font-bold text-slate-200 mt-0.5">{as.totalDrops}</p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Cashout</p>
-            <p className="font-mono text-base font-medium text-profit mt-0.5">
+            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">Cashout</p>
+            <p className="font-mono text-sm font-bold text-profit mt-0.5">
               {formatCurrency(as.totalCashout, currency)}
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">ROI</p>
-            <p className={cn('font-mono text-base font-medium mt-0.5', as.roiPercent > 0 ? 'text-profit' : as.roiPercent < 0 ? 'text-loss' : 'text-slate-400')}>
-              {as.roiPercent === Infinity ? '∞' : formatPercent(as.roiPercent, 0)}
+            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">ROI</p>
+            <p className={cn('font-mono text-sm font-bold mt-0.5', as.roiPercent > 0 ? 'text-profit' : as.roiPercent < 0 ? 'text-loss' : 'text-slate-400')}>
+              {as.roiPercent === Infinity ? '∞' : `${as.roiPercent >= 0 ? '+' : ''}${formatPercent(as.roiPercent, 0)}`}
             </p>
           </div>
         </div>
@@ -318,22 +325,22 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
         {/* Payback */}
         <div>
           <div className="flex justify-between text-[10px] font-body mb-1.5">
-            <span className="text-slate-600">Payback</span>
-            <span className={cn('font-medium', as.isPaidBack ? 'text-profit' : 'text-slate-400')}>
+            <span className="text-slate-500 font-medium">Payback</span>
+            <span className={cn('font-semibold font-mono', as.isPaidBack ? 'text-profit' : 'text-slate-400')}>
               {as.isPaidBack
-                ? '✓ Pago'
-                : `Faltam ${formatCurrency(as.remainingPayback, currency)}`
+                ? '✓ 100% Pago'
+                : `${paybackProgress.toFixed(0)}% (${formatCurrency(as.remainingPayback, currency)} restam)`
               }
             </span>
           </div>
           <Progress
-            value={as.isPaidBack ? 100 : (as.totalCashout / as.investedCost) * 100}
-            color={as.isPaidBack ? '#4ade80' : as.account.color ?? '#38bdf8'}
+            value={as.isPaidBack ? 100 : paybackProgress}
+            color={as.isPaidBack ? '#4ade80' : as.account.color ?? '#3b82f6'}
           />
         </div>
 
         {as.account.note && (
-          <p className="text-xs text-slate-600 font-body mt-3 italic">"{as.account.note}"</p>
+          <p className="text-[11px] text-slate-500 font-body mt-3 italic bg-white/[0.01] p-2 rounded-lg border border-white/[0.03]">"{as.account.note}"</p>
         )}
       </Card>
     </motion.div>
@@ -354,6 +361,12 @@ export function Accounts() {
     () => accounts.map(a => calcAccountStats(a, drops, settings)),
     [accounts, drops, settings],
   )
+
+  const recentlyAdded = useMemo(() => {
+    return [...accountStats]
+      .sort((a, b) => (b.account.createdAt ?? '').localeCompare(a.account.createdAt ?? ''))
+      .slice(0, 3)
+  }, [accountStats])
 
   const handleEdit = (id: string) => {
     const acc = accounts.find(a => a.id === id)
@@ -436,19 +449,59 @@ export function Accounts() {
           }
         />
       ) : (
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {accountStats.map((as, i) => (
-            <AccountCard
-              key={as.account.id}
-              stats={as}
-              currency={settings.currency}
-              index={i}
-              onEdit={() => handleEdit(as.account.id)}
-              onDelete={() => handleDelete(as.account.id)}
-              onToggle={() => toggleAccountActive(as.account.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {accountStats.map((as, i) => (
+              <AccountCard
+                key={as.account.id}
+                stats={as}
+                currency={settings.currency}
+                index={i}
+                onEdit={() => handleEdit(as.account.id)}
+                onDelete={() => handleDelete(as.account.id)}
+                onToggle={() => toggleAccountActive(as.account.id)}
+              />
+            ))}
+          </div>
+
+          {/* Recently Added Accounts Section */}
+          {recentlyAdded.length > 0 && (
+            <div className="mt-12 border-t border-white/[0.06] pt-8">
+              <h2 className="font-display text-base font-bold text-slate-200 mb-4 tracking-wide">Contas Adicionadas Recentemente</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recentlyAdded.map(as => (
+                  <div key={`recent-${as.account.id}`} className="p-3.5 rounded-xl bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.02] flex items-center justify-between gap-3 transition-all duration-200">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {as.account.avatarUrl ? (
+                        <img
+                          src={as.account.avatarUrl}
+                          alt={as.account.name}
+                          className="h-7 w-7 rounded-full object-cover shrink-0 border border-white/[0.06]"
+                        />
+                      ) : (
+                        <div
+                          className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 uppercase text-[8px] font-bold text-slate-200 font-body"
+                          style={{ backgroundColor: as.account.color ?? '#3b82f6' }}
+                        >
+                          {as.account.name.slice(0, 2)}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-body text-xs font-semibold text-slate-200 truncate">{as.account.name}</p>
+                        <p className="text-[9px] text-slate-500 font-body mt-0.5">Criada em {new Date(as.account.createdAt).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <Badge color={as.isPaidBack ? 'green' : 'default'}>
+                        {as.isPaidBack ? 'Paga' : `${(as.totalCashout / as.investedCost * 100).toFixed(0)}% payback`}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modals */}

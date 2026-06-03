@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- bg -->
+  <rect width="512" height="512" rx="100" fill="#0d1117"/>
+  <rect x="1" y="1" width="510" height="510" rx="99" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2"/>
+  <!-- Custom L — bottom-right corner chamfered 45° for personality -->
+  <!-- left vertical -->
+  <rect x="116" y="88" width="86" height="336" rx="6" fill="white"/>
+  <!-- foot — chamfered at bottom-right -->
+  <polygon points="202,352 396,352 356,432 116,432 116,352" fill="white"/>
+</svg>
