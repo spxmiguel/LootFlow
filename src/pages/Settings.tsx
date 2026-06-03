@@ -33,7 +33,7 @@ function Section({ icon: Icon, color, title, subtitle, defaultOpen = false, chil
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <Card className="p-0 overflow-hidden border border-white/[0.06] bg-[#0d1117]/30">
+    <Card className="p-0 overflow-hidden border border-white/[0.04] bg-[#0d1117]/30">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -312,7 +312,7 @@ function WhatsAppSection() {
       {/* 1. Conexão & Status */}
       <Section icon={MessageCircle} color="green" title="Conexão & Status" subtitle="Ative o bot e configure seu número de celular" defaultOpen={true}>
         {/* Info */}
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.04]">
           <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
           <p className="text-[11px] text-slate-500 leading-relaxed">
             O número que você coloca aqui é o <span className="text-slate-300">seu</span> número — onde vai <span className="text-slate-300">receber</span> as mensagens. O bot envia de um número dedicado.
@@ -320,7 +320,7 @@ function WhatsAppSection() {
         </div>
 
         {/* Toggle principal + status */}
-        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
           <div>
             <p className="text-sm text-white font-medium">Ativar lembretes</p>
             <p className={`text-[11px] mt-0.5 ${botStatus.color}`}>{botStatus.label}</p>
@@ -332,7 +332,7 @@ function WhatsAppSection() {
         <div>
           <label className="text-xs text-slate-400 block mb-1.5">Seu número do WhatsApp</label>
           {!editingPhone && hasPhone ? (
-            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
               <div>
                 <p className="text-sm text-white font-mono">+{phone}</p>
                 <p className={`text-[11px] mt-0.5 ${verified ? 'text-profit' : 'text-yellow-500'}`}>
@@ -443,7 +443,7 @@ function WhatsAppSection() {
       {/* 2. Tipos de Alerta */}
       <Section icon={MessageCircle} color="blue" title="Tipos de Alerta" subtitle="Escolha quais relatórios e mensagens quer receber" defaultOpen={true}>
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
             <div>
               <p className="text-sm text-white">Resumo semanal</p>
               <p className="text-[11px] text-slate-500 mt-0.5">Toda quarta: resumo da semana que fechou (terça 21h)</p>
@@ -500,7 +500,7 @@ function WhatsAppSection() {
               <ChevronDown size={15} className={`text-slate-500 transition-transform ${showDevTone ? 'rotate-180' : ''}`} />
             </button>
             {showDevTone && (
-              <div className="bg-[#0d1117] border-t border-white/[0.06] p-3 space-y-3">
+              <div className="bg-[#0d1117] border-t border-white/[0.04] p-3 space-y-3">
                 <div className="flex items-start gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3">
                   <AlertTriangle size={13} className="mt-0.5 shrink-0 text-yellow-400" />
                   <p className="text-[11px] leading-relaxed text-slate-400">
@@ -663,7 +663,7 @@ function WhatsAppSection() {
       </Section>
 
       {/* Botão Salvar */}
-      <div className={`p-4 rounded-xl border bg-[#0d1117]/30 transition-all ${hasChanges ? 'border-primary/30' : 'border-white/[0.06]'}`}>
+      <div className={`p-4 rounded-xl border bg-[#0d1117]/30 transition-all ${hasChanges ? 'border-primary/30' : 'border-white/[0.04]'}`}>
         <Button
           onClick={handleSave}
           disabled={saving || !hasChanges}
@@ -895,7 +895,7 @@ export default function Settings() {
       {/* 2-Column Sidebar Layout */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
         {/* Tab Navigation Vertical Sidebar */}
-        <div className="flex flex-col gap-1 w-full md:w-60 shrink-0 bg-[#0d1117]/60 border border-white/[0.06] rounded-xl p-2.5">
+        <div className="flex flex-col gap-1 w-full md:w-60 shrink-0 bg-[#0d1117]/60 border border-white/[0.04] rounded-xl p-2.5">
           {tabs.map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -1170,7 +1170,7 @@ export default function Settings() {
 
                     <button
                       onClick={() => setShowCustomFirebase(v => !v)}
-                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06] hover:border-white/[0.12] transition-colors text-left"
+                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04] hover:border-white/[0.10] transition-colors text-left"
                     >
                       <div>
                         <p className="text-sm text-white">Usar Firebase próprio</p>
@@ -1180,7 +1180,7 @@ export default function Settings() {
                     </button>
 
                     {showCustomFirebase && (
-                      <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
+                      <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.04]">
                         <button
                           onClick={() => setShowFirebaseTutorial(v => !v)}
                           className="w-full flex items-center justify-between text-xs text-primary hover:underline"
@@ -1337,7 +1337,7 @@ export default function Settings() {
                           className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
                             exportOpts.columns === c.id
                               ? 'bg-[#111827] border-primary/30'
-                              : 'bg-[#0d1117] border-white/[0.06] hover:border-white/[0.12]'
+                              : 'bg-[#0d1117] border-white/[0.04] hover:border-white/[0.10]'
                           }`}
                         >
                           <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
@@ -1441,7 +1441,7 @@ export default function Settings() {
                     <p className="text-xs text-slate-400 mb-3">Apagar dados seletivamente</p>
                     <div className="space-y-2">
                       {/* Drops delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
                         <div className="min-w-0">
                           <p className="text-sm text-white">Drops</p>
                           <p className="text-xs text-slate-500">{drops.length} registro{drops.length !== 1 ? 's' : ''}</p>
@@ -1458,7 +1458,7 @@ export default function Settings() {
                       </div>
 
                       {/* Accounts delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
                         <div className="min-w-0">
                           <p className="text-sm text-white">Contas</p>
                           <p className="text-xs text-slate-500">{accounts.length} registro{accounts.length !== 1 ? 's' : ''}</p>
@@ -1475,7 +1475,7 @@ export default function Settings() {
                       </div>
 
                       {/* Goals delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
                         <div className="min-w-0">
                           <p className="text-sm text-white">Metas</p>
                           <p className="text-xs text-slate-500">{goals.length} registro{goals.length !== 1 ? 's' : ''}</p>
@@ -1492,7 +1492,7 @@ export default function Settings() {
                       </div>
 
                       {/* Config defaults reset row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
                         <div className="min-w-0">
                           <p className="text-sm text-white">Configurações</p>
                           <p className="text-xs text-slate-500">Restaurar valores padrão</p>
@@ -1510,7 +1510,7 @@ export default function Settings() {
                   </div>
 
                   {/* Storage usage details */}
-                  <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.06] rounded-xl mt-2">
+                  <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.04] rounded-xl mt-2">
                     <Info size={14} className="text-slate-500 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-slate-500 space-y-1">
                       <p>Contas, drops e metas ficam no <span className="text-slate-400">localStorage</span> do seu navegador.</p>
