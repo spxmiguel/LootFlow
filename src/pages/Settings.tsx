@@ -701,7 +701,7 @@ export default function Settings() {
   } = useStore()
   const { user, deleteAccount } = useAuth()
 
-  const [activeTab, setActiveTab] = useState<'finance' | 'appearance' | 'notifications' | 'privacy' | null>('finance')
+  const [activeTab, setActiveTab] = useState<'finance' | 'appearance' | 'notifications' | 'privacy'>('finance')
   const [resetConfirm, setResetConfirm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<'drops' | 'accounts' | 'goals' | 'settings' | null>(null)
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(0)
@@ -885,61 +885,58 @@ export default function Settings() {
   return (
     <>
     {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
-    <div className="p-4 md:p-6 lg:p-8 max-w-4xl mx-auto space-y-6 pb-16">
+    <div className="p-4 md:p-6 lg:p-8 space-y-5 pb-12">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-xl font-display font-bold text-white">Configurações</h1>
+        <h1 className="text-xl font-display font-bold text-white font-body">Configurações</h1>
         <p className="text-slate-500 text-xs mt-0.5">Personalize o LootFlow ao seu jeito</p>
       </motion.div>
 
-      {/* Accordion Stack of Options */}
-      <div className="space-y-4">
-        {/* Accordion 1: Financeiro */}
-        <Card className={`p-0 overflow-hidden border transition-all duration-200 bg-[#0d1117]/30 ${
-          activeTab === 'finance'
-            ? 'border-primary/30 shadow-[0_0_20px_rgba(16,185,129,0.04)]'
-            : 'border-white/[0.06] hover:border-white/[0.1]'
-        }`}>
-          <button
-            type="button"
-            onClick={() => setActiveTab(activeTab === 'finance' ? null : 'finance')}
-            className="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-white/[0.01] transition-colors focus:outline-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-                <Settings2 size={16} />
-              </div>
-              <div>
-                <h2 className="font-semibold text-white text-sm leading-tight">Financeiro</h2>
-                <p className="text-xs text-slate-500 mt-1">Taxa de cashout, moeda de exibição e metas financeiras</p>
-              </div>
-            </div>
-            <motion.div
-              animate={{ rotate: activeTab === 'finance' ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="text-slate-500 shrink-0 p-1"
-            >
-              <ChevronDown size={16} />
-            </motion.div>
-          </button>
-
-          <AnimatePresence initial={false}>
-            {activeTab === 'finance' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden"
+      {/* 2-Column Sidebar Layout */}
+      <div className="flex flex-col md:flex-row gap-6 items-start">
+        {/* Tab Navigation Vertical Sidebar */}
+        <div className="flex flex-col gap-1 w-full md:w-60 shrink-0 bg-[#0d1117]/60 border border-white/[0.06] rounded-xl p-2.5">
+          {tabs.map(tab => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-3 px-3.5 py-3 rounded-lg text-sm font-semibold transition-all duration-200 border text-left ${
+                  isActive
+                    ? 'bg-primary/10 border-primary/20 text-primary shadow-[0_0_15px_rgba(16,185,129,0.06)]'
+                    : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.02]'
+                }`}
               >
-                <div className="p-5 pt-0 border-t border-white/[0.04] space-y-6">
-                  {/* Taxa de Cashout */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-semibold text-white">Taxa de Cashout</h3>
-                      <span className="text-base font-mono font-bold text-primary">{cashoutRate}%</span>
+                <Icon size={16} className="shrink-0" />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Settings Tab Panels */}
+        <div className="flex-1 w-full">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-5"
+          >
+            {/* ── Tab: Financeiro ── */}
+            {activeTab === 'finance' && (
+              <div className="space-y-5">
+                {/* 1. Taxa de Cashout */}
+                <Section icon={Settings2} color="blue" title="Taxa de Cashout" subtitle="Percentual do valor bruto recebido na venda" defaultOpen={true}>
+                  {/* Cashout rate */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm text-white font-medium">Taxa de Cashout</p>
+                      <span className="text-lg font-mono font-bold text-primary">{cashoutRate}%</span>
                     </div>
-                    <p className="text-xs text-slate-500 leading-relaxed">
+                    <p className="text-xs text-slate-500 mb-3">
                       Percentual do valor bruto que você realmente recebe na venda.<br/>
                       Ex: item {formatCurrency(10, settings.currency)} de valor bruto → cashout {formatCurrency(10 * cashoutRate / 100, settings.currency)}
                     </p>
@@ -957,639 +954,619 @@ export default function Settings() {
                       <span>50%</span>
                       <span>100%</span>
                     </div>
-
-                    <div className="pt-2">
-                      <label className="text-xs text-slate-400 mb-1.5 block">Ou insira manualmente</label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.5"
-                          value={String(cashoutRate)}
-                          onChange={e => handleCashoutRate(Number(e.target.value))}
-                          className="w-28"
-                        />
-                        <span className="flex items-center text-slate-400 text-sm">%</span>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Moeda & Conversão */}
-                  <div className="pt-5 border-t border-white/[0.04] space-y-4">
-                    <h3 className="text-sm font-semibold text-white">Moeda & Conversão</h3>
-                    <SettingRow label="Moeda / Currency" hint={settings.currency === 'USD' ? `Taxa: 1 USD = R$ ${settings.usdRate ?? 5.2}` : 'Valores em Real Brasileiro'}>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => updateSettings({ currency: 'BRL' })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'BRL' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                        >R$ BRL</button>
-                        <button
-                          onClick={() => updateSettings({ currency: 'USD' })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'USD' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                        >$ USD</button>
-                      </div>
-                    </SettingRow>
-
-                    {settings.currency === 'USD' && (
-                      <div className="pt-3 pl-4 border-l-2 border-primary/20 space-y-1.5">
-                        <label className="text-xs text-slate-400 block">Taxa de Conversão (1 USD = R$ ...)</label>
-                        <Input
-                          type="number"
-                          min="1"
-                          step="0.01"
-                          value={String(settings.usdRate ?? 5.2)}
-                          onChange={e => updateSettings({ usdRate: Number(e.target.value) || 5.2 })}
-                          placeholder="5.2"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Meta Semanal */}
-                  <div className="pt-5 border-t border-white/[0.04] space-y-3">
-                    <h3 className="text-sm font-semibold text-white">Meta Semanal</h3>
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1.5 block">Meta semanal de cashout ({settings.currency === 'USD' ? '$' : 'R$'})</label>
+                  {/* Manual override */}
+                  <div className="pt-3 border-t border-white/[0.04]">
+                    <label className="text-xs text-slate-400 mb-1.5 block">Ou insira manualmente</label>
+                    <div className="flex gap-2">
                       <Input
                         type="number"
                         min="0"
-                        step="10"
-                        value={String(
-                          settings.currency === 'USD'
-                            ? parseFloat((settings.weeklyGoalAmount / (settings.usdRate ?? 5.2)).toFixed(2))
-                            : settings.weeklyGoalAmount
-                        )}
-                        onChange={e => {
-                          const val = Number(e.target.value)
-                          const finalVal = settings.currency === 'USD' ? val * (settings.usdRate ?? 5.2) : val
-                          updateSettings({ weeklyGoalAmount: finalVal })
-                        }}
-                        placeholder="50"
+                        max="100"
+                        step="0.5"
+                        value={String(cashoutRate)}
+                        onChange={e => handleCashoutRate(Number(e.target.value))}
+                        className="w-28"
                       />
+                      <span className="flex items-center text-slate-400 text-sm">%</span>
                     </div>
                   </div>
-                </div>
-              </motion.div>
+                </Section>
+
+                {/* 2. Moeda & Conversão */}
+                <Section icon={Settings2} color="green" title="Moeda & Conversão" subtitle="Escolha a moeda de exibição e taxa do dólar" defaultOpen={false}>
+                  {/* Currency */}
+                  <SettingRow label="Moeda / Currency" hint={settings.currency === 'USD' ? `Taxa: 1 USD = R$ ${settings.usdRate ?? 5.2}` : 'Valores em Real Brasileiro'}>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => updateSettings({ currency: 'BRL' })}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'BRL' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                      >R$ BRL</button>
+                      <button
+                        onClick={() => updateSettings({ currency: 'USD' })}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'USD' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                      >$ USD</button>
+                    </div>
+                  </SettingRow>
+
+                  {settings.currency === 'USD' && (
+                    <div className="pt-3 border-t border-white/[0.04] pl-4 border-l-2 border-primary/20 space-y-1.5">
+                      <label className="text-xs text-slate-400 block">Taxa de Conversão (1 USD = R$ ...)</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        value={String(settings.usdRate ?? 5.2)}
+                        onChange={e => updateSettings({ usdRate: Number(e.target.value) || 5.2 })}
+                        placeholder="5.2"
+                      />
+                    </div>
+                  )}
+                </Section>
+
+                {/* 3. Meta Semanal */}
+                <Section icon={Settings2} color="gold" title="Meta Semanal" subtitle="Defina o valor alvo de cashout por semana" defaultOpen={false}>
+                  {/* Weekly goal */}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1.5 block">Meta semanal de cashout ({settings.currency === 'USD' ? '$' : 'R$'})</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="10"
+                      value={String(
+                        settings.currency === 'USD'
+                          ? parseFloat((settings.weeklyGoalAmount / (settings.usdRate ?? 5.2)).toFixed(2))
+                          : settings.weeklyGoalAmount
+                      )}
+                      onChange={e => {
+                        const val = Number(e.target.value)
+                        const finalVal = settings.currency === 'USD' ? val * (settings.usdRate ?? 5.2) : val
+                        updateSettings({ weeklyGoalAmount: finalVal })
+                      }}
+                      placeholder="50"
+                    />
+                  </div>
+                </Section>
+              </div>
             )}
-          </AnimatePresence>
-        </Card>
 
-        {/* Accordion 2: Aparência */}
-        <Card className={`p-0 overflow-hidden border transition-all duration-200 bg-[#0d1117]/30 ${
-          activeTab === 'appearance'
-            ? 'border-purple-400/30 shadow-[0_0_20px_rgba(167,139,250,0.04)]'
-            : 'border-white/[0.06] hover:border-white/[0.1]'
-        }`}>
-          <button
-            type="button"
-            onClick={() => setActiveTab(activeTab === 'appearance' ? null : 'appearance')}
-            className="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-white/[0.01] transition-colors focus:outline-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-400/10 text-purple-400 shrink-0">
-                <Palette size={16} />
-              </div>
-              <div>
-                <h2 className="font-semibold text-white text-sm leading-tight">Aparência</h2>
-                <p className="text-xs text-slate-500 mt-1">Cores do painel, idioma e efeitos visuais</p>
-              </div>
-            </div>
-            <motion.div
-              animate={{ rotate: activeTab === 'appearance' ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="text-slate-500 shrink-0 p-1"
-            >
-              <ChevronDown size={16} />
-            </motion.div>
-          </button>
-
-          <AnimatePresence initial={false}>
+            {/* ── Tab: Aparência ── */}
             {activeTab === 'appearance' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden"
-              >
-                <div className="p-5 pt-0 border-t border-white/[0.04] space-y-6">
-                  {/* Tema & Cores */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-white">Tema & Cores</h3>
-                    {/* Primary color */}
-                    <div>
-                      <label className="text-xs text-slate-400 mb-2 block">Cor Principal</label>
-                      <div className="flex gap-2 flex-wrap mb-2">
-                        {PRESET_COLORS.map(c => (
-                          <button
-                            key={c}
-                            onClick={() => updateTheme({ primaryColor: c })}
-                            className={`w-7 h-7 rounded-lg transition-all ${
-                              settings.theme.primaryColor === c
-                                ? 'ring-2 ring-white ring-offset-1 ring-offset-[#0d1117] scale-110'
-                                : 'hover:scale-105'
-                            }`}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="color"
-                          value={settings.theme.primaryColor}
-                          onChange={e => updateTheme({ primaryColor: e.target.value })}
-                          className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
+              <div className="space-y-5">
+                {/* 1. Tema & Cores */}
+                <Section icon={Palette} color="purple" title="Tema & Cores" subtitle="Personalize as cores do painel" defaultOpen={true}>
+                  {/* Primary color */}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-2 block">Cor Principal</label>
+                    <div className="flex gap-2 flex-wrap mb-2">
+                      {PRESET_COLORS.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => updateTheme({ primaryColor: c })}
+                          className={`w-7 h-7 rounded-lg transition-all ${
+                            settings.theme.primaryColor === c
+                              ? 'ring-2 ring-white ring-offset-1 ring-offset-[#0d1117] scale-110'
+                              : 'hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: c }}
                         />
-                        <Input
-                          value={settings.theme.primaryColor}
-                          onChange={e => updateTheme({ primaryColor: e.target.value })}
-                          className="w-28 font-mono text-xs"
-                          placeholder="#38bdf8"
-                        />
-                      </div>
+                      ))}
                     </div>
-
-                    {/* Accent color */}
-                    <div className="pt-3 border-t border-white/[0.04]">
-                      <label className="text-xs text-slate-400 mb-2 block">Cor de Destaque</label>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="color"
-                          value={settings.theme.accentColor}
-                          onChange={e => updateTheme({ accentColor: e.target.value })}
-                          className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
-                        />
-                        <Input
-                          value={settings.theme.accentColor}
-                          onChange={e => updateTheme({ accentColor: e.target.value })}
-                          className="w-28 font-mono text-xs"
-                          placeholder="#4ade80"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-white/[0.04]">
-                      <SettingRow label="Glassmorphism" hint="Efeito de vidro nas cards">
-                        <Toggle
-                          value={settings.theme.glassmorphism}
-                          onChange={v => updateTheme({ glassmorphism: v })}
-                        />
-                      </SettingRow>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={settings.theme.primaryColor}
+                        onChange={e => updateTheme({ primaryColor: e.target.value })}
+                        className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
+                      />
+                      <Input
+                        value={settings.theme.primaryColor}
+                        onChange={e => updateTheme({ primaryColor: e.target.value })}
+                        className="w-28 font-mono text-xs"
+                        placeholder="#38bdf8"
+                      />
                     </div>
                   </div>
 
-                  {/* Interface & Otimização */}
-                  <div className="pt-5 border-t border-white/[0.04] space-y-4">
-                    <h3 className="text-sm font-semibold text-white">Interface & Otimização</h3>
-                    <SettingRow label="Otimizar site" hint="Desativa animações e efeitos para melhor performance">
+                  {/* Accent color */}
+                  <div className="pt-3 border-t border-white/[0.04]">
+                    <label className="text-xs text-slate-400 mb-2 block">Cor de Destaque</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={settings.theme.accentColor}
+                        onChange={e => updateTheme({ accentColor: e.target.value })}
+                        className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
+                      />
+                      <Input
+                        value={settings.theme.accentColor}
+                        onChange={e => updateTheme({ accentColor: e.target.value })}
+                        className="w-28 font-mono text-xs"
+                        placeholder="#4ade80"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/[0.04]">
+                    <SettingRow label="Glassmorphism" hint="Efeito de vidro nas cards">
                       <Toggle
-                        value={!settings.theme.animations}
-                        onChange={v => updateTheme({ animations: !v })}
+                        value={settings.theme.glassmorphism}
+                        onChange={v => updateTheme({ glassmorphism: v })}
+                      />
+                    </SettingRow>
+                  </div>
+                </Section>
+
+                {/* 2. Interface & Otimização */}
+                <Section icon={Palette} color="blue" title="Interface & Otimização" subtitle="Ajustes visuais e de performance" defaultOpen={false}>
+                  <SettingRow label="Otimizar site" hint="Desativa animações e efeitos para melhor performance">
+                    <Toggle
+                      value={!settings.theme.animations}
+                      onChange={v => updateTheme({ animations: !v })}
+                    />
+                  </SettingRow>
+
+                  <div className="pt-3 border-t border-white/[0.04]">
+                    <SettingRow label="Sidebar compacta" hint="Colapsa labels no menu lateral">
+                      <Toggle
+                        value={settings.theme.sidebarCompact}
+                        onChange={v => updateTheme({ sidebarCompact: v })}
+                      />
+                    </SettingRow>
+                  </div>
+                </Section>
+
+                {/* 3. Idioma */}
+                <Section icon={Palette} color="gold" title="Idioma / Language" subtitle="Mude o idioma da interface" defaultOpen={false}>
+                  <SettingRow label="Idioma / Language" hint="Idioma da interface / Interface language">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => updateSettings({ language: 'pt' })}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                      >🇧🇷 PT</button>
+                      <button
+                        onClick={() => updateSettings({ language: 'en' })}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                      >🇺🇸 EN</button>
+                    </div>
+                  </SettingRow>
+                </Section>
+              </div>
+            )}
+
+            {/* ── Tab: Notificações ── */}
+            {activeTab === 'notifications' && (
+              <div className="space-y-5">
+                <WhatsAppSection />
+              </div>
+            )}
+
+            {/* ── Tab: Dados e Privacidade ── */}
+            {activeTab === 'privacy' && (
+              <div className="space-y-5">
+                {/* Firebase Cloud Sync Card */}
+                <Section icon={Database} color="blue" title="Firebase" subtitle="Sincronização na nuvem" defaultOpen={true}>
+                  <div className="space-y-3">
+                    <SettingRow
+                      label="Sincronizar com Firebase"
+                      hint="Com sync ativo, exclusões locais também removem do Firestore. Desativado, novas alterações ficam só no dispositivo."
+                    >
+                      <Toggle
+                        value={settings.firebaseSyncEnabled !== false}
+                        onChange={v => updateSettings({ firebaseSyncEnabled: v })}
                       />
                     </SettingRow>
 
-                    <div className="pt-3 border-t border-white/[0.04]">
-                      <SettingRow label="Sidebar compacta" hint="Colapsa labels no menu lateral">
-                        <Toggle
-                          value={settings.theme.sidebarCompact}
-                          onChange={v => updateTheme({ sidebarCompact: v })}
-                        />
-                      </SettingRow>
-                    </div>
-                  </div>
-
-                  {/* Idioma */}
-                  <div className="pt-5 border-t border-white/[0.04] space-y-4">
-                    <h3 className="text-sm font-semibold text-white">Idioma / Language</h3>
-                    <SettingRow label="Idioma / Language" hint="Idioma da interface / Interface language">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => updateSettings({ language: 'pt' })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                        >🇧🇷 PT</button>
-                        <button
-                          onClick={() => updateSettings({ language: 'en' })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                        >🇺🇸 EN</button>
+                    <div className="flex items-start gap-3 p-3 bg-profit/5 border border-profit/20 rounded-xl">
+                      <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-slate-400">
+                        <p className="text-profit font-semibold mb-1">
+                          {isUsingCustomFirebase() ? 'Firebase próprio ativo ✓' : 'Firebase padrão ativo ✓'}
+                        </p>
+                        <p>Login com Google disponível. Dados sincronizam entre dispositivos.</p>
                       </div>
-                    </SettingRow>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
+                    </div>
 
-        {/* Accordion 3: Notificações */}
-        <Card className={`p-0 overflow-hidden border transition-all duration-200 bg-[#0d1117]/30 ${
-          activeTab === 'notifications'
-            ? 'border-profit/30 shadow-[0_0_20px_rgba(16,185,129,0.04)]'
-            : 'border-white/[0.06] hover:border-white/[0.1]'
-        }`}>
-          <button
-            type="button"
-            onClick={() => setActiveTab(activeTab === 'notifications' ? null : 'notifications')}
-            className="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-white/[0.01] transition-colors focus:outline-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-profit/10 text-profit shrink-0">
-                <MessageCircle size={16} />
-              </div>
-              <div>
-                <h2 className="font-semibold text-white text-sm leading-tight">Notificações</h2>
-                <p className="text-xs text-slate-500 mt-1">Configuração do bot do WhatsApp, alertas e cronograma</p>
-              </div>
-            </div>
-            <motion.div
-              animate={{ rotate: activeTab === 'notifications' ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="text-slate-500 shrink-0 p-1"
-            >
-              <ChevronDown size={16} />
-            </motion.div>
-          </button>
+                    <button
+                      onClick={() => setShowCustomFirebase(v => !v)}
+                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06] hover:border-white/[0.12] transition-colors text-left"
+                    >
+                      <div>
+                        <p className="text-sm text-white">Usar Firebase próprio</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Para privacidade total — seus dados ficam no seu projeto Firebase</p>
+                      </div>
+                      <ChevronDown size={15} className={`text-slate-500 transition-transform ${showCustomFirebase ? 'rotate-180' : ''}`} />
+                    </button>
 
-          <AnimatePresence initial={false}>
-            {activeTab === 'notifications' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden"
-              >
-                <div className="p-5 pt-0 border-t border-white/[0.04] space-y-5">
-                  <WhatsAppSection />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
-
-        {/* Accordion 4: Dados e Privacidade */}
-        <Card className={`p-0 overflow-hidden border transition-all duration-200 bg-[#0d1117]/30 ${
-          activeTab === 'privacy'
-            ? 'border-blue-400/30 shadow-[0_0_20px_rgba(96,165,250,0.04)]'
-            : 'border-white/[0.06] hover:border-white/[0.1]'
-        }`}>
-          <button
-            type="button"
-            onClick={() => setActiveTab(activeTab === 'privacy' ? null : 'privacy')}
-            className="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-white/[0.01] transition-colors focus:outline-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-400/10 text-blue-400 shrink-0">
-                <Database size={16} />
-              </div>
-              <div>
-                <h2 className="font-semibold text-white text-sm leading-tight">Dados e Privacidade</h2>
-                <p className="text-xs text-slate-500 mt-1">Sincronização na nuvem, exportação e gerenciamento de armazenamento</p>
-              </div>
-            </div>
-            <motion.div
-              animate={{ rotate: activeTab === 'privacy' ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="text-slate-500 shrink-0 p-1"
-            >
-              <ChevronDown size={16} />
-            </motion.div>
-          </button>
-
-          <AnimatePresence initial={false}>
-            {activeTab === 'privacy' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden"
-              >
-                <div className="p-5 pt-0 border-t border-white/[0.04] space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Left Column: Firebase and Cache */}
-                    <div className="space-y-6">
-                      {/* Firebase Sync */}
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-white">Firebase Sync</h3>
-                        <SettingRow
-                          label="Sincronizar com Firebase"
-                          hint="Com sync ativo, exclusões locais também removem do Firestore. Desativado, novas alterações ficam só no dispositivo."
-                        >
-                          <Toggle
-                            value={settings.firebaseSyncEnabled !== false}
-                            onChange={v => updateSettings({ firebaseSyncEnabled: v })}
-                          />
-                        </SettingRow>
-
-                        <div className="flex items-start gap-3 p-3 bg-profit/5 border border-profit/20 rounded-xl">
-                          <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
-                          <div className="text-xs text-slate-400">
-                            <p className="text-profit font-semibold mb-1">
-                              {isUsingCustomFirebase() ? 'Firebase próprio ativo ✓' : 'Firebase padrão ativo ✓'}
-                            </p>
-                            <p>Login com Google disponível. Dados sincronizam entre dispositivos.</p>
-                          </div>
-                        </div>
-
+                    {showCustomFirebase && (
+                      <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
                         <button
-                          onClick={() => setShowCustomFirebase(v => !v)}
-                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06] hover:border-white/[0.12] transition-colors text-left"
+                          onClick={() => setShowFirebaseTutorial(v => !v)}
+                          className="w-full flex items-center justify-between text-xs text-primary hover:underline"
                         >
-                          <div>
-                            <p className="text-sm text-white">Usar Firebase próprio</p>
-                            <p className="text-xs text-slate-500 mt-0.5">Para privacidade total — seus dados ficam no seu projeto Firebase</p>
-                          </div>
-                          <ChevronDown size={15} className={`text-slate-500 transition-transform ${showCustomFirebase ? 'rotate-180' : ''}`} />
+                          <span>Como criar meu Firebase?</span>
+                          <ChevronDown size={13} className={`transition-transform ${showFirebaseTutorial ? 'rotate-180' : ''}`} />
                         </button>
 
-                        {showCustomFirebase && (
-                          <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
-                            <button
-                              onClick={() => setShowFirebaseTutorial(v => !v)}
-                              className="w-full flex items-center justify-between text-xs text-primary hover:underline"
-                            >
-                              <span>Como criar meu Firebase?</span>
-                              <ChevronDown size={13} className={`transition-transform ${showFirebaseTutorial ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {showFirebaseTutorial && (
-                              <div className="text-xs text-slate-500 space-y-1.5 p-3 bg-black/20 rounded-xl leading-relaxed">
-                                <p className="text-slate-300 font-semibold">Tutorial — Firebase gratuito em 5 passos:</p>
-                                <p>1. Acesse <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-primary underline">console.firebase.google.com</a> → "Criar projeto"</p>
-                                <p>2. Crie o projeto (desative Google Analytics se quiser)</p>
-                                <p>3. Clique em "Web" (&lt;/&gt;) → copie o objeto <code className="text-slate-300">firebaseConfig</code></p>
-                                <p>4. No menu lateral: <strong className="text-slate-300">Build → Firestore Database</strong> → criar banco → "Modo produção"</p>
-                                <p>5. Em Firestore → <strong className="text-slate-300">Rules</strong>, cole:</p>
-                                <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth.uid == uid;\n    }\n  }\n}'}</pre>
-                                <p>6. Cole os valores abaixo e salve.</p>
-                              </div>
-                            )}
-
-                            <div className="space-y-2">
-                              {([
-                                ['apiKey', 'API Key *'],
-                                ['authDomain', 'Auth Domain * (ex: meu-projeto.firebaseapp.com)'],
-                                ['projectId', 'Project ID *'],
-                                ['appId', 'App ID *'],
-                                ['storageBucket', 'Storage Bucket (opcional)'],
-                                ['messagingSenderId', 'Messaging Sender ID (opcional)'],
-                              ] as const).map(([field, label]) => (
-                                <div key={field}>
-                                  <label className="text-[10px] text-slate-500 block mb-1">{label}</label>
-                                  <input
-                                    type="text"
-                                    value={customFbForm[field as keyof typeof customFbForm]}
-                                    onChange={e => setCustomFbForm(f => ({ ...f, [field]: e.target.value }))}
-                                    placeholder={FIREBASE_CONFIG[field as keyof typeof FIREBASE_CONFIG] ? '•'.repeat(8) : ''}
-                                    className="w-full h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-
-                            <div className="flex gap-2 pt-1">
-                              <Button size="sm" onClick={handleSaveCustomFirebase} className="flex-1">
-                                Salvar e recarregar
-                              </Button>
-                              {isUsingCustomFirebase() && (
-                                <Button size="sm" variant="ghost" onClick={handleClearCustomFirebase}>
-                                  Usar padrão
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Cache Steam */}
-                      <div className="pt-5 border-t border-white/[0.04] space-y-4">
-                        <h3 className="text-sm font-semibold text-white">Cache Steam</h3>
-                        <p className="text-xs text-slate-500 leading-relaxed">
-                          O LootFlow salva preços do Steam Market localmente por 30 minutos para não sobrecarregar a API e manter a UI responsiva.
-                        </p>
-
-                        {cacheStats !== null && (
-                          <div className="bg-[#111827]/60 rounded-xl p-3 grid grid-cols-2 gap-3">
-                            <div>
-                              <p className="text-xs text-slate-500">Itens em cache</p>
-                              <p className="text-lg font-mono font-bold text-white">{cacheStats.entries}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-500">Tamanho aprox.</p>
-                              <p className="text-lg font-mono font-bold text-white">{cacheStats.sizeKB} KB</p>
-                            </div>
+                        {showFirebaseTutorial && (
+                          <div className="text-xs text-slate-500 space-y-1.5 p-3 bg-black/20 rounded-xl leading-relaxed">
+                            <p className="text-slate-300 font-semibold">Tutorial — Firebase gratuito em 5 passos:</p>
+                            <p>1. Acesse <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-primary underline">console.firebase.google.com</a> → "Criar projeto"</p>
+                            <p>2. Crie o projeto (desative Google Analytics se quiser)</p>
+                            <p>3. Clique em "Web" (&lt;/&gt;) → registre o app → copie o objeto <code className="text-slate-300">firebaseConfig</code></p>
+                            <p>4. No menu lateral: <strong className="text-slate-300">Build → Firestore Database</strong> → criar banco → "Modo produção"</p>
+                            <p>5. Em Firestore → <strong className="text-slate-300">Rules</strong>, cole:</p>
+                            <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth.uid == uid;\n    }\n  }\n}'}</pre>
+                            <p>6. Cole os valores abaixo e salve.</p>
                           </div>
                         )}
 
-                        <div className="flex gap-2">
-                          <Button variant="ghost" icon={RefreshCw} size="sm" onClick={handleCheckCache} className="flex-1">
-                            Ver Cache
-                          </Button>
-                          <Button variant="danger" icon={Trash2} size="sm" onClick={handleClearCache} className="flex-1">
-                            Limpar Cache
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column: Export, Backup, Selective Delete, Danger Zone */}
-                    <div className="space-y-6">
-                      {/* Exportar Dados */}
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-white">Exportar Dados</h3>
-                        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
-                          <AlertTriangle size={14} className="text-yellow-400 mt-0.5 shrink-0" />
-                          <p className="text-[11px] text-slate-400 leading-relaxed">
-                            No modo local, limpar cache/navegador pode apagar seus dados. Faça backup JSON antes de limpar o navegador.
-                          </p>
-                        </div>
-
-                        {/* Format */}
-                        <div>
-                          <p className="text-xs text-slate-400 mb-2">Formato</p>
-                          <div className="flex gap-1.5">
-                            {(['csv', 'xlsx', 'txt'] as ExportFormat[]).map(f => (
-                              <button
-                                key={f}
-                                onClick={() => setExportOpts(o => ({ ...o, format: f }))}
-                                className={`h-8 px-3 rounded-xl text-xs font-semibold border uppercase transition-all ${
-                                  exportOpts.format === f
-                                    ? 'bg-profit/10 border-profit/40 text-profit'
-                                    : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
-                                }`}
-                              >{f}</button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Filter */}
-                        <div>
-                          <p className="text-xs text-slate-400 mb-2">Filtrar drops</p>
-                          <div className="flex gap-1.5 flex-wrap">
-                            {([
-                              { id: 'all',    label: 'Todos' },
-                              { id: 'sold',   label: 'Vendidos' },
-                              { id: 'unsold', label: 'Não vendidos' },
-                            ] as { id: ExportFilter; label: string }[]).map(f => (
-                              <button
-                                key={f.id}
-                                onClick={() => setExportOpts(o => ({ ...o, filter: f.id }))}
-                                className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
-                                  exportOpts.filter === f.id
-                                    ? 'bg-primary/10 border-primary/40 text-primary'
-                                    : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
-                                }`}
-                              >{f.label}</button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Columns */}
-                        <div>
-                          <p className="text-xs text-slate-400 mb-2">Campos</p>
-                          <div className="space-y-1.5">
-                            {([
-                              { id: 'all',        label: 'Todos os campos',         hint: 'Semana, conta, item, bruto, cashout, vendido, datas, nota' },
-                              { id: 'minimal',    label: 'Somente nomes dos drops', hint: 'Semana, conta, nº drop, item — sem valores' },
-                              { id: 'with-dates', label: 'Com datas',               hint: 'Todos os campos + data de venda e registro' },
-                            ] as { id: ExportColumns; label: string; hint: string }[]).map(c => (
-                              <button
-                                key={c.id}
-                                onClick={() => setExportOpts(o => ({ ...o, columns: c.id }))}
-                                className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
-                                  exportOpts.columns === c.id
-                                    ? 'bg-[#111827] border-primary/30'
-                                    : 'bg-[#0d1117] border-white/[0.06] hover:border-white/[0.12]'
-                                }`}
-                              >
-                                <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
-                                  exportOpts.columns === c.id ? 'border-primary bg-primary' : 'border-slate-600'
-                                }`} />
-                                <div>
-                                  <p className={`text-xs font-medium ${exportOpts.columns === c.id ? 'text-white' : 'text-slate-400'}`}>{c.label}</p>
-                                  <p className="text-[10px] text-slate-600 mt-0.5">{c.hint}</p>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <Button
-                          onClick={handleExport}
-                          disabled={drops.length === 0}
-                          size="sm"
-                          className="w-full text-xs font-semibold"
-                        >
-                          <Download size={14} />
-                          Exportar {exportOpts.format.toUpperCase()} · {drops.length} drops
-                        </Button>
-                      </div>
-
-                      {/* Backup completo */}
-                      <div className="pt-5 border-t border-white/[0.04] space-y-3">
-                        <h3 className="text-sm font-semibold text-white">Backup e Restauração</h3>
-                        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
-                          <div>
-                            <p className="text-sm text-white">Backup completo</p>
-                            <p className="text-xs text-slate-500 mt-0.5">JSON com contas, drops e metas</p>
-                          </div>
-                          <button
-                            onClick={handleExportJSON}
-                            className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#111827]/40 border border-white/[0.08] hover:border-gold/40 text-slate-400 hover:text-gold text-xs transition-all shrink-0"
-                          >
-                            <Download size={12} />JSON
-                          </button>
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-slate-500 mb-2">Importar backup</p>
-                          <input type="file" accept=".json" ref={importRef} onChange={handleImportJSON} className="hidden" />
-                          <Button
-                            variant="ghost"
-                            icon={Upload}
-                            size="sm"
-                            onClick={() => importRef.current?.click()}
-                            className="w-full"
-                          >
-                            Importar JSON
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Limpeza seletiva */}
-                      <div className="pt-5 border-t border-white/[0.04] space-y-3">
-                        <h3 className="text-sm font-semibold text-white">Limpeza Seletiva</h3>
                         <div className="space-y-2">
-                          {[
-                            { id: 'drops', label: 'Drops', len: drops.length },
-                            { id: 'accounts', label: 'Contas', len: accounts.length },
-                            { id: 'goals', label: 'Metas', len: goals.length },
-                          ].map(item => (
-                            <div key={item.id} className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
-                              <div>
-                                <p className="text-sm text-white">{item.label}</p>
-                                <p className="text-xs text-slate-500">{item.len} registros</p>
-                              </div>
-                              <Button
-                                variant="danger"
-                                icon={deleteConfirm === item.id ? AlertTriangle : Trash2}
-                                size="sm"
-                                onClick={() => handleSelectiveDelete(item.id as any)}
-                                disabled={item.len === 0}
-                              >
-                                {deleteConfirm === item.id ? 'Confirmar?' : 'Apagar'}
-                              </Button>
+                          {([
+                            ['apiKey', 'API Key *'],
+                            ['authDomain', 'Auth Domain * (ex: meu-projeto.firebaseapp.com)'],
+                            ['projectId', 'Project ID *'],
+                            ['appId', 'App ID *'],
+                            ['storageBucket', 'Storage Bucket (opcional)'],
+                            ['messagingSenderId', 'Messaging Sender ID (opcional)'],
+                          ] as const).map(([field, label]) => (
+                            <div key={field}>
+                              <label className="text-[10px] text-slate-500 block mb-1">{label}</label>
+                              <input
+                                type="text"
+                                value={customFbForm[field as keyof typeof customFbForm]}
+                                onChange={e => setCustomFbForm(f => ({ ...f, [field]: e.target.value }))}
+                                placeholder={FIREBASE_CONFIG[field as keyof typeof FIREBASE_CONFIG] ? '•'.repeat(8) : ''}
+                                className="w-full h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60"
+                              />
                             </div>
                           ))}
                         </div>
-                      </div>
 
-                      {/* Danger Zone */}
-                      <div className="pt-5 border-t border-white/[0.04] space-y-3">
-                        <h3 className="text-sm font-semibold text-red-400">Zona de Perigo</h3>
-                        <div className="space-y-3 p-3 rounded-xl border border-red-500/10 bg-red-500/5">
-                          <div className="flex items-center justify-between gap-4">
-                            <div>
-                              <p className="text-sm text-white">Resetar dados locais</p>
-                              <p className="text-xs text-slate-500 mt-0.5">Remove tudo deste dispositivo.</p>
-                            </div>
-                            <Button
-                              variant="danger"
-                              icon={resetConfirm ? AlertTriangle : Trash2}
-                              onClick={handleReset}
-                              className="shrink-0"
-                            >
-                              {resetConfirm ? 'Confirmar?' : 'Resetar'}
+                        <div className="flex gap-2 pt-1">
+                          <Button size="sm" onClick={handleSaveCustomFirebase} className="flex-1">
+                            Salvar e recarregar
+                          </Button>
+                          {isUsingCustomFirebase() && (
+                            <Button size="sm" variant="ghost" onClick={handleClearCustomFirebase}>
+                              Usar padrão
                             </Button>
-                          </div>
-
-                          {user && (
-                            <div className="pt-3 border-t border-red-500/10 flex items-center justify-between gap-4">
-                              <div>
-                                <p className="text-sm text-white">Excluir conta permanentemente</p>
-                                <p className="text-xs text-slate-500 mt-0.5">Apaga dados do Firestore e locais.</p>
-                              </div>
-                              <Button
-                                variant="danger"
-                                icon={deleteAccountConfirm > 0 ? AlertTriangle : UserX}
-                                onClick={handleDeleteAccount}
-                                disabled={deletingAccount}
-                                className="shrink-0"
-                              >
-                                {deletingAccount ? 'Apagando…' : deleteAccountConfirm === 0 ? 'Excluir' : 'Confirmar?'}
-                              </Button>
-                            </div>
                           )}
                         </div>
                       </div>
+                    )}
+                  </div>
+                </Section>
+
+                {/* Cache Steam */}
+                <Section icon={Zap} color="gold" title="Cache Steam" subtitle="Preços salvos localmente" defaultOpen={false}>
+                  <p className="text-xs text-slate-500">
+                    O LootFlow salva preços do Steam Market localmente por 30 minutos para não sobrecarregar a API e manter a UI responsiva.
+                  </p>
+
+                  {cacheStats !== null && (
+                    <div className="bg-[#111827]/60 rounded-xl p-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-slate-500">Itens em cache</p>
+                        <p className="text-lg font-mono font-bold text-white">{cacheStats.entries}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">Tamanho aprox.</p>
+                        <p className="text-lg font-mono font-bold text-white">{cacheStats.sizeKB} KB</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button variant="ghost" icon={RefreshCw} size="sm" onClick={handleCheckCache} className="flex-1">
+                      Ver Cache
+                    </Button>
+                    <Button variant="danger" icon={Trash2} size="sm" onClick={handleClearCache} className="flex-1">
+                      Limpar Cache
+                    </Button>
+                  </div>
+                </Section>
+
+                {/* Exportar Dados */}
+                <Section icon={Download} color="green" title="Exportar Dados" subtitle={`${drops.length} drops · ${accounts.length} contas`} defaultOpen={false}>
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
+                    <AlertTriangle size={14} className="text-yellow-400 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      No modo local, limpar cache/navegador pode apagar seus dados. Faça backup JSON antes de limpar o navegador, trocar de dispositivo ou testar em produção.
+                    </p>
+                  </div>
+
+                  {/* Format selection */}
+                  <div>
+                    <p className="text-xs text-slate-400 mb-2">Formato</p>
+                    <div className="flex gap-1.5">
+                      {(['csv', 'xlsx', 'txt'] as ExportFormat[]).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setExportOpts(o => ({ ...o, format: f }))}
+                          className={`h-8 px-3 rounded-xl text-xs font-semibold border uppercase transition-all ${
+                            exportOpts.format === f
+                              ? 'bg-profit/10 border-profit/40 text-profit'
+                              : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                          }`}
+                        >{f}</button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1.5">
+                      {exportOpts.format === 'csv'  && 'Planilha CSV — abre em Excel, Sheets e LibreOffice'}
+                      {exportOpts.format === 'xlsx' && 'Excel com abas: Drops + Contas'}
+                      {exportOpts.format === 'txt'  && 'Relatório em texto formatado, legível em qualquer editor'}
+                    </p>
+                  </div>
+
+                  {/* Filter selection */}
+                  <div>
+                    <p className="text-xs text-slate-400 mb-2">Filtrar drops</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {([
+                        { id: 'all',    label: 'Todos' },
+                        { id: 'sold',   label: 'Vendidos' },
+                        { id: 'unsold', label: 'Não vendidos' },
+                      ] as { id: ExportFilter; label: string }[]).map(f => (
+                        <button
+                          key={f.id}
+                          onClick={() => setExportOpts(o => ({ ...o, filter: f.id }))}
+                          className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
+                            exportOpts.filter === f.id
+                              ? 'bg-primary/10 border-primary/40 text-primary'
+                              : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                          }`}
+                        >{f.label}</button>
+                      ))}
                     </div>
                   </div>
-                </div>
-              </motion.div>
+
+                  {/* Columns configuration */}
+                  <div>
+                    <p className="text-xs text-slate-400 mb-2">Campos</p>
+                    <div className="space-y-1.5">
+                      {([
+                        { id: 'all',        label: 'Todos os campos',         hint: 'Semana, conta, item, bruto, cashout, vendido, datas, nota' },
+                        { id: 'minimal',    label: 'Somente nomes dos drops', hint: 'Semana, conta, nº drop, item — sem valores' },
+                        { id: 'with-dates', label: 'Com datas',               hint: 'Todos os campos + data de venda e registro' },
+                      ] as { id: ExportColumns; label: string; hint: string }[]).map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => setExportOpts(o => ({ ...o, columns: c.id }))}
+                          className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                            exportOpts.columns === c.id
+                              ? 'bg-[#111827] border-primary/30'
+                              : 'bg-[#0d1117] border-white/[0.06] hover:border-white/[0.12]'
+                          }`}
+                        >
+                          <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
+                            exportOpts.columns === c.id ? 'border-primary bg-primary' : 'border-slate-600'
+                          }`} />
+                          <div>
+                            <p className={`text-xs font-medium ${exportOpts.columns === c.id ? 'text-white' : 'text-slate-400'}`}>{c.label}</p>
+                            <p className="text-[10px] text-slate-600 mt-0.5">{c.hint}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Export Currency options */}
+                  {exportOpts.columns !== 'minimal' && (
+                    <div>
+                      <p className="text-xs text-slate-400 mb-2">Moeda dos valores</p>
+                      <div className="flex gap-1.5">
+                        {(['BRL', 'USD'] as ExportCurrency[]).map(c => (
+                          <button
+                            key={c}
+                            onClick={() => setExportOpts(o => ({ ...o, currency: c }))}
+                            className={`h-8 px-3 rounded-xl text-xs font-semibold border transition-all ${
+                              exportOpts.currency === c
+                                ? 'bg-primary/10 border-primary/40 text-primary'
+                                : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                            }`}
+                          >{c === 'BRL' ? '🇧🇷 R$ BRL' : '🇺🇸 $ USD'}</button>
+                        ))}
+                      </div>
+                      {exportOpts.currency === 'USD' && (
+                        <p className="text-[10px] text-slate-600 mt-1">
+                          Taxa: 1 USD = R$ {(settings as any).usdRate ?? 5.2}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Export Total row Toggle */}
+                  {exportOpts.columns !== 'minimal' && (
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm text-white">Linha de total</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Adiciona soma de bruto e cashout no final</p>
+                      </div>
+                      <Toggle value={exportOpts.includeTotal} onChange={v => setExportOpts(o => ({ ...o, includeTotal: v }))} />
+                    </div>
+                  )}
+
+                  {/* Export execution trigger */}
+                  <Button
+                    onClick={handleExport}
+                    disabled={drops.length === 0}
+                    size="sm"
+                    className="w-full"
+                  >
+                    <Download size={14} />
+                    Exportar {exportOpts.format.toUpperCase()} · {drops.length} drops
+                  </Button>
+
+                  {/* JSON backup export */}
+                  <div className="pt-1 border-t border-white/[0.08]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm text-white">Backup completo</p>
+                        <p className="text-xs text-slate-500 mt-0.5">JSON com contas, drops e metas — para restaurar depois</p>
+                      </div>
+                      <button
+                        onClick={handleExportJSON}
+                        className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#111827]/40 border border-white/[0.08] hover:border-gold/40 text-slate-400 hover:text-gold text-xs transition-all shrink-0"
+                      >
+                        <Download size={12} />JSON
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* JSON import wrapper */}
+                  <div className="pt-1 border-t border-white/[0.08]">
+                    <p className="text-xs text-slate-500 mb-2">Importar backup</p>
+                    <input type="file" accept=".json" ref={importRef} onChange={handleImportJSON} className="hidden" />
+                    <Button
+                      variant="ghost"
+                      icon={Upload}
+                      size="sm"
+                      onClick={() => importRef.current?.click()}
+                      className="w-full"
+                    >
+                      Importar JSON
+                    </Button>
+                    <p className="text-xs text-slate-600 mt-1.5 flex items-center gap-1">
+                      <AlertTriangle size={10} />
+                      Isso vai sobrescrever todos os dados antigos
+                    </p>
+                  </div>
+                </Section>
+
+                {/* Apagar dados seletivamente */}
+                <Section icon={Lock} color="purple" title="Dados Locais e Privacidade" subtitle="Controle total sobre seus dados" defaultOpen={false}>
+                  <div>
+                    <p className="text-xs text-slate-400 mb-3">Apagar dados seletivamente</p>
+                    <div className="space-y-2">
+                      {/* Drops delete row */}
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                        <div className="min-w-0">
+                          <p className="text-sm text-white">Drops</p>
+                          <p className="text-xs text-slate-500">{drops.length} registro{drops.length !== 1 ? 's' : ''}</p>
+                        </div>
+                        <Button
+                          variant="danger"
+                          icon={deleteConfirm === 'drops' ? AlertTriangle : Trash2}
+                          size="sm"
+                          onClick={() => handleSelectiveDelete('drops')}
+                          disabled={drops.length === 0}
+                        >
+                          {deleteConfirm === 'drops' ? 'Confirmar?' : 'Apagar'}
+                        </Button>
+                      </div>
+
+                      {/* Accounts delete row */}
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                        <div className="min-w-0">
+                          <p className="text-sm text-white">Contas</p>
+                          <p className="text-xs text-slate-500">{accounts.length} registro{accounts.length !== 1 ? 's' : ''}</p>
+                        </div>
+                        <Button
+                          variant="danger"
+                          icon={deleteConfirm === 'accounts' ? AlertTriangle : Trash2}
+                          size="sm"
+                          onClick={() => handleSelectiveDelete('accounts')}
+                          disabled={accounts.length === 0}
+                        >
+                          {deleteConfirm === 'accounts' ? 'Confirmar?' : 'Apagar'}
+                        </Button>
+                      </div>
+
+                      {/* Goals delete row */}
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                        <div className="min-w-0">
+                          <p className="text-sm text-white">Metas</p>
+                          <p className="text-xs text-slate-500">{goals.length} registro{goals.length !== 1 ? 's' : ''}</p>
+                        </div>
+                        <Button
+                          variant="danger"
+                          icon={deleteConfirm === 'goals' ? AlertTriangle : Trash2}
+                          size="sm"
+                          onClick={() => handleSelectiveDelete('goals')}
+                          disabled={goals.length === 0}
+                        >
+                          {deleteConfirm === 'goals' ? 'Confirmar?' : 'Apagar'}
+                        </Button>
+                      </div>
+
+                      {/* Config defaults reset row */}
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                        <div className="min-w-0">
+                          <p className="text-sm text-white">Configurações</p>
+                          <p className="text-xs text-slate-500">Restaurar valores padrão</p>
+                        </div>
+                        <Button
+                          variant="danger"
+                          icon={deleteConfirm === 'settings' ? AlertTriangle : RotateCcw}
+                          size="sm"
+                          onClick={() => handleSelectiveDelete('settings')}
+                        >
+                          {deleteConfirm === 'settings' ? 'Confirmar?' : 'Resetar'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Storage usage details */}
+                  <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.06] rounded-xl mt-2">
+                    <Info size={14} className="text-slate-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-slate-500 space-y-1">
+                      <p>Contas, drops e metas ficam no <span className="text-slate-400">localStorage</span> do seu navegador.</p>
+                      <p>Se logado com Google, uma cópia é sincronizada no Firestore (desative o toggle acima para impedir).</p>
+                      <p>Nenhum IP, comportamento de navegação ou dado de terceiros é coletado. Projeto <span className="text-slate-400">open source</span> — você pode auditar o código.</p>
+                    </div>
+                  </div>
+                </Section>
+
+                {/* Danger Zone */}
+                <Section icon={Shield} color="red" title="Zona de Perigo" subtitle="Ações irreversíveis" defaultOpen={false}>
+                  <div className="space-y-3">
+                    {/* Reset local data */}
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm text-white">Apagar todos os dados locais</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Remove contas, drops, metas e configurações deste dispositivo.</p>
+                      </div>
+                      <Button
+                        variant="danger"
+                        icon={resetConfirm ? AlertTriangle : Trash2}
+                        onClick={handleReset}
+                        className="shrink-0"
+                      >
+                        {resetConfirm ? 'Confirmar?' : 'Resetar'}
+                      </Button>
+                    </div>
+
+                    {/* Delete account permanently */}
+                    {user && (
+                      <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-loss/20 bg-loss/5">
+                        <div className="min-w-0">
+                          <p className="text-sm text-white">Excluir conta permanentemente</p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Apaga <strong className="text-slate-400">todos os dados do Firestore</strong> e locais. Conforme LGPD, art. 18.
+                            {deleteAccountConfirm === 1 && <span className="text-gold"> Clique mais uma vez para confirmar.</span>}
+                            {deleteAccountConfirm === 2 && <span className="text-loss"> Clique para confirmar definitivamente.</span>}
+                          </p>
+                        </div>
+                        <Button
+                          variant="danger"
+                          icon={deleteAccountConfirm > 0 ? AlertTriangle : UserX}
+                          onClick={handleDeleteAccount}
+                          disabled={deletingAccount}
+                          className="shrink-0"
+                        >
+                          {deletingAccount ? 'Apagando…' : deleteAccountConfirm === 0 ? 'Excluir' : 'Confirmar?'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Section>
+              </div>
             )}
-          </AnimatePresence>
-        </Card>
+          </motion.div>
+        </div>
       </div>
 
       {/* Version & Legal Footer */}

@@ -1,61 +1,81 @@
-import { app as e, ipcMain as d, shell as h, Menu as u, BrowserWindow as r } from "electron";
-import { fileURLToPath as f } from "node:url";
-import i from "node:path";
-const c = i.dirname(f(import.meta.url)), g = e.isPackaged ? "https://spxmiguel.github.io/LootFlow/app/" : "http://localhost:5173/app/", m = e.isPackaged ? "https://spxmiguel.github.io/LootFlow/app/?electron-auth=1" : "http://localhost:5173/app/?electron-auth=1", w = e.isPackaged ? i.join(process.resourcesPath, "build-assets/icon-512.png") : i.join(c, "../build-assets/icon-512.png");
-e.commandLine.appendSwitch("use-mock-keychain");
-const k = e.requestSingleInstanceLock();
-k || e.quit();
-let o = null;
-function p(s) {
+import { app, ipcMain, shell, Menu, BrowserWindow } from "electron";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+const APP_URL = app.isPackaged ? "https://spxmiguel.github.io/LootFlow/app/" : "http://localhost:5173/app/";
+const AUTH_URL = app.isPackaged ? "https://spxmiguel.github.io/LootFlow/app/?electron-auth=1" : "http://localhost:5173/app/?electron-auth=1";
+const ICON = app.isPackaged ? path.join(process.resourcesPath, "build-assets/icon-512.png") : path.join(__dirname$1, "../build-assets/icon-512.png");
+app.commandLine.appendSwitch("use-mock-keychain");
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.quit();
+let win = null;
+function handleDeepLink(url) {
   try {
-    const t = new URL(s);
-    if (t.host === "auth") {
-      const n = t.searchParams.get("idToken"), a = t.searchParams.get("accessToken");
-      n && o && (o.webContents.send("auth:credential", { idToken: n, accessToken: a }), o.isMinimized() && o.restore(), o.focus());
+    const u = new URL(url);
+    if (u.host === "auth") {
+      const idToken = u.searchParams.get("idToken");
+      const accessToken = u.searchParams.get("accessToken");
+      if (idToken && win) {
+        win.webContents.send("auth:credential", { idToken, accessToken });
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      }
     }
-  } catch (t) {
-    console.error("[deep-link] parse error:", t);
+  } catch (e) {
+    console.error("[deep-link] parse error:", e);
   }
 }
-process.defaultApp ? process.argv.length >= 2 && e.setAsDefaultProtocolClient("lootflow", process.execPath, [i.resolve(process.argv[1])]) : e.setAsDefaultProtocolClient("lootflow");
-e.on("second-instance", (s, t) => {
-  o && (o.isMinimized() && o.restore(), o.focus());
-  const n = t.find((a) => a.startsWith("lootflow://"));
-  n && p(n);
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient("lootflow", process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient("lootflow");
+}
+app.on("second-instance", (_event, commandLine) => {
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+  const url = commandLine.find((arg) => arg.startsWith("lootflow://"));
+  if (url) handleDeepLink(url);
 });
-e.on("open-url", (s, t) => {
-  p(t);
+app.on("open-url", (_event, url) => {
+  handleDeepLink(url);
 });
-d.handle("auth:open-browser", () => {
-  h.openExternal(m);
+ipcMain.handle("auth:open-browser", () => {
+  shell.openExternal(AUTH_URL);
 });
-function l() {
-  o = new r({
+function createWindow() {
+  win = new BrowserWindow({
     title: "LootFlow",
     width: 1280,
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    icon: w,
-    autoHideMenuBar: !0,
+    icon: ICON,
+    autoHideMenuBar: true,
     webPreferences: {
-      nodeIntegration: !1,
-      contextIsolation: !0,
+      nodeIntegration: false,
+      contextIsolation: true,
       // sandbox: false is required for ESM preload scripts (import syntax) to
       // work correctly. Electron v20+ defaults sandbox to true, which breaks
       // ESM module loading in the preload — contextBridge.exposeInMainWorld
       // never runs and window.electronAPI stays undefined in the renderer.
-      sandbox: !1,
-      backgroundThrottling: !1,
-      preload: i.join(c, "preload.js")
+      sandbox: false,
+      backgroundThrottling: false,
+      preload: path.join(__dirname$1, "preload.js")
     }
-  }), o.loadURL(g);
+  });
+  win.loadURL(APP_URL);
 }
-e.whenReady().then(() => {
-  u.setApplicationMenu(null), l(), e.on("activate", () => {
-    r.getAllWindows().length === 0 && l();
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
+  createWindow();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
-e.on("window-all-closed", () => {
-  process.platform !== "darwin" && e.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });

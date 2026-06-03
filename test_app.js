@@ -317,17 +317,34 @@ async function run() {
       await page.waitForTimeout(1000);
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, '06_new_goal_modal.png') });
 
-      // Type title
-      const titleInput = await page.$('input[placeholder*="Título"], input[placeholder*="Title"]');
-      if (titleInput) {
-        await titleInput.type('Meta de Skins de Teste');
+      // Type title and value in a robust way
+      const inputs = await page.$$('input');
+      let nameInput = null;
+      let goalValueInput = null;
+      for (const input of inputs) {
+        const placeholder = await page.evaluate(el => el.placeholder, input);
+        console.log(`Found input with placeholder: "${placeholder}"`);
+        if ((placeholder.toLowerCase().includes('bayonet') || placeholder.toLowerCase().includes('doppler')) && 
+            !placeholder.toLowerCase().includes('buscar') && 
+            !placeholder.toLowerCase().includes('search') &&
+            !placeholder.toLowerCase().includes('item')) {
+          nameInput = input;
+        } else if (placeholder.toLowerCase().includes('500') || placeholder.toLowerCase().includes('0,00') || placeholder.toLowerCase().includes('target')) {
+          goalValueInput = input;
+        }
       }
 
-      // Type value
-      const goalValueInput = await page.$('input[type="number"], input[placeholder*="Alvo"], input[placeholder*="Target"]');
+      if (nameInput) {
+        await nameInput.type('Meta de Skins de Teste');
+      } else {
+        console.warn('Could not find goal name input!');
+      }
+
       if (goalValueInput) {
         await goalValueInput.click({ clickCount: 3 });
         await goalValueInput.type('500');
+      } else {
+        console.warn('Could not find goal target value input!');
       }
 
       // Save goal inside the modal footer
@@ -354,11 +371,12 @@ async function run() {
     }
 
     // Nav to Settings
-    await navigateTo('Ajustes', 'Settings', '07_settings.png');
+    await navigateTo('Configurações', 'Settings', '07_settings.png');
+    await page.waitForTimeout(2000);
 
     // Go to Appearance Tab in Settings
     console.log('Clicking Aparência tab...');
-    const settingsTabs = await page.$$('button');
+    let settingsTabs = await page.$$('button');
     let appearanceTabBtn = null;
     for (const btn of settingsTabs) {
       const text = await page.evaluate(el => el.textContent, btn);
@@ -370,7 +388,7 @@ async function run() {
 
     if (appearanceTabBtn) {
       await appearanceTabBtn.click();
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1500);
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, '07_settings_appearance.png') });
       console.log('Saved appearance settings screenshot.');
 
@@ -387,13 +405,14 @@ async function run() {
       if (enBtn) {
         console.log('Clicking EN language button...');
         await enBtn.click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(1500);
         await page.screenshot({ path: path.join(SCREENSHOT_DIR, '07_settings_appearance_en.png') });
       }
     }
 
     // Go to Finance tab in Settings
     console.log('Checking Finance tab...');
+    settingsTabs = await page.$$('button');
     let financeTabBtn = null;
     for (const btn of settingsTabs) {
       const text = await page.evaluate(el => el.textContent, btn);
@@ -404,7 +423,7 @@ async function run() {
     }
     if (financeTabBtn) {
       await financeTabBtn.click();
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1500);
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, '07_settings_finance.png') });
       console.log('Saved finance settings screenshot.');
     }

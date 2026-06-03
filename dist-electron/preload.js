@@ -1,13 +1,13 @@
-import { contextBridge as o, ipcRenderer as e } from "electron";
-o.exposeInMainWorld("electronAPI", {
-  isElectron: !0,
+import { contextBridge, ipcRenderer } from "electron";
+contextBridge.exposeInMainWorld("electronAPI", {
+  isElectron: true,
   /** Opens the user's default browser for Google login (Epic Games style) */
-  openBrowserLogin: () => e.invoke("auth:open-browser"),
+  openBrowserLogin: () => ipcRenderer.invoke("auth:open-browser"),
   /** Called when the deep-link callback brings back Google tokens */
-  onAuthCredential: (r) => {
-    e.on("auth:credential", (t, n) => r(n));
+  onAuthCredential: (cb) => {
+    ipcRenderer.on("auth:credential", (_event, data) => cb(data));
   },
   removeAuthListener: () => {
-    e.removeAllListeners("auth:credential");
+    ipcRenderer.removeAllListeners("auth:credential");
   }
 });
