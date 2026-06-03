@@ -48,6 +48,20 @@ function DashboardMock() {
     { dot: "#f472b6", name: "cria",                  drops: 22, bruto: "R$ 54,60",   cashout: "R$ 46,40",  roi: "-38%",  roiPos: false },
   ];
 
+  const goals = [
+    { name: "R$ 1.000 cashout total", color: "#4ade80", label: "R$ 498,30 / R$ 1.000,00", pct: 49.8 },
+    { name: "200 drops registrados",  color: "#60a5fa", label: "164 / 200",               pct: 82.0 },
+    { name: "R$ 500 esta semana",     color: "#f472b6", label: "R$ 30,90 / R$ 500,00",    pct: 6.2  },
+  ];
+
+  const recentDrops = [
+    { item: "AK-47 | Redline (Field-Tested)",          account: "AKM",                 drop: 2, cashout: "R$ 7,20",  steam: "R$ 8,47"  },
+    { item: "M4A4 | Asiimov (Battle-Scarred)",          account: "servente de pedreiro",drop: 1, cashout: "R$ 5,40",  steam: "R$ 6,35"  },
+    { item: "AWP | Hyper Beast (Minimal Wear)",         account: "leno brega",          drop: 2, cashout: "R$ 12,60", steam: "R$ 14,82" },
+    { item: "Glock-18 | Water Elemental (Field-Tested)",account: "patrão",              drop: 1, cashout: "R$ 4,10",  steam: "R$ 4,82"  },
+    { item: "Desert Eagle | Blaze (Factory New)",       account: "cria",                drop: 2, cashout: "R$ 1,90",  steam: "R$ 2,24"  },
+  ];
+
   // chart
   const chartW = 760, chartH = 220, padL = 44, padR = 24, padT = 18, padB = 36;
   const innerW = chartW - padL - padR;
@@ -79,7 +93,7 @@ function DashboardMock() {
   const yTicks = [0, 20, 40, 60, 80];
 
   return (
-    <div className="dash-scaler" ref={scaleWrapRef} style={{ height: 820 * scale }}>
+    <div className="dash-scaler" ref={scaleWrapRef} style={{ height: 1260 * scale }}>
       <div className="dash" style={{ width: 1280, transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div className="dash-body">
           {/* ----- SIDEBAR ----- */}
@@ -312,6 +326,58 @@ function DashboardMock() {
                 ))}
               </div>
             </div>
+
+            {/* goals */}
+            <div className="dash-panel">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title plain">Metas em Andamento</div>
+                <a className="dash-week-link sm">Ver todas <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+              </div>
+              <div className="dash-goals">
+                {goals.map((g) => (
+                  <div className="dash-goal" key={g.name}>
+                    <div className="dash-goal-head">
+                      <div className="dash-goal-label">
+                        <span className="dash-dot" style={{ background: g.color }} />
+                        {g.name}
+                      </div>
+                      <div className="dash-goal-meta">
+                        <span className="dash-goal-vals">{g.label}</span>
+                        <span className="dash-goal-pct" style={{ color: g.color }}>{g.pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <div className="dash-goal-bar">
+                      <i style={{ width: `${g.pct}%`, background: g.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* recent drops */}
+            <div className="dash-panel">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title plain">Drops Recentes</div>
+                <a className="dash-week-link sm">Ver todos <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+              </div>
+              <div className="dash-drops">
+                {recentDrops.map((d) => (
+                  <div className="dash-drop" key={d.item}>
+                    <div className="dash-drop-thumb">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    </div>
+                    <div className="dash-drop-info">
+                      <div className="dash-drop-name">{d.item}</div>
+                      <div className="dash-drop-meta-row">{d.account} · Drop #{d.drop}</div>
+                    </div>
+                    <div className="dash-drop-val">
+                      <div className="dash-drop-cashout">{d.cashout}</div>
+                      <div className="dash-drop-steam">{d.steam} bruto</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </main>
         </div>
 
@@ -344,7 +410,7 @@ const dashboardStyles = `
   flex-direction: column;
   background: #06080c;
 }
-.dash-body { display: grid; grid-template-columns: 240px 1fr; min-height: 820px; }
+.dash-body { display: grid; grid-template-columns: 240px 1fr; min-height: 1260px; }
 
 /* ----- sidebar ----- */
 .dash-side {
@@ -571,6 +637,40 @@ const dashboardStyles = `
   color: #10b981;
   border-color: rgba(16,185,129,0.25);
 }
+
+/* ----- goals ----- */
+.dash-goals { display: flex; flex-direction: column; gap: 16px; }
+.dash-goal { display: flex; flex-direction: column; gap: 8px; }
+.dash-goal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dash-goal-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #cbd5e1; }
+.dash-goal-meta { display: flex; align-items: center; gap: 12px; }
+.dash-goal-vals { font-family: var(--mono); font-size: 11px; color: #6b7280; }
+.dash-goal-pct { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.dash-goal-bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 999px; overflow: hidden; }
+.dash-goal-bar i { display: block; height: 100%; border-radius: 999px; }
+
+/* ----- recent drops ----- */
+.dash-drops { display: flex; flex-direction: column; gap: 2px; }
+.dash-drop {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px;
+  border-radius: 10px;
+}
+.dash-drop:hover { background: rgba(255,255,255,0.025); }
+.dash-drop-thumb {
+  width: 40px; height: 40px; border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+  display: grid; place-items: center;
+  color: #4b5563;
+}
+.dash-drop-info { flex: 1; min-width: 0; }
+.dash-drop-name { font-size: 13px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-drop-meta-row { font-size: 11px; color: #6b7280; font-family: var(--mono); margin-top: 2px; }
+.dash-drop-val { text-align: right; flex-shrink: 0; }
+.dash-drop-cashout { font-family: var(--mono); font-size: 13px; font-weight: 500; color: #10b981; }
+.dash-drop-steam { font-family: var(--mono); font-size: 10px; color: #4b5563; margin-top: 1px; }
 `;
 
 Object.assign(window, { DashboardMock });
