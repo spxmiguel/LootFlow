@@ -109,14 +109,20 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
         'flex flex-col gap-2.5 px-4 py-5 border-b border-white/[0.06]',
         compact && 'items-center px-2 py-4',
       )}>
-        <div className="flex items-center gap-3 w-full">
+        <a
+          href={window.electronAPI?.isElectron ? undefined : '../'}
+          className={cn(
+            "flex items-center gap-3 w-full",
+            !window.electronAPI?.isElectron && "cursor-pointer hover:opacity-80 transition-opacity"
+          )}
+        >
           <img src="../icon.svg" className="w-8 h-8 rounded-xl shrink-0 shadow-[0_0_12px_rgba(74,222,128,0.2)] border border-primary/10" alt="LootFlow" />
           {!compact && (
             <div className="flex-1 min-w-0">
               <p className="font-display font-extrabold text-slate-100 text-base leading-none tracking-wide">LootFlow</p>
             </div>
           )}
-        </div>
+        </a>
         {mobile && (
           <button onClick={onClose} className="ml-auto text-slate-500 hover:text-slate-200 p-1">
             <X className="w-5 h-5" />
