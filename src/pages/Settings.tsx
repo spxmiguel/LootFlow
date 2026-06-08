@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Settings2, Palette, Database, Download, Upload, Trash2,
   Shield, RotateCcw, Check, AlertTriangle, Zap, ChevronRight,
@@ -26,52 +26,22 @@ const SECTION_COLORS = {
   purple: 'bg-purple-400/10 text-purple-400',
 }
 
-function Section({ icon: Icon, color, title, subtitle, defaultOpen = false, children }: {
+function Section({ icon: Icon, color, title, subtitle, children }: {
   icon: any; color: keyof typeof SECTION_COLORS
-  title: string; subtitle?: string; defaultOpen?: boolean; children: React.ReactNode
+  title: string; subtitle?: string; children: React.ReactNode
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
-
   return (
-    <Card className="p-0 overflow-hidden border border-white/[0.04] bg-[#0d1117]/30">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-white/[0.01] transition-colors focus:outline-none"
-      >
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${SECTION_COLORS[color]} shrink-0`}>
-            <Icon size={16} />
-          </div>
-          <div>
-            <h2 className="font-semibold text-white text-sm leading-tight">{title}</h2>
-            {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
-          </div>
+    <Card className="p-5">
+      <div className="flex items-center gap-3 mb-5">
+        <div className={`p-2 rounded-lg ${SECTION_COLORS[color]}`}>
+          <Icon size={16} />
         </div>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className="text-slate-500 shrink-0 p-1 hover:text-slate-300 transition-colors"
-        >
-          <ChevronDown size={16} />
-        </motion.div>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="p-5 pt-0 border-t border-white/[0.04] space-y-4">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <div>
+          <h2 className="font-semibold text-white text-sm">{title}</h2>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="space-y-4">{children}</div>
     </Card>
   )
 }
@@ -156,7 +126,6 @@ function WhatsAppSection() {
   }))
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [showDevTone, setShowDevTone] = useState(() => wa?.xingamentos ?? false)
 
   // ── Phone & verificação (imediato — bot precisa) ───────────────────────────
   const [editingPhone, setEditingPhone] = useState(false)
@@ -308,11 +277,11 @@ function WhatsAppSection() {
     : { label: '✅ Ativo — lembretes habilitados', color: 'text-profit' }
 
   return (
-    <div className="space-y-5">
-      {/* 1. Conexão & Status */}
-      <Section icon={MessageCircle} color="green" title="Conexão & Status" subtitle="Ative o bot e configure seu número de celular" defaultOpen={true}>
+    <Section icon={MessageCircle} color="green" title="Notificações WhatsApp" subtitle="Lembretes automáticos de drop via bot">
+      <div className="space-y-5">
+
         {/* Info */}
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.04]">
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
           <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
           <p className="text-[11px] text-slate-500 leading-relaxed">
             O número que você coloca aqui é o <span className="text-slate-300">seu</span> número — onde vai <span className="text-slate-300">receber</span> as mensagens. O bot envia de um número dedicado.
@@ -320,7 +289,7 @@ function WhatsAppSection() {
         </div>
 
         {/* Toggle principal + status */}
-        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
           <div>
             <p className="text-sm text-white font-medium">Ativar lembretes</p>
             <p className={`text-[11px] mt-0.5 ${botStatus.color}`}>{botStatus.label}</p>
@@ -332,7 +301,7 @@ function WhatsAppSection() {
         <div>
           <label className="text-xs text-slate-400 block mb-1.5">Seu número do WhatsApp</label>
           {!editingPhone && hasPhone ? (
-            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
               <div>
                 <p className="text-sm text-white font-mono">+{phone}</p>
                 <p className={`text-[11px] mt-0.5 ${verified ? 'text-profit' : 'text-yellow-500'}`}>
@@ -352,6 +321,7 @@ function WhatsAppSection() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">+55</span>
                 <input
                   type="tel"
+                  autoFocus
                   value={phoneInput}
                   onChange={e => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
                   placeholder="11 99999-9999"
@@ -438,12 +408,12 @@ function WhatsAppSection() {
             </button>
           </div>
         )}
-      </Section>
 
-      {/* 2. Tipos de Alerta */}
-      <Section icon={MessageCircle} color="blue" title="Tipos de Alerta" subtitle="Escolha quais relatórios e mensagens quer receber" defaultOpen={true}>
+        {/* Opções de mensagem */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
+          <label className="text-xs text-slate-400 block">Tipos de mensagem</label>
+
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.06]">
             <div>
               <p className="text-sm text-white">Resumo semanal</p>
               <p className="text-[11px] text-slate-500 mt-0.5">Toda quarta: resumo da semana que fechou (terça 21h)</p>
@@ -460,7 +430,7 @@ function WhatsAppSection() {
           </div>
 
           {(draft.encheSaco ?? false) && (
-            <div className="pl-1 py-1">
+            <div className="pl-1">
               <label className="text-xs text-slate-500 block mb-2">Repetir a cada</label>
               <div className="flex gap-1.5 flex-wrap">
                 {[
@@ -487,159 +457,156 @@ function WhatsAppSection() {
             </div>
           )}
 
-          <div className="rounded-xl border border-white/[0.08] overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowDevTone(v => !v)}
-              className="w-full flex items-center justify-between gap-3 p-3 bg-[#111827] text-left hover:bg-[#131c2e] transition-colors"
-            >
+          <div className="rounded-xl border border-red-500/20 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 p-3 bg-[#111827]">
               <div>
-                <p className="text-sm text-white">Modo zoeira/dev</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Mensagens agressivas ficam escondidas e exigem opt-in consciente.</p>
+                <p className="text-sm text-white">Modo xingamentos 🤬</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Bot te xinga até você registrar os drops 💀</p>
               </div>
-              <ChevronDown size={15} className={`text-slate-500 transition-transform ${showDevTone ? 'rotate-180' : ''}`} />
-            </button>
-            {showDevTone && (
-              <div className="bg-[#0d1117] border-t border-white/[0.04] p-3 space-y-3">
-                <div className="flex items-start gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3">
-                  <AlertTriangle size={13} className="mt-0.5 shrink-0 text-yellow-400" />
-                  <p className="text-[11px] leading-relaxed text-slate-400">
-                    Conteúdo propositalmente ofensivo. Use só em ambiente privado, demo interna ou desenvolvimento.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-red-500/20">
-                  <div>
-                    <p className="text-sm text-white">Ativar modo zoeira/dev</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">O bot usa mensagens agressivas até os drops serem registrados.</p>
+              <Toggle value={draft.xingamentos ?? false} onChange={async v => {
+                const wasOff = !(draft.xingamentos ?? false)
+                updateDraft({ xingamentos: v })
+                if (v && wasOff && user?.uid && hasPhone) {
+                  try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
+                }
+              }} />
+            </div>
+            {(draft.xingamentos ?? false) && (
+              <div className="bg-[#0d1117] border-t border-red-500/10 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Mensagens ativas</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => updateDraft({ enabledXingamentos: undefined })}
+                      className="text-[10px] text-slate-600 hover:text-profit transition-colors"
+                    >
+                      Todas
+                    </button>
+                    <span className="text-slate-800 text-[10px]">·</span>
+                    <button
+                      onClick={() => updateDraft({ enabledXingamentos: [] })}
+                      className="text-[10px] text-slate-600 hover:text-loss transition-colors"
+                    >
+                      Nenhuma
+                    </button>
                   </div>
-                  <Toggle value={draft.xingamentos ?? false} onChange={async v => {
-                    const wasOff = !(draft.xingamentos ?? false)
-                    updateDraft({ xingamentos: v })
-                    if (v && wasOff && user?.uid && hasPhone) {
-                      try { await firestoreQueueNotification(user.uid, 'xingamentos_welcome') } catch {}
-                    }
-                  }} />
                 </div>
-
-                {(draft.xingamentos ?? false) && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Mensagens ativas</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => updateDraft({ enabledXingamentos: undefined })}
-                          className="text-[10px] text-slate-600 hover:text-profit transition-colors"
-                        >
-                          Todas
-                        </button>
-                        <span className="text-slate-800 text-[10px]">·</span>
-                        <button
-                          onClick={() => updateDraft({ enabledXingamentos: [] })}
-                          className="text-[10px] text-slate-600 hover:text-loss transition-colors"
-                        >
-                          Nenhuma
-                        </button>
+                <div className="space-y-1">
+                  {XINGAMENTOS_META.map(x => {
+                    const enabled = !draft.enabledXingamentos || draft.enabledXingamentos.includes(x.id)
+                    return (
+                      <div
+                        key={x.id}
+                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer ${
+                          enabled
+                            ? 'bg-red-500/5 border-red-500/15 text-slate-300'
+                            : 'bg-transparent border-white/[0.04] text-slate-600'
+                        }`}
+                        onClick={() => {
+                          const current = draft.enabledXingamentos ?? XINGAMENTOS_META.map(m => m.id)
+                          updateDraft({
+                            enabledXingamentos: enabled
+                              ? current.filter(i => i !== x.id)
+                              : [...current, x.id].sort((a, b) => a - b),
+                          })
+                        }}
+                      >
+                        <span className="text-base leading-none shrink-0">{x.emoji}</span>
+                        <span className="text-[11px] font-mono flex-1 truncate">{x.title}</span>
+                        <span className={`text-[10px] shrink-0 ${enabled ? 'text-profit' : 'text-slate-700'}`}>
+                          {enabled ? 'ON' : 'OFF'}
+                        </span>
                       </div>
-                    </div>
-                    <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin pr-1">
-                      {XINGAMENTOS_META.map(x => {
-                        const enabled = !draft.enabledXingamentos || draft.enabledXingamentos.includes(x.id)
-                        return (
-                          <div
-                            key={x.id}
-                            className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer ${
-                              enabled
-                                ? 'bg-red-500/5 border-red-500/15 text-slate-300'
-                                : 'bg-transparent border-white/[0.04] text-slate-600'
-                            }`}
-                            onClick={() => {
-                              const current = draft.enabledXingamentos ?? XINGAMENTOS_META.map(m => m.id)
-                              updateDraft({
-                                enabledXingamentos: enabled
-                                  ? current.filter(i => i !== x.id)
-                                  : [...current, x.id].sort((a, b) => a - b),
-                              })
-                            }}
-                          >
-                            <span className="text-base leading-none shrink-0">{x.emoji}</span>
-                            <span className="text-[11px] font-mono flex-1 truncate">{x.title}</span>
-                            <span className={`text-[10px] shrink-0 ${enabled ? 'text-profit' : 'text-slate-700'}`}>
-                              {enabled ? 'ON' : 'OFF'}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <p className="text-[10px] text-slate-700 mt-2 text-center">
-                      {(() => {
-                        const n = draft.enabledXingamentos == null ? XINGAMENTOS_META.length : draft.enabledXingamentos.length
-                        return `${n} de ${XINGAMENTOS_META.length} ativas`
-                      })()}
-                    </p>
-                  </div>
-                )}
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-700 mt-2 text-center">
+                  {(() => {
+                    const n = draft.enabledXingamentos == null ? XINGAMENTOS_META.length : draft.enabledXingamentos.length
+                    return `${n} de ${XINGAMENTOS_META.length} ativas`
+                  })()}
+                </p>
               </div>
             )}
           </div>
         </div>
-      </Section>
 
-      {/* 3. Grade de Horários */}
-      <Section icon={MessageCircle} color="gold" title="Grade de Horários" subtitle="Dias e horários permitidos para envio" defaultOpen={false}>
-        <p className="text-[11px] text-slate-600 mb-3">Ative os dias e configure o horário em que o bot pode te mandar mensagem.</p>
-        <div className="space-y-1.5">
-          {[0, 1, 2, 3, 4, 5, 6].map(day => {
-            const conf = schedule[day] ?? { enabled: false, activeStart: '09:00', activeEnd: '22:00' }
-            return (
-              <div
-                key={day}
-                className={`rounded-xl border transition-all ${
-                  conf.enabled
-                    ? 'bg-[#111827]'
-                    : 'bg-transparent'
-                } border-white/[0.05]`}
-              >
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <span className={`text-xs font-medium w-7 ${conf.enabled ? 'text-white' : 'text-slate-600'}`}>
-                    {DAY_LABELS[day]}
-                  </span>
-                  <Toggle
-                    value={conf.enabled}
-                    onChange={v => updateDraft({
-                      schedule: { ...schedule, [day]: { ...conf, enabled: v } },
-                    })}
-                  />
-                  {conf.enabled && (
-                    <div className="flex items-center gap-1.5 ml-auto">
-                      <input
-                        type="time"
-                        value={conf.activeStart}
-                        onChange={e => updateDraft({
-                          schedule: { ...schedule, [day]: { ...conf, activeStart: e.target.value } },
-                        })}
-                        className="h-7 w-20 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
-                      />
-                      <span className="text-slate-600 text-xs">→</span>
-                      <input
-                        type="time"
-                        value={conf.activeEnd}
-                        onChange={e => updateDraft({
-                          schedule: { ...schedule, [day]: { ...conf, activeEnd: e.target.value } },
-                        })}
-                        className="h-7 w-20 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
-                      />
-                    </div>
-                  )}
+        {/* Schedule por dia */}
+        <div>
+          <label className="text-xs text-slate-400 block mb-2">Horário por dia da semana</label>
+          <p className="text-[11px] text-slate-600 mb-3">Ative os dias e configure o horário em que o bot pode te mandar mensagem.</p>
+          <div className="space-y-1.5">
+            {[0, 1, 2, 3, 4, 5, 6].map(day => {
+              const conf = schedule[day] ?? { enabled: false, activeStart: '09:00', activeEnd: '22:00' }
+              return (
+                <div
+                  key={day}
+                  className={`rounded-xl border transition-all ${
+                    conf.enabled
+                      ? 'bg-[#111827] border-profit/20'
+                      : 'bg-[#0d1117] border-white/[0.05]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <span className={`text-xs font-medium w-7 ${conf.enabled ? 'text-white' : 'text-slate-600'}`}>
+                      {DAY_LABELS[day]}
+                    </span>
+                    <Toggle
+                      value={conf.enabled}
+                      onChange={v => updateDraft({
+                        schedule: { ...schedule, [day]: { ...conf, enabled: v } },
+                      })}
+                    />
+                    {conf.enabled && (
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <input
+                          type="time"
+                          value={conf.activeStart}
+                          onChange={e => updateDraft({
+                            schedule: { ...schedule, [day]: { ...conf, activeStart: e.target.value } },
+                          })}
+                          className="h-7 w-24 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
+                        />
+                        <span className="text-slate-600 text-xs">→</span>
+                        <input
+                          type="time"
+                          value={conf.activeEnd}
+                          onChange={e => updateDraft({
+                            schedule: { ...schedule, [day]: { ...conf, activeEnd: e.target.value } },
+                          })}
+                          className="h-7 w-24 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
-      </Section>
 
-      {/* 4. Testes & Diagnóstico */}
-      <Section icon={MessageCircle} color="purple" title="Testes & Diagnóstico" subtitle="Valide o funcionamento do bot de mensagens" defaultOpen={false}>
+        {/* Botão Salvar */}
+        <div className={`pt-2 border-t transition-all ${hasChanges ? 'border-primary/30' : 'border-white/[0.06]'}`}>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !hasChanges}
+            size="sm"
+            className={`w-full transition-all ${
+              hasChanges
+                ? 'bg-primary/90 hover:bg-primary text-white border-transparent'
+                : 'opacity-40 cursor-not-allowed'
+            }`}
+          >
+            {saving ? '⏳ Salvando...' : hasChanges ? '💾 Salvar alterações' : '✓ Tudo salvo'}
+          </Button>
+          {hasChanges && (
+            <p className="text-[10px] text-primary/70 text-center mt-1.5">
+              Alterações pendentes — clique em salvar para o bot receber as novas configurações
+            </p>
+          )}
+        </div>
+
+        {/* Botões de teste */}
         <div className="space-y-2">
           <Button
             onClick={handleTest}
@@ -660,38 +627,10 @@ function WhatsAppSection() {
             {forcingReminder ? '⏳ Enviando...' : '🔔 Simular lembrete real agora'}
           </Button>
         </div>
-      </Section>
-
-      {/* Botão Salvar */}
-      <div className={`p-4 rounded-xl border bg-[#0d1117]/30 transition-all ${hasChanges ? 'border-primary/30' : 'border-white/[0.04]'}`}>
-        <Button
-          onClick={handleSave}
-          disabled={saving || !hasChanges}
-          size="sm"
-          className={`w-full transition-all ${
-            hasChanges
-              ? 'bg-primary/90 hover:bg-primary text-white border-transparent'
-              : 'opacity-40 cursor-not-allowed'
-          }`}
-        >
-          {saving ? '⏳ Salvando...' : hasChanges ? '💾 Salvar alterações' : '✓ Tudo salvo'}
-        </Button>
-        {hasChanges && (
-          <p className="text-[10px] text-primary/70 text-center mt-1.5">
-            Alterações pendentes — clique em salvar para o bot receber as novas configurações
-          </p>
-        )}
       </div>
-    </div>
+    </Section>
   )
 }
-
-const tabs: { id: 'finance' | 'appearance' | 'notifications' | 'privacy'; label: string; icon: any }[] = [
-  { id: 'finance', label: 'Financeiro', icon: Settings2 },
-  { id: 'appearance', label: 'Aparência', icon: Palette },
-  { id: 'notifications', label: 'Notificações', icon: MessageCircle },
-  { id: 'privacy', label: 'Dados e Privacidade', icon: Database },
-]
 
 export default function Settings() {
   const {
@@ -699,9 +638,21 @@ export default function Settings() {
     updateSettings, updateTheme, reset,
     clearDrops, clearAccounts, clearGoals, resetSettingsToDefault,
   } = useStore()
-  const { user, deleteAccount } = useAuth()
+  const { user, deleteAccount, resync } = useAuth()
+  const [syncing, setSyncing] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<'finance' | 'appearance' | 'notifications' | 'privacy'>('finance')
+  async function handleResync() {
+    setSyncing(true)
+    try {
+      await resync(true)
+      toast.success('Sincronizado com a nuvem!')
+    } catch {
+      toast.error('Falha ao sincronizar. Verifique a conexão.')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const [resetConfirm, setResetConfirm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<'drops' | 'accounts' | 'goals' | 'settings' | null>(null)
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(0)
@@ -885,692 +836,653 @@ export default function Settings() {
   return (
     <>
     {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
-    <div className="p-4 md:p-6 lg:p-8 space-y-5 pb-12">
+    <div className="p-4 md:p-6 space-y-5 pb-12">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-xl font-display font-bold text-white font-body">Configurações</h1>
-        <p className="text-slate-500 text-xs mt-0.5">Personalize o LootFlow ao seu jeito</p>
+        <h1 className="text-xl font-display font-bold text-white">Configurações</h1>
+        <p className="text-slate-500 text-sm mt-0.5">Personalize o LootFlow ao seu jeito</p>
       </motion.div>
 
-      {/* 2-Column Sidebar Layout */}
-      <div className="flex flex-col md:flex-row gap-6 items-start">
-        {/* Tab Navigation Vertical Sidebar */}
-        <div className="flex flex-col gap-1 w-full md:w-60 shrink-0 bg-[#0d1117]/60 border border-white/[0.04] rounded-xl p-2.5">
-          {tabs.map(tab => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-3.5 py-3 rounded-lg text-sm font-semibold transition-all duration-200 border text-left ${
-                  isActive
-                    ? 'bg-primary/10 border-primary/20 text-primary shadow-[0_0_15px_rgba(16,185,129,0.06)]'
-                    : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.02]'
-                }`}
-              >
-                <Icon size={16} className="shrink-0" />
-                <span>{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Settings Tab Panels */}
-        <div className="flex-1 w-full">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="space-y-5"
-          >
-            {/* ── Tab: Financeiro ── */}
-            {activeTab === 'finance' && (
-              <div className="space-y-5">
-                {/* 1. Taxa de Cashout */}
-                <Section icon={Settings2} color="blue" title="Taxa de Cashout" subtitle="Percentual do valor bruto recebido na venda" defaultOpen={true}>
-                  {/* Cashout rate */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-white font-medium">Taxa de Cashout</p>
-                      <span className="text-lg font-mono font-bold text-primary">{cashoutRate}%</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mb-3">
-                      Percentual do valor bruto que você realmente recebe na venda.<br/>
-                      Ex: item {formatCurrency(10, settings.currency)} de valor bruto → cashout {formatCurrency(10 * cashoutRate / 100, settings.currency)}
-                    </p>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={cashoutRate}
-                      onChange={e => handleCashoutRate(Number(e.target.value))}
-                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-[#111827]"
-                    />
-                    <div className="flex justify-between text-xs text-slate-600 mt-1">
-                      <span>0%</span>
-                      <span>50%</span>
-                      <span>100%</span>
-                    </div>
-                  </div>
-
-                  {/* Manual override */}
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <label className="text-xs text-slate-400 mb-1.5 block">Ou insira manualmente</label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                        value={String(cashoutRate)}
-                        onChange={e => handleCashoutRate(Number(e.target.value))}
-                        className="w-28"
-                      />
-                      <span className="flex items-center text-slate-400 text-sm">%</span>
-                    </div>
-                  </div>
-                </Section>
-
-                {/* 2. Moeda & Conversão */}
-                <Section icon={Settings2} color="green" title="Moeda & Conversão" subtitle="Escolha a moeda de exibição e taxa do dólar" defaultOpen={false}>
-                  {/* Currency */}
-                  <SettingRow label="Moeda / Currency" hint={settings.currency === 'USD' ? `Taxa: 1 USD = R$ ${settings.usdRate ?? 5.2}` : 'Valores em Real Brasileiro'}>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => updateSettings({ currency: 'BRL' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'BRL' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                      >R$ BRL</button>
-                      <button
-                        onClick={() => updateSettings({ currency: 'USD' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'USD' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                      >$ USD</button>
-                    </div>
-                  </SettingRow>
-
-                  {settings.currency === 'USD' && (
-                    <div className="pt-3 border-t border-white/[0.04] pl-4 border-l-2 border-primary/20 space-y-1.5">
-                      <label className="text-xs text-slate-400 block">Taxa de Conversão (1 USD = R$ ...)</label>
-                      <Input
-                        type="number"
-                        min="1"
-                        step="0.01"
-                        value={String(settings.usdRate ?? 5.2)}
-                        onChange={e => updateSettings({ usdRate: Number(e.target.value) || 5.2 })}
-                        placeholder="5.2"
-                      />
-                    </div>
-                  )}
-                </Section>
-
-                {/* 3. Meta Semanal */}
-                <Section icon={Settings2} color="gold" title="Meta Semanal" subtitle="Defina o valor alvo de cashout por semana" defaultOpen={false}>
-                  {/* Weekly goal */}
-                  <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Meta semanal de cashout ({settings.currency === 'USD' ? '$' : 'R$'})</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="10"
-                      value={String(
-                        settings.currency === 'USD'
-                          ? parseFloat((settings.weeklyGoalAmount / (settings.usdRate ?? 5.2)).toFixed(2))
-                          : settings.weeklyGoalAmount
-                      )}
-                      onChange={e => {
-                        const val = Number(e.target.value)
-                        const finalVal = settings.currency === 'USD' ? val * (settings.usdRate ?? 5.2) : val
-                        updateSettings({ weeklyGoalAmount: finalVal })
-                      }}
-                      placeholder="50"
-                    />
-                  </div>
-                </Section>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* ── Finanças ── */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Section icon={Settings2} color="blue" title="Financeiro" subtitle="Parâmetros de cálculo">
+            {/* Cashout rate */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-white">Taxa de Cashout</p>
+                <span className="text-lg font-mono font-bold text-primary">{cashoutRate}%</span>
               </div>
-            )}
-
-            {/* ── Tab: Aparência ── */}
-            {activeTab === 'appearance' && (
-              <div className="space-y-5">
-                {/* 1. Tema & Cores */}
-                <Section icon={Palette} color="purple" title="Tema & Cores" subtitle="Personalize as cores do painel" defaultOpen={true}>
-                  {/* Primary color */}
-                  <div>
-                    <label className="text-xs text-slate-400 mb-2 block">Cor Principal</label>
-                    <div className="flex gap-2 flex-wrap mb-2">
-                      {PRESET_COLORS.map(c => (
-                        <button
-                          key={c}
-                          onClick={() => updateTheme({ primaryColor: c })}
-                          className={`w-7 h-7 rounded-lg transition-all ${
-                            settings.theme.primaryColor === c
-                              ? 'ring-2 ring-white ring-offset-1 ring-offset-[#0d1117] scale-110'
-                              : 'hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={settings.theme.primaryColor}
-                        onChange={e => updateTheme({ primaryColor: e.target.value })}
-                        className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
-                      />
-                      <Input
-                        value={settings.theme.primaryColor}
-                        onChange={e => updateTheme({ primaryColor: e.target.value })}
-                        className="w-28 font-mono text-xs"
-                        placeholder="#38bdf8"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Accent color */}
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <label className="text-xs text-slate-400 mb-2 block">Cor de Destaque</label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={settings.theme.accentColor}
-                        onChange={e => updateTheme({ accentColor: e.target.value })}
-                        className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
-                      />
-                      <Input
-                        value={settings.theme.accentColor}
-                        onChange={e => updateTheme({ accentColor: e.target.value })}
-                        className="w-28 font-mono text-xs"
-                        placeholder="#4ade80"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <SettingRow label="Glassmorphism" hint="Efeito de vidro nas cards">
-                      <Toggle
-                        value={settings.theme.glassmorphism}
-                        onChange={v => updateTheme({ glassmorphism: v })}
-                      />
-                    </SettingRow>
-                  </div>
-                </Section>
-
-                {/* 2. Interface & Otimização */}
-                <Section icon={Palette} color="blue" title="Interface & Otimização" subtitle="Ajustes visuais e de performance" defaultOpen={false}>
-                  <SettingRow label="Otimizar site" hint="Desativa animações e efeitos para melhor performance">
-                    <Toggle
-                      value={!settings.theme.animations}
-                      onChange={v => updateTheme({ animations: !v })}
-                    />
-                  </SettingRow>
-
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <SettingRow label="Sidebar compacta" hint="Colapsa labels no menu lateral">
-                      <Toggle
-                        value={settings.theme.sidebarCompact}
-                        onChange={v => updateTheme({ sidebarCompact: v })}
-                      />
-                    </SettingRow>
-                  </div>
-                </Section>
-
-                {/* 3. Idioma */}
-                <Section icon={Palette} color="gold" title="Idioma / Language" subtitle="Mude o idioma da interface" defaultOpen={false}>
-                  <SettingRow label="Idioma / Language" hint="Idioma da interface / Interface language">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => updateSettings({ language: 'pt' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                      >🇧🇷 PT</button>
-                      <button
-                        onClick={() => updateSettings({ language: 'en' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
-                      >🇺🇸 EN</button>
-                    </div>
-                  </SettingRow>
-                </Section>
+              <p className="text-xs text-slate-500 mb-3">
+                Percentual do valor bruto que você realmente recebe na venda.<br/>
+                Ex: item R$10 de valor bruto → cashout {formatCurrency(10 * cashoutRate / 100)}
+              </p>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={cashoutRate}
+                onChange={e => handleCashoutRate(Number(e.target.value))}
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-[#111827]"
+              />
+              <div className="flex justify-between text-xs text-slate-600 mt-1">
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
               </div>
-            )}
+            </div>
 
-            {/* ── Tab: Notificações ── */}
-            {activeTab === 'notifications' && (
-              <div className="space-y-5">
-                <WhatsAppSection />
+            {/* Manual override */}
+            <div>
+              <label className="text-xs text-slate-400 mb-1.5 block">Ou insira manualmente</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={String(cashoutRate)}
+                  onChange={e => handleCashoutRate(Number(e.target.value))}
+                  className="w-28"
+                />
+                <span className="flex items-center text-slate-400 text-sm">%</span>
               </div>
-            )}
+            </div>
 
-            {/* ── Tab: Dados e Privacidade ── */}
-            {activeTab === 'privacy' && (
-              <div className="space-y-5">
-                {/* Firebase Cloud Sync Card */}
-                <Section icon={Database} color="blue" title="Firebase" subtitle="Sincronização na nuvem" defaultOpen={true}>
-                  <div className="space-y-3">
-                    <SettingRow
-                      label="Sincronizar com Firebase"
-                      hint="Com sync ativo, exclusões locais também removem do Firestore. Desativado, novas alterações ficam só no dispositivo."
-                    >
-                      <Toggle
-                        value={settings.firebaseSyncEnabled !== false}
-                        onChange={v => updateSettings({ firebaseSyncEnabled: v })}
-                      />
-                    </SettingRow>
+            {/* Currency */}
+            <SettingRow label="Moeda / Currency" hint={settings.currency === 'USD' ? `Taxa: 1 USD = R$ ${settings.usdRate ?? 5.2}` : 'Valores em Real Brasileiro'}>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateSettings({ currency: 'BRL' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'BRL' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >R$ BRL</button>
+                <button
+                  onClick={() => updateSettings({ currency: 'USD' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'USD' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >$ USD</button>
+              </div>
+            </SettingRow>
 
-                    <div className="flex items-start gap-3 p-3 bg-profit/5 border border-profit/20 rounded-xl">
-                      <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
-                      <div className="text-xs text-slate-400">
-                        <p className="text-profit font-semibold mb-1">
-                          {isUsingCustomFirebase() ? 'Firebase próprio ativo ✓' : 'Firebase padrão ativo ✓'}
-                        </p>
-                        <p>Login com Google disponível. Dados sincronizam entre dispositivos.</p>
-                      </div>
-                    </div>
+            {/* Language */}
+            <SettingRow label="Idioma / Language" hint="Interface language">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateSettings({ language: 'pt' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >🇧🇷 PT</button>
+                <button
+                  onClick={() => updateSettings({ language: 'en' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                >🇺🇸 EN</button>
+              </div>
+            </SettingRow>
 
-                    <button
-                      onClick={() => setShowCustomFirebase(v => !v)}
-                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04] hover:border-white/[0.10] transition-colors text-left"
-                    >
-                      <div>
-                        <p className="text-sm text-white">Usar Firebase próprio</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Para privacidade total — seus dados ficam no seu projeto Firebase</p>
-                      </div>
-                      <ChevronDown size={15} className={`text-slate-500 transition-transform ${showCustomFirebase ? 'rotate-180' : ''}`} />
-                    </button>
+            {/* Weekly goal */}
+            <div>
+              <label className="text-xs text-slate-400 mb-1.5 block">Meta semanal de cashout (R$)</label>
+              <Input
+                type="number"
+                min="0"
+                step="10"
+                value={String(settings.weeklyGoalAmount)}
+                onChange={e => updateSettings({ weeklyGoalAmount: Number(e.target.value) })}
+                placeholder="50"
+              />
+            </div>
+          </Section>
+        </motion.div>
 
-                    {showCustomFirebase && (
-                      <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.04]">
-                        <button
-                          onClick={() => setShowFirebaseTutorial(v => !v)}
-                          className="w-full flex items-center justify-between text-xs text-primary hover:underline"
-                        >
-                          <span>Como criar meu Firebase?</span>
-                          <ChevronDown size={13} className={`transition-transform ${showFirebaseTutorial ? 'rotate-180' : ''}`} />
-                        </button>
+        {/* ── Aparência ── */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Section icon={Palette} color="purple" title="Aparência" subtitle="Cores e efeitos visuais">
+            {/* Primary color */}
+            <div>
+              <label className="text-xs text-slate-400 mb-2 block">Cor Principal</label>
+              <div className="flex gap-2 flex-wrap mb-2">
+                {PRESET_COLORS.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => updateTheme({ primaryColor: c })}
+                    className={`w-7 h-7 rounded-lg transition-all ${
+                      settings.theme.primaryColor === c
+                        ? 'ring-2 ring-white ring-offset-1 ring-offset-[#0d1117] scale-110'
+                        : 'hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={settings.theme.primaryColor}
+                  onChange={e => updateTheme({ primaryColor: e.target.value })}
+                  className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
+                />
+                <Input
+                  value={settings.theme.primaryColor}
+                  onChange={e => updateTheme({ primaryColor: e.target.value })}
+                  className="w-28 font-mono text-xs"
+                  placeholder="#38bdf8"
+                />
+              </div>
+            </div>
 
-                        {showFirebaseTutorial && (
-                          <div className="text-xs text-slate-500 space-y-1.5 p-3 bg-black/20 rounded-xl leading-relaxed">
-                            <p className="text-slate-300 font-semibold">Tutorial — Firebase gratuito em 5 passos:</p>
-                            <p>1. Acesse <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-primary underline">console.firebase.google.com</a> → "Criar projeto"</p>
-                            <p>2. Crie o projeto (desative Google Analytics se quiser)</p>
-                            <p>3. Clique em "Web" (&lt;/&gt;) → registre o app → copie o objeto <code className="text-slate-300">firebaseConfig</code></p>
-                            <p>4. No menu lateral: <strong className="text-slate-300">Build → Firestore Database</strong> → criar banco → "Modo produção"</p>
-                            <p>5. Em Firestore → <strong className="text-slate-300">Rules</strong>, cole:</p>
-                            <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth.uid == uid;\n    }\n  }\n}'}</pre>
-                            <p>6. Cole os valores abaixo e salve.</p>
-                          </div>
-                        )}
+            {/* Accent color */}
+            <div>
+              <label className="text-xs text-slate-400 mb-2 block">Cor de Destaque</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={settings.theme.accentColor}
+                  onChange={e => updateTheme({ accentColor: e.target.value })}
+                  className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
+                />
+                <Input
+                  value={settings.theme.accentColor}
+                  onChange={e => updateTheme({ accentColor: e.target.value })}
+                  className="w-28 font-mono text-xs"
+                  placeholder="#4ade80"
+                />
+              </div>
+            </div>
 
-                        <div className="space-y-2">
-                          {([
-                            ['apiKey', 'API Key *'],
-                            ['authDomain', 'Auth Domain * (ex: meu-projeto.firebaseapp.com)'],
-                            ['projectId', 'Project ID *'],
-                            ['appId', 'App ID *'],
-                            ['storageBucket', 'Storage Bucket (opcional)'],
-                            ['messagingSenderId', 'Messaging Sender ID (opcional)'],
-                          ] as const).map(([field, label]) => (
-                            <div key={field}>
-                              <label className="text-[10px] text-slate-500 block mb-1">{label}</label>
-                              <input
-                                type="text"
-                                value={customFbForm[field as keyof typeof customFbForm]}
-                                onChange={e => setCustomFbForm(f => ({ ...f, [field]: e.target.value }))}
-                                placeholder={FIREBASE_CONFIG[field as keyof typeof FIREBASE_CONFIG] ? '•'.repeat(8) : ''}
-                                className="w-full h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60"
-                              />
-                            </div>
-                          ))}
-                        </div>
+            <SettingRow label="Glassmorphism" hint="Efeito de vidro nas cards">
+              <Toggle
+                value={settings.theme.glassmorphism}
+                onChange={v => updateTheme({ glassmorphism: v })}
+              />
+            </SettingRow>
 
-                        <div className="flex gap-2 pt-1">
-                          <Button size="sm" onClick={handleSaveCustomFirebase} className="flex-1">
-                            Salvar e recarregar
-                          </Button>
-                          {isUsingCustomFirebase() && (
-                            <Button size="sm" variant="ghost" onClick={handleClearCustomFirebase}>
-                              Usar padrão
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </Section>
+            <SettingRow label="Otimizar site" hint="Desativa animações e efeitos para melhor performance">
+              <Toggle
+                value={!settings.theme.animations}
+                onChange={v => updateTheme({ animations: !v })}
+              />
+            </SettingRow>
 
-                {/* Cache Steam */}
-                <Section icon={Zap} color="gold" title="Cache Steam" subtitle="Preços salvos localmente" defaultOpen={false}>
-                  <p className="text-xs text-slate-500">
-                    O LootFlow salva preços do Steam Market localmente por 30 minutos para não sobrecarregar a API e manter a UI responsiva.
-                  </p>
+            <SettingRow label="Sidebar compacta" hint="Colapsa labels no menu lateral">
+              <Toggle
+                value={settings.theme.sidebarCompact}
+                onChange={v => updateTheme({ sidebarCompact: v })}
+              />
+            </SettingRow>
+          </Section>
+        </motion.div>
 
-                  {cacheStats !== null && (
-                    <div className="bg-[#111827]/60 rounded-xl p-3 grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-xs text-slate-500">Itens em cache</p>
-                        <p className="text-lg font-mono font-bold text-white">{cacheStats.entries}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Tamanho aprox.</p>
-                        <p className="text-lg font-mono font-bold text-white">{cacheStats.sizeKB} KB</p>
-                      </div>
-                    </div>
-                  )}
+        {/* ── Exportação ── */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Section icon={Download} color="green" title="Exportar Dados" subtitle={`${drops.length} drops · ${accounts.length} contas`}>
 
-                  <div className="flex gap-2">
-                    <Button variant="ghost" icon={RefreshCw} size="sm" onClick={handleCheckCache} className="flex-1">
-                      Ver Cache
-                    </Button>
-                    <Button variant="danger" icon={Trash2} size="sm" onClick={handleClearCache} className="flex-1">
-                      Limpar Cache
-                    </Button>
-                  </div>
-                </Section>
+            {/* Format */}
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Formato</p>
+              <div className="flex gap-1.5">
+                {(['csv', 'xlsx', 'txt'] as ExportFormat[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setExportOpts(o => ({ ...o, format: f }))}
+                    className={`h-8 px-3 rounded-xl text-xs font-semibold border uppercase transition-all ${
+                      exportOpts.format === f
+                        ? 'bg-profit/10 border-profit/40 text-profit'
+                        : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                    }`}
+                  >{f}</button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-600 mt-1.5">
+                {exportOpts.format === 'csv'  && 'Planilha CSV — abre em Excel, Sheets e LibreOffice'}
+                {exportOpts.format === 'xlsx' && 'Excel com abas: Drops + Contas'}
+                {exportOpts.format === 'txt'  && 'Relatório em texto formatado, legível em qualquer editor'}
+              </p>
+            </div>
 
-                {/* Exportar Dados */}
-                <Section icon={Download} color="green" title="Exportar Dados" subtitle={`${drops.length} drops · ${accounts.length} contas`} defaultOpen={false}>
-                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
-                    <AlertTriangle size={14} className="text-yellow-400 mt-0.5 shrink-0" />
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      No modo local, limpar cache/navegador pode apagar seus dados. Faça backup JSON antes de limpar o navegador, trocar de dispositivo ou testar em produção.
-                    </p>
-                  </div>
+            {/* Filter */}
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Filtrar drops</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {([
+                  { id: 'all',    label: 'Todos' },
+                  { id: 'sold',   label: 'Vendidos' },
+                  { id: 'unsold', label: 'Não vendidos' },
+                ] as { id: ExportFilter; label: string }[]).map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setExportOpts(o => ({ ...o, filter: f.id }))}
+                    className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
+                      exportOpts.filter === f.id
+                        ? 'bg-primary/10 border-primary/40 text-primary'
+                        : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                    }`}
+                  >{f.label}</button>
+                ))}
+              </div>
+            </div>
 
-                  {/* Format selection */}
-                  <div>
-                    <p className="text-xs text-slate-400 mb-2">Formato</p>
-                    <div className="flex gap-1.5">
-                      {(['csv', 'xlsx', 'txt'] as ExportFormat[]).map(f => (
-                        <button
-                          key={f}
-                          onClick={() => setExportOpts(o => ({ ...o, format: f }))}
-                          className={`h-8 px-3 rounded-xl text-xs font-semibold border uppercase transition-all ${
-                            exportOpts.format === f
-                              ? 'bg-profit/10 border-profit/40 text-profit'
-                              : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
-                          }`}
-                        >{f}</button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-slate-600 mt-1.5">
-                      {exportOpts.format === 'csv'  && 'Planilha CSV — abre em Excel, Sheets e LibreOffice'}
-                      {exportOpts.format === 'xlsx' && 'Excel com abas: Drops + Contas'}
-                      {exportOpts.format === 'txt'  && 'Relatório em texto formatado, legível em qualquer editor'}
-                    </p>
-                  </div>
-
-                  {/* Filter selection */}
-                  <div>
-                    <p className="text-xs text-slate-400 mb-2">Filtrar drops</p>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {([
-                        { id: 'all',    label: 'Todos' },
-                        { id: 'sold',   label: 'Vendidos' },
-                        { id: 'unsold', label: 'Não vendidos' },
-                      ] as { id: ExportFilter; label: string }[]).map(f => (
-                        <button
-                          key={f.id}
-                          onClick={() => setExportOpts(o => ({ ...o, filter: f.id }))}
-                          className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
-                            exportOpts.filter === f.id
-                              ? 'bg-primary/10 border-primary/40 text-primary'
-                              : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
-                          }`}
-                        >{f.label}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Columns configuration */}
-                  <div>
-                    <p className="text-xs text-slate-400 mb-2">Campos</p>
-                    <div className="space-y-1.5">
-                      {([
-                        { id: 'all',        label: 'Todos os campos',         hint: 'Semana, conta, item, bruto, cashout, vendido, datas, nota' },
-                        { id: 'minimal',    label: 'Somente nomes dos drops', hint: 'Semana, conta, nº drop, item — sem valores' },
-                        { id: 'with-dates', label: 'Com datas',               hint: 'Todos os campos + data de venda e registro' },
-                      ] as { id: ExportColumns; label: string; hint: string }[]).map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => setExportOpts(o => ({ ...o, columns: c.id }))}
-                          className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
-                            exportOpts.columns === c.id
-                              ? 'bg-[#111827] border-primary/30'
-                              : 'bg-[#0d1117] border-white/[0.04] hover:border-white/[0.10]'
-                          }`}
-                        >
-                          <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
-                            exportOpts.columns === c.id ? 'border-primary bg-primary' : 'border-slate-600'
-                          }`} />
-                          <div>
-                            <p className={`text-xs font-medium ${exportOpts.columns === c.id ? 'text-white' : 'text-slate-400'}`}>{c.label}</p>
-                            <p className="text-[10px] text-slate-600 mt-0.5">{c.hint}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Export Currency options */}
-                  {exportOpts.columns !== 'minimal' && (
-                    <div>
-                      <p className="text-xs text-slate-400 mb-2">Moeda dos valores</p>
-                      <div className="flex gap-1.5">
-                        {(['BRL', 'USD'] as ExportCurrency[]).map(c => (
-                          <button
-                            key={c}
-                            onClick={() => setExportOpts(o => ({ ...o, currency: c }))}
-                            className={`h-8 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                              exportOpts.currency === c
-                                ? 'bg-primary/10 border-primary/40 text-primary'
-                                : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
-                            }`}
-                          >{c === 'BRL' ? '🇧🇷 R$ BRL' : '🇺🇸 $ USD'}</button>
-                        ))}
-                      </div>
-                      {exportOpts.currency === 'USD' && (
-                        <p className="text-[10px] text-slate-600 mt-1">
-                          Taxa: 1 USD = R$ {(settings as any).usdRate ?? 5.2}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Export Total row Toggle */}
-                  {exportOpts.columns !== 'minimal' && (
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-white">Linha de total</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Adiciona soma de bruto e cashout no final</p>
-                      </div>
-                      <Toggle value={exportOpts.includeTotal} onChange={v => setExportOpts(o => ({ ...o, includeTotal: v }))} />
-                    </div>
-                  )}
-
-                  {/* Export execution trigger */}
-                  <Button
-                    onClick={handleExport}
-                    disabled={drops.length === 0}
-                    size="sm"
-                    className="w-full"
+            {/* Columns */}
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Campos</p>
+              <div className="space-y-1.5">
+                {([
+                  { id: 'all',        label: 'Todos os campos',         hint: 'Semana, conta, item, bruto, cashout, vendido, datas, nota' },
+                  { id: 'minimal',    label: 'Somente nomes dos drops', hint: 'Semana, conta, nº drop, item — sem valores' },
+                  { id: 'with-dates', label: 'Com datas',               hint: 'Todos os campos + data de venda e registro' },
+                ] as { id: ExportColumns; label: string; hint: string }[]).map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setExportOpts(o => ({ ...o, columns: c.id }))}
+                    className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                      exportOpts.columns === c.id
+                        ? 'bg-[#111827] border-primary/30'
+                        : 'bg-[#0d1117] border-white/[0.06] hover:border-white/[0.12]'
+                    }`}
                   >
-                    <Download size={14} />
-                    Exportar {exportOpts.format.toUpperCase()} · {drops.length} drops
-                  </Button>
-
-                  {/* JSON backup export */}
-                  <div className="pt-1 border-t border-white/[0.08]">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm text-white">Backup completo</p>
-                        <p className="text-xs text-slate-500 mt-0.5">JSON com contas, drops e metas — para restaurar depois</p>
-                      </div>
-                      <button
-                        onClick={handleExportJSON}
-                        className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#111827]/40 border border-white/[0.08] hover:border-gold/40 text-slate-400 hover:text-gold text-xs transition-all shrink-0"
-                      >
-                        <Download size={12} />JSON
-                      </button>
+                    <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
+                      exportOpts.columns === c.id ? 'border-primary bg-primary' : 'border-slate-600'
+                    }`} />
+                    <div>
+                      <p className={`text-xs font-medium ${exportOpts.columns === c.id ? 'text-white' : 'text-slate-400'}`}>{c.label}</p>
+                      <p className="text-[10px] text-slate-600 mt-0.5">{c.hint}</p>
                     </div>
-                  </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                  {/* JSON import wrapper */}
-                  <div className="pt-1 border-t border-white/[0.08]">
-                    <p className="text-xs text-slate-500 mb-2">Importar backup</p>
-                    <input type="file" accept=".json" ref={importRef} onChange={handleImportJSON} className="hidden" />
-                    <Button
-                      variant="ghost"
-                      icon={Upload}
-                      size="sm"
-                      onClick={() => importRef.current?.click()}
-                      className="w-full"
-                    >
-                      Importar JSON
-                    </Button>
-                    <p className="text-xs text-slate-600 mt-1.5 flex items-center gap-1">
-                      <AlertTriangle size={10} />
-                      Isso vai sobrescrever todos os dados antigos
-                    </p>
-                  </div>
-                </Section>
-
-                {/* Apagar dados seletivamente */}
-                <Section icon={Lock} color="purple" title="Dados Locais e Privacidade" subtitle="Controle total sobre seus dados" defaultOpen={false}>
-                  <div>
-                    <p className="text-xs text-slate-400 mb-3">Apagar dados seletivamente</p>
-                    <div className="space-y-2">
-                      {/* Drops delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
-                        <div className="min-w-0">
-                          <p className="text-sm text-white">Drops</p>
-                          <p className="text-xs text-slate-500">{drops.length} registro{drops.length !== 1 ? 's' : ''}</p>
-                        </div>
-                        <Button
-                          variant="danger"
-                          icon={deleteConfirm === 'drops' ? AlertTriangle : Trash2}
-                          size="sm"
-                          onClick={() => handleSelectiveDelete('drops')}
-                          disabled={drops.length === 0}
-                        >
-                          {deleteConfirm === 'drops' ? 'Confirmar?' : 'Apagar'}
-                        </Button>
-                      </div>
-
-                      {/* Accounts delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
-                        <div className="min-w-0">
-                          <p className="text-sm text-white">Contas</p>
-                          <p className="text-xs text-slate-500">{accounts.length} registro{accounts.length !== 1 ? 's' : ''}</p>
-                        </div>
-                        <Button
-                          variant="danger"
-                          icon={deleteConfirm === 'accounts' ? AlertTriangle : Trash2}
-                          size="sm"
-                          onClick={() => handleSelectiveDelete('accounts')}
-                          disabled={accounts.length === 0}
-                        >
-                          {deleteConfirm === 'accounts' ? 'Confirmar?' : 'Apagar'}
-                        </Button>
-                      </div>
-
-                      {/* Goals delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
-                        <div className="min-w-0">
-                          <p className="text-sm text-white">Metas</p>
-                          <p className="text-xs text-slate-500">{goals.length} registro{goals.length !== 1 ? 's' : ''}</p>
-                        </div>
-                        <Button
-                          variant="danger"
-                          icon={deleteConfirm === 'goals' ? AlertTriangle : Trash2}
-                          size="sm"
-                          onClick={() => handleSelectiveDelete('goals')}
-                          disabled={goals.length === 0}
-                        >
-                          {deleteConfirm === 'goals' ? 'Confirmar?' : 'Apagar'}
-                        </Button>
-                      </div>
-
-                      {/* Config defaults reset row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
-                        <div className="min-w-0">
-                          <p className="text-sm text-white">Configurações</p>
-                          <p className="text-xs text-slate-500">Restaurar valores padrão</p>
-                        </div>
-                        <Button
-                          variant="danger"
-                          icon={deleteConfirm === 'settings' ? AlertTriangle : RotateCcw}
-                          size="sm"
-                          onClick={() => handleSelectiveDelete('settings')}
-                        >
-                          {deleteConfirm === 'settings' ? 'Confirmar?' : 'Resetar'}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Storage usage details */}
-                  <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.04] rounded-xl mt-2">
-                    <Info size={14} className="text-slate-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-slate-500 space-y-1">
-                      <p>Contas, drops e metas ficam no <span className="text-slate-400">localStorage</span> do seu navegador.</p>
-                      <p>Se logado com Google, uma cópia é sincronizada no Firestore (desative o toggle acima para impedir).</p>
-                      <p>Nenhum IP, comportamento de navegação ou dado de terceiros é coletado. Projeto <span className="text-slate-400">open source</span> — você pode auditar o código.</p>
-                    </div>
-                  </div>
-                </Section>
-
-                {/* Danger Zone */}
-                <Section icon={Shield} color="red" title="Zona de Perigo" subtitle="Ações irreversíveis" defaultOpen={false}>
-                  <div className="space-y-3">
-                    {/* Reset local data */}
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-sm text-white">Apagar todos os dados locais</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Remove contas, drops, metas e configurações deste dispositivo.</p>
-                      </div>
-                      <Button
-                        variant="danger"
-                        icon={resetConfirm ? AlertTriangle : Trash2}
-                        onClick={handleReset}
-                        className="shrink-0"
-                      >
-                        {resetConfirm ? 'Confirmar?' : 'Resetar'}
-                      </Button>
-                    </div>
-
-                    {/* Delete account permanently */}
-                    {user && (
-                      <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-loss/20 bg-loss/5">
-                        <div className="min-w-0">
-                          <p className="text-sm text-white">Excluir conta permanentemente</p>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            Apaga <strong className="text-slate-400">todos os dados do Firestore</strong> e locais. Conforme LGPD, art. 18.
-                            {deleteAccountConfirm === 1 && <span className="text-gold"> Clique mais uma vez para confirmar.</span>}
-                            {deleteAccountConfirm === 2 && <span className="text-loss"> Clique para confirmar definitivamente.</span>}
-                          </p>
-                        </div>
-                        <Button
-                          variant="danger"
-                          icon={deleteAccountConfirm > 0 ? AlertTriangle : UserX}
-                          onClick={handleDeleteAccount}
-                          disabled={deletingAccount}
-                          className="shrink-0"
-                        >
-                          {deletingAccount ? 'Apagando…' : deleteAccountConfirm === 0 ? 'Excluir' : 'Confirmar?'}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </Section>
+            {/* Currency */}
+            {exportOpts.columns !== 'minimal' && (
+              <div>
+                <p className="text-xs text-slate-400 mb-2">Moeda dos valores</p>
+                <div className="flex gap-1.5">
+                  {(['BRL', 'USD'] as ExportCurrency[]).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setExportOpts(o => ({ ...o, currency: c }))}
+                      className={`h-8 px-3 rounded-xl text-xs font-semibold border transition-all ${
+                        exportOpts.currency === c
+                          ? 'bg-primary/10 border-primary/40 text-primary'
+                          : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                      }`}
+                    >{c === 'BRL' ? '🇧🇷 R$ BRL' : '🇺🇸 $ USD'}</button>
+                  ))}
+                </div>
+                {exportOpts.currency === 'USD' && (
+                  <p className="text-[10px] text-slate-600 mt-1">
+                    Taxa: 1 USD = R$ {(settings as any).usdRate ?? 5.2}
+                  </p>
+                )}
               </div>
             )}
-          </motion.div>
-        </div>
+
+            {/* Total row */}
+            {exportOpts.columns !== 'minimal' && (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-white">Linha de total</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Adiciona soma de bruto e cashout no final</p>
+                </div>
+                <Toggle value={exportOpts.includeTotal} onChange={v => setExportOpts(o => ({ ...o, includeTotal: v }))} />
+              </div>
+            )}
+
+            {/* Export button */}
+            <Button
+              onClick={handleExport}
+              disabled={drops.length === 0}
+              size="sm"
+              className="w-full"
+            >
+              <Download size={14} />
+              Exportar {exportOpts.format.toUpperCase()} · {drops.length} drops
+            </Button>
+
+            {/* JSON backup */}
+            <div className="pt-1 border-t border-white/[0.08]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-white">Backup completo</p>
+                  <p className="text-xs text-slate-500 mt-0.5">JSON com contas, drops e metas — para restaurar depois</p>
+                </div>
+                <button
+                  onClick={handleExportJSON}
+                  className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#111827]/40 border border-white/[0.08] hover:border-gold/40 text-slate-400 hover:text-gold text-xs transition-all shrink-0"
+                >
+                  <Download size={12} />JSON
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-1 border-t border-white/[0.08]">
+              <p className="text-xs text-slate-500 mb-2">Importar backup</p>
+              <input type="file" accept=".json" ref={importRef} onChange={handleImportJSON} className="hidden" />
+              <Button
+                variant="ghost"
+                icon={Upload}
+                size="sm"
+                onClick={() => importRef.current?.click()}
+                className="w-full"
+              >
+                Importar JSON
+              </Button>
+              <p className="text-xs text-slate-600 mt-1.5 flex items-center gap-1">
+                <AlertTriangle size={10} />
+                Isso vai sobrescrever todos os dados atuais
+              </p>
+            </div>
+          </Section>
+        </motion.div>
+
+        {/* ── Cache Steam ── */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Section icon={Zap} color="gold" title="Cache Steam" subtitle="Preços salvos localmente">
+            <p className="text-xs text-slate-500">
+              O LootFlow salva preços do Steam Market localmente por 30 minutos para não sobrecarregar a API e manter a UI responsiva.
+            </p>
+
+            {cacheStats !== null && (
+              <div className="bg-[#111827]/60 rounded-xl p-3 grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-slate-500">Itens em cache</p>
+                  <p className="text-lg font-mono font-bold text-white">{cacheStats.entries}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Tamanho aprox.</p>
+                  <p className="text-lg font-mono font-bold text-white">{cacheStats.sizeKB} KB</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button variant="ghost" icon={RefreshCw} size="sm" onClick={handleCheckCache} className="flex-1">
+                Ver Cache
+              </Button>
+              <Button variant="danger" icon={Trash2} size="sm" onClick={handleClearCache} className="flex-1">
+                Limpar Cache
+              </Button>
+            </div>
+          </Section>
+        </motion.div>
+
+        {/* ── Firebase ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="lg:col-span-2"
+        >
+          <Section icon={Database} color="blue" title="Firebase" subtitle="Sincronização na nuvem">
+            <div className="space-y-3">
+              {/* Status */}
+              <div className="flex items-start gap-3 p-3 bg-profit/5 border border-profit/20 rounded-xl">
+                <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-slate-400">
+                  <p className="text-profit font-semibold mb-1">
+                    {isUsingCustomFirebase() ? 'Firebase próprio ativo ✓' : 'Firebase padrão ativo ✓'}
+                  </p>
+                  <p>Login com Google disponível. Dados sincronizam entre dispositivos.</p>
+                </div>
+              </div>
+
+              {/* Manual sync button (only for Google users) */}
+              {user?.provider === 'google' && (
+                <Button
+                  variant="ghost"
+                  icon={RefreshCw}
+                  size="sm"
+                  onClick={handleResync}
+                  disabled={syncing}
+                  className="w-full justify-center"
+                >
+                  {syncing ? 'Sincronizando...' : 'Sincronizar agora'}
+                </Button>
+              )}
+
+              {/* Custom Firebase toggle */}
+              <button
+                onClick={() => setShowCustomFirebase(v => !v)}
+                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06] hover:border-white/[0.12] transition-colors text-left"
+              >
+                <div>
+                  <p className="text-sm text-white">Usar Firebase próprio</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Para privacidade total — seus dados ficam no seu projeto Firebase</p>
+                </div>
+                <ChevronDown size={15} className={`text-slate-500 transition-transform ${showCustomFirebase ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showCustomFirebase && (
+                <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.06]">
+                  {/* Tutorial */}
+                  <button
+                    onClick={() => setShowFirebaseTutorial(v => !v)}
+                    className="w-full flex items-center justify-between text-xs text-primary hover:underline"
+                  >
+                    <span>Como criar meu Firebase?</span>
+                    <ChevronDown size={13} className={`transition-transform ${showFirebaseTutorial ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showFirebaseTutorial && (
+                    <div className="text-xs text-slate-500 space-y-1.5 p-3 bg-black/20 rounded-xl leading-relaxed">
+                      <p className="text-slate-300 font-semibold">Tutorial — Firebase gratuito em 5 passos:</p>
+                      <p>1. Acesse <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-primary underline">console.firebase.google.com</a> → "Criar projeto"</p>
+                      <p>2. Crie o projeto (desative Google Analytics se quiser)</p>
+                      <p>3. Clique em "Web" (&lt;/&gt;) → registre o app → copie o objeto <code className="text-slate-300">firebaseConfig</code></p>
+                      <p>4. No menu lateral: <strong className="text-slate-300">Build → Firestore Database</strong> → criar banco → "Modo produção"</p>
+                      <p>5. Em Firestore → <strong className="text-slate-300">Rules</strong>, cole:</p>
+                      <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth.uid == uid;\n    }\n  }\n}'}</pre>
+                      <p>6. Em Authentication → <strong className="text-slate-300">Get Started</strong> → ative "Google"</p>
+                      <p>7. Em Authentication → <strong className="text-slate-300">Settings → Authorized domains</strong> → adicione seu domínio (ex: <code className="text-slate-300">spxmiguel.github.io</code>)</p>
+                      <p>8. Cole os valores abaixo e salve.</p>
+                    </div>
+                  )}
+
+                  {/* Form */}
+                  <div className="space-y-2">
+                    {([
+                      ['apiKey', 'API Key *'],
+                      ['authDomain', 'Auth Domain * (ex: meu-projeto.firebaseapp.com)'],
+                      ['projectId', 'Project ID *'],
+                      ['appId', 'App ID *'],
+                      ['storageBucket', 'Storage Bucket (opcional)'],
+                      ['messagingSenderId', 'Messaging Sender ID (opcional)'],
+                    ] as const).map(([field, label]) => (
+                      <div key={field}>
+                        <label className="text-[10px] text-slate-500 block mb-1">{label}</label>
+                        <input
+                          type="text"
+                          value={customFbForm[field as keyof typeof customFbForm]}
+                          onChange={e => setCustomFbForm(f => ({ ...f, [field]: e.target.value }))}
+                          placeholder={FIREBASE_CONFIG[field as keyof typeof FIREBASE_CONFIG] ? '•'.repeat(8) : ''}
+                          className="w-full h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" onClick={handleSaveCustomFirebase} className="flex-1">
+                      Salvar e recarregar
+                    </Button>
+                    {isUsingCustomFirebase() && (
+                      <Button size="sm" variant="ghost" onClick={handleClearCustomFirebase}>
+                        Usar padrão
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
+        </motion.div>
+
+        {/* ── WhatsApp ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.27 }}
+          className="lg:col-span-2"
+        >
+          <WhatsAppSection />
+        </motion.div>
+
+        {/* ── Privacidade ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+          className="lg:col-span-2"
+        >
+          <Section icon={Lock} color="purple" title="Privacidade" subtitle="Controle total sobre seus dados">
+            {/* Firebase sync toggle */}
+            <SettingRow
+              label="Sincronizar com Firebase"
+              hint="Com sync ativo, exclusões locais também removem do Firestore. Desativado, novas alterações ficam só no dispositivo."
+            >
+              <Toggle
+                value={settings.firebaseSyncEnabled !== false}
+                onChange={v => updateSettings({ firebaseSyncEnabled: v })}
+              />
+            </SettingRow>
+
+            {/* Selective deletion */}
+            <div>
+              <p className="text-xs text-slate-400 mb-3">Apagar dados seletivamente</p>
+              <div className="space-y-2">
+                {/* Drops */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Drops</p>
+                    <p className="text-xs text-slate-500">{drops.length} registro{drops.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'drops' ? AlertTriangle : Trash2}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('drops')}
+                    disabled={drops.length === 0}
+                  >
+                    {deleteConfirm === 'drops' ? 'Confirmar?' : 'Apagar'}
+                  </Button>
+                </div>
+
+                {/* Contas */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Contas</p>
+                    <p className="text-xs text-slate-500">{accounts.length} registro{accounts.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'accounts' ? AlertTriangle : Trash2}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('accounts')}
+                    disabled={accounts.length === 0}
+                  >
+                    {deleteConfirm === 'accounts' ? 'Confirmar?' : 'Apagar'}
+                  </Button>
+                </div>
+
+                {/* Metas */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Metas</p>
+                    <p className="text-xs text-slate-500">{goals.length} registro{goals.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'goals' ? AlertTriangle : Trash2}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('goals')}
+                    disabled={goals.length === 0}
+                  >
+                    {deleteConfirm === 'goals' ? 'Confirmar?' : 'Apagar'}
+                  </Button>
+                </div>
+
+                {/* Configurações */}
+                <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.06]">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Configurações</p>
+                    <p className="text-xs text-slate-500">Restaurar valores padrão</p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteConfirm === 'settings' ? AlertTriangle : RotateCcw}
+                    size="sm"
+                    onClick={() => handleSelectiveDelete('settings')}
+                  >
+                    {deleteConfirm === 'settings' ? 'Confirmar?' : 'Resetar'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Storage disclosure */}
+            <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.06] rounded-xl">
+              <Info size={14} className="text-slate-500 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-slate-500 space-y-1">
+                <p>Contas, drops e metas ficam no <span className="text-slate-400">localStorage</span> do seu navegador.</p>
+                <p>Se logado com Google, uma cópia é sincronizada no Firestore (desative o toggle acima para impedir).</p>
+                <p>Nenhum IP, comportamento de navegação ou dado de terceiros é coletado. Projeto <span className="text-slate-400">open source</span> — você pode auditar o código.</p>
+              </div>
+            </div>
+          </Section>
+        </motion.div>
+
+        {/* ── Danger Zone ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="lg:col-span-2"
+        >
+          <Section icon={Shield} color="red" title="Zona de Perigo" subtitle="Ações irreversíveis">
+            <div className="space-y-3">
+              {/* Reset local data */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm text-white">Apagar todos os dados locais</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Remove contas, drops, metas e configurações deste dispositivo.</p>
+                </div>
+                <Button
+                  variant="danger"
+                  icon={resetConfirm ? AlertTriangle : Trash2}
+                  onClick={handleReset}
+                  className="shrink-0"
+                >
+                  {resetConfirm ? 'Confirmar?' : 'Resetar'}
+                </Button>
+              </div>
+
+              {/* Delete account */}
+              {user && (
+                <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-loss/20 bg-loss/5">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white">Excluir conta permanentemente</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Apaga <strong className="text-slate-400">todos os dados do Firestore</strong> e locais. Conforme LGPD, art. 18.
+                      {deleteAccountConfirm === 1 && <span className="text-gold"> Clique mais uma vez para confirmar.</span>}
+                      {deleteAccountConfirm === 2 && <span className="text-loss"> Clique para confirmar definitivamente.</span>}
+                    </p>
+                  </div>
+                  <Button
+                    variant="danger"
+                    icon={deleteAccountConfirm > 0 ? AlertTriangle : UserX}
+                    onClick={handleDeleteAccount}
+                    disabled={deletingAccount}
+                    className="shrink-0"
+                  >
+                    {deletingAccount ? 'Apagando…' : deleteAccountConfirm === 0 ? 'Excluir' : 'Confirmar?'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Section>
+        </motion.div>
       </div>
 
-      {/* Version & Legal Footer */}
-      <div className="text-center text-xs text-slate-700 pt-5 space-y-1.5 border-t border-white/[0.04] mt-8">
+      {/* Version & Legal */}
+      <div className="text-center text-xs text-slate-700 pt-2 space-y-1.5">
         <p>LootFlow v1.0.0 · Feito para acompanhar drops com calma</p>
         <div className="flex items-center justify-center gap-3">
           <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
