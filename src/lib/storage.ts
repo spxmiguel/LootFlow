@@ -50,6 +50,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
     sidebarCompact: false,
   },
   showOnboarding: true,
+  gamification: {
+    showInsights: true,
+    showHeatmap: true,
+    showTimeline: true,
+    showAchievements: true,
+    showHallOfFame: true,
+  },
 }
 
 // ─── Loaders ──────────────────────────────────────────────────────────────────
@@ -63,6 +70,7 @@ function loadSettings(): AppSettings {
     ...DEFAULT_SETTINGS,
     ...saved,
     theme: { ...DEFAULT_SETTINGS.theme, ...(saved.theme ?? {}) },
+    gamification: { ...DEFAULT_SETTINGS.gamification, ...(saved.gamification ?? {}) } as any,
   }
   // Migrate old cyan default → green to match new design system
   if (merged.theme.primaryColor === '#38bdf8') merged.theme.primaryColor = '#10b981'

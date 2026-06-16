@@ -17,7 +17,7 @@ import { useT } from '../hooks/useT'
 function ChartTip({ active, payload, label, currency }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#0d1117] border border-white/10 rounded-xl p-3 shadow-xl text-xs">
+    <div className="bg-[#0d1117] border border-white/[0.025] rounded-xl p-3 shadow-xl text-xs">
       <p className="text-slate-400 mb-1.5">{label}</p>
       {payload.map((p: any, i: number) => (
         <p key={i} style={{ color: p.color }} className="font-semibold">
@@ -31,6 +31,7 @@ function ChartTip({ active, payload, label, currency }: any) {
 }
 
 function LowDataChartState({ children, message }: { children: ReactNode; message: string }) {
+  const t = useT()
   return (
     <div className="relative">
       <div className="opacity-45">{children}</div>
@@ -39,7 +40,7 @@ function LowDataChartState({ children, message }: { children: ReactNode; message
           <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Info size={15} />
           </div>
-          <p className="text-sm font-semibold text-white">Dados iniciais</p>
+          <p className="text-sm font-semibold text-white">{t('analytics.low_data_indicator_title')}</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">{message}</p>
         </div>
       </div>
@@ -101,8 +102,8 @@ export default function Analytics() {
 
   const needsTrendHint = drops.length < 2 || weeksWithDrops < 2
   const trendHint = drops.length < 2
-    ? 'Registre mais drops para o gráfico sair do modo amostra e revelar tendência.'
-    : 'Registre drops em mais semanas para comparar evolução e tendência.'
+    ? t('analytics.alert_low_data_desc_drops')
+    : t('analytics.alert_low_data_desc_weeks')
 
   const topDrops = useMemo(() =>
     [...drops]
@@ -130,15 +131,15 @@ export default function Analytics() {
   return (
     <div className="p-4 md:p-6 space-y-6 pb-12">
       <div>
-        <h1 className="text-xl font-bold text-white">Analytics</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Performance e tendências</p>
+        <h1 className="text-xl font-bold text-white">{t('analytics.title')}</h1>
+        <p className="text-slate-500 text-sm mt-0.5">{t('analytics.subtitle')}</p>
       </div>
 
       {needsTrendHint && (
         <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
           <Info size={16} className="mt-0.5 shrink-0 text-primary" />
           <div>
-            <p className="text-sm font-semibold text-white">Poucos dados para tendência</p>
+            <p className="text-sm font-semibold text-white">{t('analytics.alert_low_data')}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{trendHint}</p>
           </div>
         </div>
@@ -148,7 +149,7 @@ export default function Analytics() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label={t('analytics.total_cashout')}  value={formatCurrency(stats.totalCashoutAllTime, currency)}  icon={DollarSign} color="profit" />
         <StatCard label={t('analytics.gross_value')}    value={formatCurrency(stats.totalSteamValueAllTime, currency)} icon={Package}   color="primary" />
-        <StatCard label="ROI Geral"      value={isFinite(stats.overallROI) ? formatPercent(stats.overallROI) : '∞'} icon={TrendingUp} color={stats.overallROI >= 0 ? 'profit' : 'loss'} />
+        <StatCard label={t('analytics.overall_roi')}      value={isFinite(stats.overallROI) ? formatPercent(stats.overallROI) : '∞'} icon={TrendingUp} color={stats.overallROI >= 0 ? 'profit' : 'loss'} />
         <StatCard label={t('analytics.total_drops')} value={String(stats.totalDropsAllTime)} icon={Zap} color="gold" />
       </div>
 
@@ -156,12 +157,12 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-white">Cashout Semanal</p>
+            <p className="text-sm font-semibold text-white">{t('analytics.weekly_cashout')}</p>
             <select value={weeksRange} onChange={e => setWeeksRange(Number(e.target.value))}
-              className="text-xs bg-[#111827] border border-white/[0.1] rounded-lg px-2 py-1 text-slate-300 focus:outline-none">
-              <option value={6}>6 semanas</option>
-              <option value={12}>12 semanas</option>
-              <option value={24}>24 semanas</option>
+              className="text-xs bg-[#111827] border border-white/[0.025] rounded-lg px-2 py-1 text-slate-300 focus:outline-none">
+              <option value={6}>{t('analytics.chart_weeks_range_6')}</option>
+              <option value={12}>{t('analytics.chart_weeks_range_12')}</option>
+              <option value={24}>{t('analytics.chart_weeks_range_24')}</option>
             </select>
           </div>
           {needsTrendHint ? (
@@ -192,9 +193,9 @@ export default function Analytics() {
         </Card>
 
         <Card className="p-5">
-          <p className="text-sm font-semibold text-white mb-4">Cashout Acumulado</p>
+          <p className="text-sm font-semibold text-white mb-4">{t('analytics.chart_cumulative_cashout')}</p>
           {needsTrendHint ? (
-            <LowDataChartState message="O acumulado já aparece nos cards. Com mais drops, esta curva fica mais legível.">
+            <LowDataChartState message={t('analytics.low_data_indicator_desc_cum')}>
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={cumData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <defs>
@@ -234,9 +235,9 @@ export default function Analytics() {
       {/* Charts row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5">
-          <p className="text-sm font-semibold text-white mb-4">Volume de Drops</p>
+          <p className="text-sm font-semibold text-white mb-4">{t('analytics.chart_drop_volume')}</p>
           {needsTrendHint ? (
-            <LowDataChartState message="Adicione mais drops para transformar este ponto inicial em uma linha de volume.">
+            <LowDataChartState message={t('analytics.low_data_indicator_desc_vol')}>
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
@@ -261,9 +262,9 @@ export default function Analytics() {
         </Card>
 
         <Card className="p-5">
-          <p className="text-sm font-semibold text-white mb-4">Drops por Conta</p>
+          <p className="text-sm font-semibold text-white mb-4">{t('analytics.chart_drops_per_account')}</p>
           {pieData.length === 0 ? (
-            <div className="flex items-center justify-center h-[180px] text-slate-600 text-sm">Sem dados</div>
+            <div className="flex items-center justify-center h-[180px] text-slate-600 text-sm">{t('analytics.chart_drops_per_account_empty')}</div>
           ) : (
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
@@ -281,19 +282,27 @@ export default function Analytics() {
 
       {/* Account table */}
       <Card className="p-5">
-        <p className="text-sm font-semibold text-white mb-4">Performance por Conta</p>
+        <p className="text-sm font-semibold text-white mb-4">{t('analytics.table_rankings')}</p>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[500px]">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                {['Conta','Drops','Bruto','Cashout','Investido','ROI','Status'].map(h => (
+              <tr className="border-b border-white/[0.025]">
+                {[
+                  t('analytics.table_col_account'),
+                  t('analytics.table_col_drops'),
+                  t('analytics.table_col_gross'),
+                  t('analytics.table_col_cashout'),
+                  t('analytics.table_col_invested'),
+                  t('analytics.table_col_roi'),
+                  t('analytics.table_col_status')
+                ].map(h => (
                   <th key={h} className="text-left text-xs text-slate-500 font-medium pb-3 pr-4 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {[...accountStats].sort((a,b) => b.roiPercent - a.roiPercent).map(as => (
-                <tr key={as.account.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                <tr key={as.account.id} className="border-b border-white/[0.02] hover:bg-white/[0.015]">
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: as.account.color ?? '#64748b' }} />
@@ -311,7 +320,7 @@ export default function Analytics() {
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                       as.isPaidBack ? 'bg-profit/20 text-profit' : 'bg-loss/20 text-loss'
                     }`}>
-                      {as.isPaidBack ? 'Pago' : 'Pendente'}
+                      {as.isPaidBack ? t('analytics.status_paid') : t('analytics.status_pending')}
                     </span>
                   </td>
                 </tr>
@@ -325,14 +334,14 @@ export default function Analytics() {
       {topDrops.length > 0 && (
         <Card className="p-5">
           <p className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <Award size={16} className="text-gold" /> Top Drops
+            <Award size={16} className="text-gold" /> {t('analytics.top_drops')}
           </p>
           <div className="space-y-2">
             {topDrops.map((drop, i) => {
               const account = accounts.find(a => a.id === drop.accountId)
               const val = drop.cashoutValue ?? (drop.steamValue * settings.cashoutRate / 100)
               return (
-                <div key={drop.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117] hover:bg-[#111827] transition-colors">
+                <div key={drop.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.025] hover:bg-[#111827] transition-colors">
                   <span className={`text-xs font-bold w-5 text-center ${i === 0 ? 'text-gold' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-slate-600'}`}>
                     {i + 1}
                   </span>
@@ -345,7 +354,7 @@ export default function Analytics() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-mono font-semibold text-profit">{formatCurrency(val, currency)}</p>
-                    <p className="text-xs text-slate-500 font-mono">Bruto {formatCurrency(drop.steamValue, currency)}</p>
+                    <p className="text-xs text-slate-500 font-mono">{t('drops.gross')} {formatCurrency(drop.steamValue, currency)}</p>
                   </div>
                   <ArrowUpRight size={13} className="text-slate-600" />
                 </div>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Plus, Target, Trash2, Edit3, CheckCircle2, Clock, TrendingUp, Package, DollarSign, Zap, Search, X, Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useStore } from '../store'
 import { calcDashboardStats, calcGoalProgress, calcWeekStats } from '../lib/calculations'
 import { formatCurrency, formatDate, getCurrentWeekId, cn } from '../lib/utils'
@@ -62,6 +63,7 @@ function useGoalTypes() {
 // ─── Mini Item Picker (para metas) ───────────────────────────────────────────
 
 function GoalItemPicker({ value, onChange }: { value: SteamItem | null; onChange: (item: SteamItem | null) => void }) {
+  const t = useT()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Array<{ name: string; hashName: string; imageUrl: string }>>([])
   const [searching, setSearching] = useState(false)
@@ -79,7 +81,7 @@ function GoalItemPicker({ value, onChange }: { value: SteamItem | null; onChange
 
   if (value) {
     return (
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.08]">
+      <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.025]">
         <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center shrink-0 overflow-hidden">
           <SteamItemImage imageUrl={value.imageUrl} alt={value.name} size={40} />
         </div>
@@ -99,13 +101,13 @@ function GoalItemPicker({ value, onChange }: { value: SteamItem | null; onChange
         <input
           value={query}
           onChange={e => handleSearch(e.target.value)}
-          placeholder="Buscar item CS2 (ex: Bayonet Doppler)"
+          placeholder={t('goals.goal_form_placeholder_search_item')}
           maxLength={80}
-          className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-xs pl-9 pr-4 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+          className="w-full h-9 rounded-xl border border-white/[0.025] bg-[#111827] text-slate-200 text-xs pl-9 pr-4 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
         />
       </div>
       {results.length > 0 && (
-        <div className="rounded-xl border border-white/[0.08] bg-[#0d1117] overflow-hidden divide-y divide-white/[0.04]">
+        <div className="rounded-xl border border-white/[0.025] bg-[#0d1117] overflow-hidden divide-y divide-white/[0.04]">
           {results.map(r => (
             <button
               key={r.hashName}
@@ -153,19 +155,21 @@ function GoalForm({ initial, onSave, onClose }: {
 
   function handleSave() {
     const e: Record<string,string> = {}
-    if (!name.trim()) e.name = 'Obrigatório'
+    if (!name.trim()) e.name = t('goals.goal_form_validation_name')
     let n = parseGoalTarget(target, type)
     const max = type === 'drops' ? MAX_DROPS_GOAL : MAX_MONEY_GOAL
     
     if (n == null || n <= 0) {
-      e.target = type === 'drops' ? 'Quantidade inválida' : 'Valor inválido'
+      e.target = type === 'drops' ? t('goals.goal_form_validation_target_qty') : t('goals.goal_form_validation_target_money')
     } else {
       // If currency is USD and type is monetary, convert it back to BRL for validation and saving
       if (type !== 'drops' && currency === 'USD') {
         n = n * usdRate
       }
       if (n > max) {
-        e.target = type === 'drops' ? `Máximo de ${max} drops` : `Máximo de ${formatCurrency(max, currency)}`
+        e.target = type === 'drops' 
+          ? t('goals.goal_form_validation_max_qty', { max }) 
+          : t('goals.goal_form_validation_max_money', { max: formatCurrency(max, currency) })
       }
     }
 
@@ -178,7 +182,7 @@ function GoalForm({ initial, onSave, onClose }: {
   }
 
   return (
-    <Modal open onClose={onClose} title={initial ? 'Editar Meta' : 'Nova Meta'} size="md">
+    <Modal open onClose={onClose} title={initial ? t('goals.goal_form_title_edit') : t('goals.goal_form_title_new')} size="md">
       <div className="space-y-4 pt-1">
         <Input
           label={t('goals.name_label')}
@@ -187,18 +191,18 @@ function GoalForm({ initial, onSave, onClose }: {
           placeholder={t('goals.name_placeholder')}
           error={errors.name}
           maxLength={80}
-          className="bg-[#11161d] border-white/[0.08]"
+          className="bg-[#11161d] border-white/[0.025]"
         />
 
         <div className="space-y-1.5">
-          <label className="text-xs text-slate-400 font-body font-medium block">Tipo de Meta</label>
+          <label className="text-xs text-slate-400 font-body font-medium block">{t('goals.goal_form_input_type')}</label>
           <div className="grid grid-cols-2 gap-2">
             {goalTypes.map(gt => (
               <button key={gt.value} type="button" onClick={() => setType(gt.value)}
                 className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all ${
                   type === gt.value
                     ? 'border-primary/50 bg-primary/10 text-white shadow-[0_0_12px_rgba(74,222,128,0.06)]'
-                    : 'border-white/[0.08] text-slate-400 hover:border-white/20 bg-[#11161d]/60'
+                    : 'border-white/[0.025] text-slate-400 hover:border-white/20 bg-[#11161d]/60'
                 }`}>
                 <gt.icon size={15} className={`mt-0.5 flex-shrink-0 ${type === gt.value ? 'text-primary' : 'text-slate-500'}`} />
                 <div>
@@ -215,29 +219,29 @@ function GoalForm({ initial, onSave, onClose }: {
           type="text" inputMode={type === 'drops' ? 'numeric' : 'decimal'}
           value={target} onChange={e => setTarget(e.target.value)}
           placeholder={type === 'drops' ? '100' : '500,00'}
-          hint={type === 'drops' ? `Até ${MAX_DROPS_GOAL} drops` : `Até ${formatCurrency(MAX_MONEY_GOAL, currency)}. Aceita 500, 500.00 ou 500,00.`}
+          hint={type === 'drops' ? t('goals.goal_form_hint_qty', { max: MAX_DROPS_GOAL }) : t('goals.goal_form_hint_money', { max: formatCurrency(MAX_MONEY_GOAL, currency) })}
           error={errors.target}
-          className="bg-[#11161d] border-white/[0.08]"
+          className="bg-[#11161d] border-white/[0.025]"
         />
 
         <div className="space-y-1.5">
           <label className="text-xs text-slate-400 font-body font-medium block">
-            Item Alvo no CS2 <span className="text-slate-600 font-normal font-body">(opcional)</span>
+            {t('goals.goal_form_input_target_item')} <span className="text-slate-600 font-normal font-body">{t('goals.goal_form_input_target_item_optional')}</span>
           </label>
           <GoalItemPicker value={targetItem} onChange={setTargetItem} />
         </div>
 
         <Input
-          label="Prazo de Conclusão (opcional)"
+          label={t('goals.goal_form_input_deadline')}
           type="date"
           value={deadline}
           onChange={e => setDeadline(e.target.value)}
-          className="bg-[#11161d] border-white/[0.08]"
+          className="bg-[#11161d] border-white/[0.025]"
         />
 
         <div className="space-y-1.5">
-          <label className="text-xs text-slate-400 font-body font-medium block">Cor Temática</label>
-          <div className="flex gap-2 flex-wrap p-2.5 rounded-xl bg-[#11161d]/60 border border-white/[0.08]">
+          <label className="text-xs text-slate-400 font-body font-medium block">{t('goals.goal_form_input_color')}</label>
+          <div className="flex gap-2 flex-wrap p-2.5 rounded-xl bg-[#11161d]/60 border border-white/[0.025]">
             {GOAL_COLORS.map(c => (
               <button key={c} type="button" onClick={() => setColor(c)}
                 className={`w-7 h-7 rounded-lg transition-all ${color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0d1117] scale-110' : 'hover:scale-105'}`}
@@ -246,9 +250,9 @@ function GoalForm({ initial, onSave, onClose }: {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-3 border-t border-white/[0.04]">
-          <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
-          <Button onClick={handleSave} variant="primary" className="flex-1 font-semibold">{initial ? 'Salvar' : 'Criar Meta'}</Button>
+        <div className="flex gap-3 pt-3 border-t border-white/[0.02]">
+          <Button variant="ghost" onClick={onClose} className="flex-1">{t('goals.goal_form_btn_cancel')}</Button>
+          <Button onClick={handleSave} variant="primary" className="flex-1 font-semibold">{initial ? t('goals.goal_form_btn_save_edit') : t('goals.goal_form_btn_save_new')}</Button>
         </div>
       </div>
     </Modal>
@@ -262,6 +266,7 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
   onEdit: () => void; onDelete: () => void
 }) {
   const { settings } = useStore()
+  const t = useT()
   const currency = settings.currency
   const goalTypes = useGoalTypes()
   const clamped    = Math.min(100, Math.max(0, progress))
@@ -276,7 +281,7 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
     ? 'border-profit/30 shadow-[0_0_18px_rgba(74,222,128,0.12)]'
     : hasItemTarget
     ? 'border-primary/20 shadow-[0_0_18px_rgba(74,222,128,0.08)] bg-gradient-to-br from-[#11161d] to-[#121c1d]'
-    : 'border-white/[0.06] hover:border-white/[0.1]'
+    : 'border-white/[0.025] hover:border-white/[0.05]'
 
   return (
     <Card className={cn('p-5 relative overflow-hidden transition-all duration-300 bg-[#11161d]', glowStyle)}>
@@ -298,14 +303,14 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
       {isDone && (
         <div className="absolute top-3.5 right-3.5">
           <div className="flex items-center gap-1 bg-profit/15 text-profit text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-profit/20 select-none font-display tracking-wider">
-            <CheckCircle2 size={10} className="stroke-[3]" /> Concluída
+            <CheckCircle2 size={10} className="stroke-[3]" /> {t('goals.card_completed')}
           </div>
         </div>
       )}
 
       <div className="flex items-start gap-3.5 mb-4">
         {goal.targetItem ? (
-          <div className="w-11 h-11 rounded-xl bg-[#111827]/80 border border-white/[0.08] shrink-0 overflow-hidden flex items-center justify-center relative">
+          <div className="w-11 h-11 rounded-xl bg-[#111827]/80 border border-white/[0.025] shrink-0 overflow-hidden flex items-center justify-center relative">
             <SteamItemImage imageUrl={goal.targetItem.imageUrl} alt={goal.targetItem.name} size={44} />
           </div>
         ) : (
@@ -317,15 +322,25 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-slate-100 text-sm sm:text-base leading-snug truncate font-body">{goal.name}</h3>
           <p className="text-[10px] text-slate-500 font-semibold font-body uppercase mt-0.5 tracking-wider">
-            {goal.targetItem ? 'Alvo: Item CS2' : typeInfo.label}
+            {goal.targetItem ? t('goals.goal_form_input_target_item') : typeInfo.label}
           </p>
         </div>
         
         <div className="flex gap-1 shrink-0">
-          <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.02] transition-colors">
+          <button 
+            onClick={onEdit} 
+            aria-label={t('accounts.btn_edit')} 
+            title={t('accounts.btn_edit')}
+            className="p-2.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.02] transition-colors"
+          >
             <Edit3 size={13} />
           </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg text-slate-500 hover:text-loss hover:bg-loss/10 transition-colors">
+          <button 
+            onClick={onDelete} 
+            aria-label={t('accounts.btn_delete')} 
+            title={t('accounts.btn_delete')}
+            className="p-2.5 rounded-lg text-slate-500 hover:text-loss hover:bg-loss/10 transition-colors"
+          >
             <Trash2 size={13} />
           </button>
         </div>
@@ -333,7 +348,7 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
 
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1.5 text-[10px] font-semibold text-slate-500 font-body uppercase tracking-wider">
-          <span>Progresso</span>
+          <span>{t('goals.card_progress')}</span>
           <span className="font-mono font-bold" style={{ color: goal.color }}>
             {clamped.toFixed(1)}%
           </span>
@@ -353,13 +368,13 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
 
       <div className="flex items-center justify-between text-xs py-2 px-2.5 rounded-lg bg-[#0e121a]/60 border border-white/[0.02]">
         <div>
-          <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">Atual</p>
+          <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">{t('goals.card_current')}</p>
           <p className="font-mono font-bold text-slate-200 mt-0.5">
             {isMonetary ? formatCurrency(currentValue, currency) : Math.round(currentValue).toString()}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">Falta</p>
+          <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">{t('goals.card_remaining')}</p>
           <p className="font-mono font-medium text-slate-400 mt-0.5">
             {isMonetary
               ? formatCurrency(Math.max(0, goal.targetAmount - currentValue), currency)
@@ -367,7 +382,7 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">Alvo</p>
+          <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">{t('goals.card_target')}</p>
           <p className="font-mono font-bold text-slate-200 mt-0.5">
             {isMonetary ? formatCurrency(goal.targetAmount, currency) : goal.targetAmount.toString()}
           </p>
@@ -377,7 +392,7 @@ function GoalCard({ goal, progress, currentValue, onEdit, onDelete }: {
       {goal.deadline && (
         <div className={`mt-3 pt-3 border-t border-white/[0.04] flex items-center gap-1.5 text-[10px] font-body ${isOverdue ? 'text-loss font-semibold' : 'text-slate-500'}`}>
           <Clock size={11} className={isOverdue ? 'animate-pulse' : ''} />
-          <span>{isOverdue ? 'Venceu em' : 'Prazo:'} {formatDate(goal.deadline)}</span>
+          <span>{isOverdue ? t('goals.card_deadline_overdue') : t('goals.card_deadline_future')} {formatDate(goal.deadline)}</span>
         </div>
       )}
     </Card>
@@ -424,8 +439,13 @@ export default function Goals() {
   const completed  = goalsWithProgress.filter(g => g.progress >= 100)
 
   function handleSave(data: Omit<Goal, 'id' | 'createdAt'>) {
-    if (editingGoal) updateGoal(editingGoal.id, data)
-    else addGoal(data)
+    if (editingGoal) {
+      updateGoal(editingGoal.id, data)
+      toast.success(t('goals.toast_goal_updated'))
+    } else {
+      addGoal(data)
+      toast.success(t('goals.toast_goal_created'))
+    }
     setShowForm(false)
     setEditingGoal(null)
   }
@@ -433,6 +453,7 @@ export default function Goals() {
   function confirmDeleteGoal() {
     if (!goalToDelete) return
     deleteGoal(goalToDelete.id)
+    toast.success(t('goals.toast_goal_deleted'))
     setGoalToDelete(null)
   }
 
@@ -440,13 +461,15 @@ export default function Goals() {
     <div className="p-4 md:p-6 space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Metas</h1>
+          <h1 className="text-xl font-bold text-white">{t('goals.title')}</h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            {goals.length === 0 ? 'Defina objetivos para monitorar seu progresso' : `${inProgress.length} em andamento · ${completed.length} concluídas`}
+            {goals.length === 0 
+              ? t('goals.subtitle_empty') 
+              : t('goals.subtitle_stats', { inProgress: inProgress.length, completed: completed.length })}
           </p>
         </div>
         <Button icon={Plus} size="sm" onClick={() => { setEditingGoal(null); setShowForm(true) }}>
-          Nova Meta
+          {t('goals.btn_new_goal')}
         </Button>
       </div>
 
@@ -455,14 +478,14 @@ export default function Goals() {
           icon={Target}
           title={t('goals.empty_title')}
           description={t('goals.empty_desc')}
-          action={{ label: 'Criar meta', onClick: () => setShowForm(true) }}
+          action={{ label: t('goals.btn_new_goal'), onClick: () => setShowForm(true) }}
         />
       )}
 
       {inProgress.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-            Em Andamento ({inProgress.length})
+            {t('goals.header_in_progress', { count: inProgress.length })}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {inProgress.map(({ goal, progress, currentValue }) => (
@@ -479,7 +502,7 @@ export default function Goals() {
       {completed.length > 0 && (
         <div className="opacity-75">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-            Concluídas ({completed.length})
+            {t('goals.header_completed', { count: completed.length })}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {completed.map(({ goal, progress, currentValue }) => (
@@ -497,17 +520,23 @@ export default function Goals() {
         <Modal
           open
           onClose={() => setGoalToDelete(null)}
-          title="Excluir meta?"
+          title={t('goals.delete_modal_title')}
           size="sm"
           footer={
             <>
-              <Button variant="ghost" onClick={() => setGoalToDelete(null)}>Cancelar</Button>
-              <Button variant="danger" icon={Trash2} onClick={confirmDeleteGoal}>Excluir</Button>
+              <Button variant="ghost" onClick={() => setGoalToDelete(null)}>{t('goals.delete_modal_cancel')}</Button>
+              <Button variant="danger" icon={Trash2} onClick={confirmDeleteGoal}>{t('goals.delete_modal_confirm')}</Button>
             </>
           }
         >
           <p className="text-sm text-slate-400">
-            A meta <span className="font-semibold text-white">{goalToDelete.name}</span> será removida. Essa ação não apaga contas nem drops.
+            {t('goals.delete_modal_desc', { name: '###SPLIT###' }).split('###SPLIT###').map((part, i) => (
+              i === 0 ? (
+                <span key={i}>
+                  {part}<span className="font-semibold text-white">{goalToDelete.name}</span>
+                </span>
+              ) : <span key={i}>{part}</span>
+            ))}
           </p>
         </Modal>
       )}

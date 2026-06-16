@@ -86,6 +86,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
   const drops = useStore(s => s.drops)
   const { user, logout } = useAuth()
   const compact = !mobile && settings.theme.sidebarCompact
+  const t = useT()
   const { displayName, photoURL, email, showEmail } = useProfileDisplay()
   const [profileOpen, setProfileOpen] = useState(false)
   const [legalModal, setLegalModal] = useState<LegalType | null>(null)
@@ -106,7 +107,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
     )}>
       {/* Logo / Header Dropdown Selector */}
       <div className={cn(
-        'flex flex-col gap-2.5 px-4 py-5 border-b border-white/[0.06]',
+        'flex flex-col gap-2.5 px-4 py-5 border-b border-white/[0.025]',
         compact && 'items-center px-2 py-4',
       )}>
         <a
@@ -132,22 +133,22 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
 
       {/* Quick Stats */}
       {!compact && (
-        <div className="mx-3 mt-4 p-3 rounded-xl bg-white/[0.01] border border-white/[0.04] relative overflow-hidden group">
+        <div className="mx-3 mt-4 p-3 rounded-xl bg-white/[0.01] border border-white/[0.025] relative overflow-hidden group">
           <div className="absolute -inset-px bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
           <div className="flex items-center gap-2 text-xs text-slate-400 font-body mb-2.5">
             <TrendingUp className="w-3.5 h-3.5 text-primary" />
-            <span className="font-semibold tracking-wide uppercase text-[9px]">Esta semana</span>
+            <span className="font-semibold tracking-wide uppercase text-[9px]">{t('layout.compact_week')}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-[#11161d] p-2 rounded-lg border border-white/[0.04]">
+            <div className="bg-[#11161d] p-2 rounded-lg border border-white/[0.025]">
               <p className="font-mono text-sm font-bold text-slate-100">{activeAccounts}</p>
-              <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">contas</p>
+              <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">{t('layout.compact_accounts')}</p>
             </div>
-            <div className="bg-[#11161d] p-2 rounded-lg border border-white/[0.04]">
+            <div className="bg-[#11161d] p-2 rounded-lg border border-white/[0.025]">
               <p className="font-mono text-sm font-bold text-slate-100">
                 {activeAccounts * 2}
               </p>
-              <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">drops alvo</p>
+              <p className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">{t('layout.compact_goals')}</p>
             </div>
           </div>
         </div>
@@ -174,25 +175,25 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
             onClick={() => setLegalModal('privacy')}
             className="text-[10px] text-slate-700 hover:text-slate-500 transition-colors underline underline-offset-2"
           >
-            Privacidade
+            {t('layout.privacy')}
           </button>
           <span className="text-slate-800 text-[10px]">·</span>
           <button
             onClick={() => setLegalModal('terms')}
             className="text-[10px] text-slate-700 hover:text-slate-500 transition-colors underline underline-offset-2"
           >
-            Termos
+            {t('layout.terms')}
           </button>
         </div>
       )}
 
       {/* User */}
-      <div className={cn('px-3 py-4 border-t border-white/[0.09]', compact && 'px-2')}>
+      <div className={cn('px-3 py-4 border-t border-white/[0.025]', compact && 'px-2')}>
         <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
         <div className={cn('flex items-center gap-3 p-2.5 rounded-xl', compact && 'justify-center')}>
           <button
             onClick={() => setProfileOpen(true)}
-            title="Editar perfil"
+            title={t('layout.edit_profile')}
             className="relative shrink-0 rounded-full ring-2 ring-transparent hover:ring-primary/50 transition-all"
           >
             <Avatar photoURL={photoURL} displayName={displayName} size={28} />
@@ -203,7 +204,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
                 <p className="text-xs font-body font-medium text-slate-300 truncate">{displayName}</p>
                 <p className="text-[10px] text-slate-600 truncate">
                   {user?.isAnonymous
-                    ? 'Modo offline'
+                    ? t('layout.offline_mode')
                     : showEmail
                       ? email
                       : email
@@ -211,7 +212,7 @@ function Sidebar({ mobile, onClose }: SidebarProps) {
                         : null}
                 </p>
               </button>
-              <button onClick={logout} className="text-slate-600 hover:text-loss transition-colors p-1" title="Sair">
+              <button onClick={logout} className="text-slate-600 hover:text-loss transition-colors p-1" title={t('layout.logout')}>
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </>
@@ -231,12 +232,21 @@ function MobileHeader() {
   const { logout } = useAuth()
   const { displayName, photoURL } = useProfileDisplay()
   const [profileOpen, setProfileOpen] = useState(false)
+  const t = useT()
 
   return (
-    <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.09] bg-[#0d1117]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
+    <header className="lg:hidden flex items-center justify-between px-4 border-b border-white/[0.025] bg-[#0d1117]/92 backdrop-blur-xl sticky top-0 z-30 h-16">
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <div className="flex items-center gap-3">
-        <img src="../icon.svg" className="w-9 h-9 rounded-xl" alt="LootFlow" />
+        <a
+          href={window.electronAPI?.isElectron ? undefined : '../'}
+          className={cn(
+            "flex items-center gap-3",
+            !window.electronAPI?.isElectron && "cursor-pointer hover:opacity-80 transition-opacity"
+          )}
+        >
+          <img src="../icon.svg" className="w-9 h-9 rounded-xl shrink-0 shadow-[0_0_12px_rgba(74,222,128,0.2)] border border-primary/10" alt="LootFlow" />
+        </a>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-600 font-body">LootFlow</p>
           <span className="font-display font-bold text-slate-100 text-base">
@@ -247,15 +257,16 @@ function MobileHeader() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => setProfileOpen(true)}
-          title="Editar perfil"
+          title={t('layout.edit_profile')}
           className="rounded-full ring-2 ring-transparent hover:ring-primary/50 active:ring-primary/50 transition-all"
         >
           <Avatar photoURL={photoURL} displayName={displayName} size={32} />
         </button>
         <button
           onClick={logout}
-          aria-label="Sair da conta"
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-[#11161d] text-slate-500 transition-colors active:text-loss"
+          aria-label={t('layout.logout')}
+          title={t('layout.logout')}
+          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.025] bg-[#11161d] text-slate-500 transition-colors active:text-loss"
         >
           <LogOut className="h-4 w-4" />
         </button>
@@ -268,9 +279,10 @@ function MobileBottomNav() {
   const currentPage = useStore(s => s.currentPage)
   const setCurrentPage = useStore(s => s.setCurrentPage)
   const navItems = useNavItems()
+  const t = useT()
 
   return (
-    <nav className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.09] bg-[#080b12]/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 backdrop-blur-xl">
+    <nav className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.025] bg-[#080b12]/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 backdrop-blur-xl">
       <div className="grid grid-cols-6 gap-1">
         {navItems.map(item => {
           const Icon = item.icon
@@ -288,7 +300,13 @@ function MobileBottomNav() {
             >
               <Icon className="h-4 w-4" />
               <span className="max-w-full truncate px-0.5 leading-none">
-                {item.id === 'dashboard' ? 'Home' : item.id === 'analytics' ? 'Dados' : item.id === 'settings' ? 'Ajustes' : item.label}
+                {item.id === 'dashboard'
+                  ? t('nav.mobile.dashboard')
+                  : item.id === 'analytics'
+                    ? t('nav.mobile.analytics')
+                    : item.id === 'settings'
+                      ? t('nav.mobile.settings')
+                      : item.label}
               </span>
             </button>
           )
@@ -319,7 +337,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className={cn(
         'hidden lg:flex flex-col shrink-0',
-        'border-r border-white/[0.06]',
+        'border-r border-white/[0.025]',
         'sticky top-0 h-screen overflow-hidden',
         'bg-[#0d1117]/95 backdrop-blur-sm',
         'relative z-10',
@@ -344,7 +362,7 @@ export function Layout({ children }: { children: ReactNode }) {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 z-50 w-72 bg-[#0d1117] border-r border-white/[0.08] flex flex-col"
+              className="lg:hidden fixed left-0 top-0 bottom-0 z-50 w-72 bg-[#0d1117] border-r border-white/[0.025] flex flex-col"
             >
               <Sidebar mobile onClose={() => setSidebarOpen(false)} />
             </motion.aside>

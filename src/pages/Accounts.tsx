@@ -122,55 +122,55 @@ function AccountModal({
       title={editId ? t('accounts.title_edit') : t('accounts.title_add')}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="ghost" onClick={onClose}>{t('accounts.delete_modal_cancel')}</Button>
           <Button variant="primary" onClick={handleSubmit}>
-            {editId ? 'Salvar' : 'Adicionar'}
+            {editId ? t('goals.goal_form_btn_save_edit') : (settings.language === 'en' ? 'Add' : 'Adicionar')}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         <Input
-          label="Nome da conta *"
+          label={t('accounts.input_name')}
           value={form.name}
           onChange={e => f('name', e.target.value)}
-          placeholder="ex: Conta Prime 1"
-          error={errors.name}
+          placeholder={t('accounts.placeholder_name')}
+          error={errors.name ? t('accounts.validation_name') : undefined}
           maxLength={60}
         />
         <Input
-          label="Steam ID / Username (opcional)"
+          label={t('accounts.input_steam_id')}
           value={form.steamId}
           onChange={e => f('steamId', e.target.value)}
-          placeholder="76561198..."
+          placeholder={t('accounts.placeholder_steam_id')}
           maxLength={64}
         />
         <div>
           <Input
-            label={fetchingAvatar ? 'Foto da conta (buscando…)' : 'Foto da conta (opcional)'}
+            label={fetchingAvatar ? t('accounts.input_avatar_fetching') : t('accounts.input_avatar_optional')}
             value={form.avatarUrl.startsWith('data:') ? '' : form.avatarUrl}
             onChange={e => f('avatarUrl', e.target.value)}
-            placeholder="https://... (auto-detectado via Steam ID)"
+            placeholder={t('accounts.placeholder_avatar')}
             maxLength={500}
           />
           <div className="flex items-center gap-2 mt-2">
             <ImageUploadButton onSelect={dataUrl => f('avatarUrl', dataUrl)} />
             {form.avatarUrl.startsWith('data:') && (
               <span className="flex items-center gap-1 text-[11px] text-profit">
-                <Check size={12} /> Foto anexada
+                <Check size={12} /> {t('accounts.avatar_attached')}
               </span>
             )}
           </div>
         </div>
         <Divider />
-        <div className="flex items-center justify-between p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
+        <div className="flex items-center justify-between p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
           <div>
             <p className="text-xs text-slate-500 mb-0.5">{t('accounts.prime_cost')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-base font-mono font-bold text-primary">
                 {formatCurrency(primeCostBRL, currency)}
               </p>
-              <p className="text-xs text-slate-600 font-mono">valor fixo</p>
+              <p className="text-xs text-slate-600 font-mono">{settings.language === 'en' ? 'fixed value' : 'valor fixo'}</p>
             </div>
           </div>
           <div className="text-right">
@@ -178,16 +178,15 @@ function AccountModal({
           </div>
         </div>
         <Textarea
-          label="Nota (opcional)"
+          label={t('accounts.input_note')}
           value={form.note}
           onChange={e => f('note', e.target.value)}
-          placeholder="Detalhes, observações..."
+          placeholder={t('accounts.placeholder_note')}
           maxLength={200}
         />
         <div className="p-3 rounded-xl bg-primary/[0.05] border border-primary/10">
           <p className="text-xs text-slate-500 font-body">
-            Todas as contas são consideradas <strong className="text-slate-300">Prime</strong>, com reset de drops toda <strong className="text-slate-300">terça-feira</strong>.
-            Cada conta pode receber até <strong className="text-slate-300">2 drops por semana</strong>.
+            {t('accounts.prime_notice')}
           </p>
         </div>
       </div>
@@ -200,21 +199,21 @@ function AccountModal({
 function DeleteModal({
   open, onClose, onConfirm, name,
 }: { open: boolean; onClose: () => void; onConfirm: () => void; name: string }) {
+  const t = useT()
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Deletar Conta"
+      title={t('accounts.delete_modal_title')}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button variant="danger" onClick={() => { onConfirm(); onClose() }}>Deletar</Button>
+          <Button variant="ghost" onClick={onClose}>{t('accounts.delete_modal_cancel')}</Button>
+          <Button variant="danger" onClick={() => { onConfirm(); onClose() }}>{t('accounts.delete_modal_confirm')}</Button>
         </>
       }
     >
       <p className="text-sm text-slate-300 font-body">
-        Tem certeza que quer deletar <strong className="text-slate-100">"{name}"</strong>?
-        Todos os drops dessa conta também serão removidos. Essa ação não pode ser desfeita.
+        {t('accounts.delete_modal_desc', { name })}
       </p>
     </Modal>
   )
@@ -232,6 +231,7 @@ interface AccountCardProps {
 }
 
 function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }: AccountCardProps) {
+  const t = useT()
   const paybackProgress = as.isPaidBack ? 100 : (as.totalCashout / as.investedCost) * 100
   return (
     <motion.div
@@ -239,9 +239,9 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.35 }}
     >
-      <Card className={cn('p-5 bg-gradient-to-br from-[#11161d] to-[#141922] relative overflow-hidden transition-all duration-300 hover:border-white/[0.1] hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)]', !as.account.active && 'opacity-50')}>
+      <Card className={cn('p-5 bg-gradient-to-br from-[#11161d] to-[#141922] relative overflow-hidden transition-all duration-300 hover:border-white/[0.05] hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)] border-white/[0.025]', !as.account.active && 'opacity-50')}>
         {as.isPaidBack && (
-          <div className="absolute -inset-px border border-primary/20 rounded-2xl pointer-events-none" />
+          <div className="absolute -inset-px border border-primary/10 rounded-2xl pointer-events-none" />
         )}
 
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -251,12 +251,12 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
                 src={as.account.avatarUrl}
                 alt={as.account.name}
                 referrerPolicy="no-referrer"
-                className="h-8 w-8 rounded-full border border-white/[0.08] object-cover shrink-0 ring-2 ring-white/[0.03]"
+                className="h-8 w-8 rounded-full border border-white/[0.04] object-cover shrink-0 ring-2 ring-white/[0.02]"
               />
             ) : (
               <div
                 className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 uppercase text-[10px] font-bold text-slate-200"
-                style={{ backgroundColor: as.account.color ?? '#38bdf8', border: `1px solid ${as.account.color ?? '#38bdf8'}30` }}
+                style={{ backgroundColor: as.account.color ?? '#38bdf8', border: `1px solid ${as.account.color ?? '#38bdf8'}15` }}
               >
                 {as.account.name.slice(0, 2)}
               </div>
@@ -268,15 +268,16 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
               {as.account.steamId ? (
                 <p className="text-[9px] text-slate-500 font-mono mt-0.5 truncate max-w-[120px] sm:max-w-[160px]">{as.account.steamId}</p>
               ) : (
-                <p className="text-[9px] text-slate-600 font-body mt-0.5">Sem Steam ID</p>
+                <p className="text-[9px] text-slate-600 font-body mt-0.5">{t('accounts.no_steam_id')}</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={onToggle}
-              className="text-slate-500 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-white/[0.02]"
-              title={as.account.active ? 'Desativar' : 'Ativar'}
+              className="text-slate-500 hover:text-primary transition-colors p-2.5 rounded-lg hover:bg-white/[0.02]"
+              aria-label={as.account.active ? t('accounts.btn_deactivate') : t('accounts.btn_activate')}
+              title={as.account.active ? t('accounts.btn_deactivate') : t('accounts.btn_activate')}
             >
               {as.account.active
                 ? <ToggleRight className="w-5 h-5 text-primary" size={20} />
@@ -285,17 +286,17 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
             </button>
             <button
               onClick={onEdit}
-              aria-label="Editar conta"
-              title="Editar"
-              className="text-slate-500 hover:text-slate-200 p-1.5 rounded-lg hover:bg-white/[0.02] transition-colors"
+              aria-label={t('accounts.btn_edit')}
+              title={t('accounts.btn_edit')}
+              className="text-slate-500 hover:text-slate-200 p-2.5 rounded-lg hover:bg-white/[0.02] transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={onDelete}
-              aria-label="Deletar conta"
-              title="Deletar"
-              className="text-slate-500 hover:text-loss p-1.5 rounded-lg hover:bg-loss/10 transition-colors"
+              aria-label={t('accounts.btn_delete')}
+              title={t('accounts.btn_delete')}
+              className="text-slate-500 hover:text-loss p-2.5 rounded-lg hover:bg-loss/10 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -303,19 +304,19 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-2.5 mb-4 p-2.5 rounded-xl bg-[#0e121a]/80 border border-white/[0.03]">
+        <div className="grid grid-cols-3 gap-2.5 mb-4 p-2.5 rounded-xl bg-[#0e121a]/80 border border-white/[0.02]">
           <div>
-            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">Drops</p>
+            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">{t('dash.rankings.col_drops')}</p>
             <p className="font-mono text-sm font-bold text-slate-200 mt-0.5">{as.totalDrops}</p>
           </div>
           <div>
-            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">Cashout</p>
+            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">{t('dash.rankings.col_cashout')}</p>
             <p className="font-mono text-sm font-bold text-profit mt-0.5">
               {formatCurrency(as.totalCashout, currency)}
             </p>
           </div>
           <div>
-            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">ROI</p>
+            <p className="text-[9px] text-slate-500 font-semibold font-body uppercase tracking-wider">{t('dash.rankings.col_roi')}</p>
             <p className={cn('font-mono text-sm font-bold mt-0.5', as.roiPercent > 0 ? 'text-profit' : as.roiPercent < 0 ? 'text-loss' : 'text-slate-400')}>
               {as.roiPercent === Infinity ? '∞' : `${as.roiPercent >= 0 ? '+' : ''}${formatPercent(as.roiPercent, 0)}`}
             </p>
@@ -325,11 +326,11 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
         {/* Payback */}
         <div>
           <div className="flex justify-between text-[10px] font-body mb-1.5">
-            <span className="text-slate-500 font-medium">Payback</span>
+            <span className="text-slate-500 font-medium">{t('accounts.payback')}</span>
             <span className={cn('font-semibold font-mono', as.isPaidBack ? 'text-profit' : 'text-slate-400')}>
               {as.isPaidBack
-                ? '✓ 100% Pago'
-                : `${paybackProgress.toFixed(0)}% (${formatCurrency(as.remainingPayback, currency)} restam)`
+                ? t('accounts.payback_paid')
+                : t('accounts.payback_remaining', { progress: paybackProgress.toFixed(0), remaining: formatCurrency(as.remainingPayback, currency) })
               }
             </span>
           </div>
@@ -340,7 +341,7 @@ function AccountCard({ stats: as, currency, onEdit, onDelete, onToggle, index }:
         </div>
 
         {as.account.note && (
-          <p className="text-[11px] text-slate-500 font-body mt-3 italic bg-white/[0.01] p-2 rounded-lg border border-white/[0.03]">"{as.account.note}"</p>
+          <p className="text-[11px] text-slate-500 font-body mt-3 italic bg-white/[0.01] p-2 rounded-lg border border-white/[0.02]">"{as.account.note}"</p>
         )}
       </Card>
     </motion.div>
@@ -392,14 +393,14 @@ export function Accounts() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-100">Contas CS2</h1>
+          <h1 className="font-display text-2xl font-bold text-slate-100">{t('accounts.title')}</h1>
           <p className="text-sm text-slate-500 font-body mt-0.5">
-            {accounts.length} total · {accounts.filter(a => a.active).length} ativas
+            {accounts.length} {t('accounts.total_badge')} · {accounts.filter(a => a.active).length} {t('accounts.active_badge')}
           </p>
         </div>
         <Button variant="primary" onClick={() => setShowAdd(true)} className="shrink-0">
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Adicionar Conta</span>
+          <span className="hidden sm:inline">{t('dash.empty.action_add_account')}</span>
         </Button>
       </div>
 
@@ -408,22 +409,22 @@ export function Accounts() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {[
             {
-              label: 'Total drops',
+              label: t('accounts.col_total_drops'),
               value: accountStats.reduce((s, a) => s + a.totalDrops, 0).toString(),
               icon: <Package className="w-4 h-4 text-gold" />,
             },
             {
-              label: 'Cashout total',
+              label: t('accounts.col_total_cashout'),
               value: formatCurrency(accountStats.reduce((s, a) => s + a.totalCashout, 0), currency),
               icon: <TrendingUp className="w-4 h-4 text-profit" />,
             },
             {
-              label: 'Contas pagas',
+              label: t('accounts.col_paid_accounts'),
               value: `${accountStats.filter(a => a.isPaidBack).length}/${accounts.length}`,
               icon: <CheckCircle2 className="w-4 h-4 text-primary" />,
             },
           ].map(item => (
-            <Card key={item.label} className="p-4 flex items-center gap-3">
+            <Card key={item.label} className="p-4 flex items-center gap-3 border-white/[0.025]">
               <div className="w-9 h-9 rounded-xl bg-[#131c2e] flex items-center justify-center shrink-0">
                 {item.icon}
               </div>
@@ -444,7 +445,7 @@ export function Accounts() {
           description={t('accounts.empty_desc')}
           action={
             <Button variant="primary" onClick={() => setShowAdd(true)}>
-              <Plus className="w-4 h-4" /> Adicionar Conta
+              <Plus className="w-4 h-4" /> {t('dash.empty.action_add_account')}
             </Button>
           }
         />
@@ -466,17 +467,17 @@ export function Accounts() {
 
           {/* Recently Added Accounts Section */}
           {recentlyAdded.length > 0 && (
-            <div className="mt-12 border-t border-white/[0.06] pt-8">
-              <h2 className="font-display text-base font-bold text-slate-200 mb-4 tracking-wide">Contas Adicionadas Recentemente</h2>
+            <div className="mt-12 border-t border-white/[0.03] pt-8">
+              <h2 className="font-display text-base font-bold text-slate-200 mb-4 tracking-wide">{t('accounts.recently_added')}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {recentlyAdded.map(as => (
-                  <div key={`recent-${as.account.id}`} className="p-3.5 rounded-xl bg-white/[0.01] border border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.02] flex items-center justify-between gap-3 transition-all duration-200">
+                  <div key={`recent-${as.account.id}`} className="p-3.5 rounded-xl bg-white/[0.01] border border-white/[0.025] hover:border-white/[0.04] hover:bg-white/[0.02] flex items-center justify-between gap-3 transition-all duration-200">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {as.account.avatarUrl ? (
                         <img
                           src={as.account.avatarUrl}
                           alt={as.account.name}
-                          className="h-7 w-7 rounded-full object-cover shrink-0 border border-white/[0.06]"
+                          className="h-7 w-7 rounded-full object-cover shrink-0 border border-white/[0.04]"
                         />
                       ) : (
                         <div
@@ -488,12 +489,14 @@ export function Accounts() {
                       )}
                       <div className="min-w-0">
                         <p className="font-body text-xs font-semibold text-slate-200 truncate">{as.account.name}</p>
-                        <p className="text-[9px] text-slate-500 font-body mt-0.5">Criada em {new Date(as.account.createdAt).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-[9px] text-slate-500 font-body mt-0.5">
+                          {t('accounts.created_at')} {settings.language === 'en' ? new Date(as.account.createdAt).toLocaleDateString('en-US') : new Date(as.account.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
                       <Badge color={as.isPaidBack ? 'green' : 'default'}>
-                        {as.isPaidBack ? 'Paga' : `${(as.totalCashout / as.investedCost * 100).toFixed(0)}% payback`}
+                        {as.isPaidBack ? t('accounts.paid') : `${(as.totalCashout / as.investedCost * 100).toFixed(0)}% ${t('accounts.payback_suffix')}`}
                       </Badge>
                     </div>
                   </div>
@@ -521,7 +524,7 @@ export function Accounts() {
         onConfirm={() => {
           if (deleteTarget) {
             deleteAccount(deleteTarget.id)
-            toast.success('Conta deletada')
+            toast.success(t('accounts.toast_deleted'))
           }
         }}
         name={deleteTarget?.name ?? ''}

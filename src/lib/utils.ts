@@ -1,5 +1,5 @@
 import { format, parseISO, startOfDay } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { ptBR, enUS } from 'date-fns/locale'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -7,6 +7,19 @@ import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+// ─── Language Helper ─────────────────────────────────────────────────────────
+
+export function getActiveLanguage(): 'pt' | 'en' {
+  try {
+    const rawSettings = localStorage.getItem('lootflow_settings')
+    if (rawSettings) {
+      const settings = JSON.parse(rawSettings)
+      return settings.language ?? 'pt'
+    }
+  } catch {}
+  return 'pt'
 }
 
 // ─── Week System (CS2 resets every Tuesday) ──────────────────────────────────
@@ -46,7 +59,8 @@ export function getWeekRange(weekId: string): { start: Date; end: Date } {
 export function getWeekLabel(weekId: string): string {
   try {
     const { start, end } = getWeekRange(weekId)
-    return `${format(start, 'dd/MM', { locale: ptBR })} – ${format(end, 'dd/MM/yy', { locale: ptBR })}`
+    const lang = getActiveLanguage()
+    return `${format(start, 'dd/MM', { locale: lang === 'en' ? enUS : ptBR })} – ${format(end, 'dd/MM/yy', { locale: lang === 'en' ? enUS : ptBR })}`
   } catch {
     return weekId
   }
@@ -138,7 +152,8 @@ export function parseSteamPrice(priceStr: string | undefined): number {
 
 export function formatDate(isoDate: string): string {
   try {
-    return format(parseISO(isoDate), 'dd/MM/yyyy', { locale: ptBR })
+    const lang = getActiveLanguage()
+    return format(parseISO(isoDate), 'dd/MM/yyyy', { locale: lang === 'en' ? enUS : ptBR })
   } catch {
     return isoDate
   }
@@ -150,9 +165,14 @@ export function formatDateRelative(isoDate: string): string {
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    if (diffDays === 0) return 'Hoje'
-    if (diffDays === 1) return 'Ontem'
-    if (diffDays < 7) return `${diffDays} dias atrás`
+    const lang = getActiveLanguage()
+    if (diffDays === 0) return lang === 'en' ? 'Today' : 'Hoje'
+    if (diffDays === 1) return lang === 'en' ? 'Yesterday' : 'Ontem'
+    if (diffDays < 7) {
+      return lang === 'en'
+        ? `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
+        : `${diffDays} dias atrás`
+    }
     return formatDate(isoDate)
   } catch {
     return isoDate

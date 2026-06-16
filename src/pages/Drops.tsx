@@ -10,6 +10,7 @@ import { Button, Card, Input, Modal, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
 import { useT } from '../hooks/useT'
+import toast from 'react-hot-toast'
 import type { Drop, SteamItem, WearCondition } from '../lib/types'
 
 // ─── Item type detection ──────────────────────────────────────────────────────
@@ -107,6 +108,7 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
   const [results, setResults] = useState<Array<{ name: string; hashName: string; imageUrl: string; sellPrice?: number }>>([])
   const [searching, setSearching] = useState(false)
   const [open, setOpen] = useState(false)
+  const t = useT()
 
   const handleSearch = useCallback(async (q: string) => {
     setQuery(q)
@@ -146,9 +148,9 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
   const cashout = parseFloat(steamValue) > 0 ? parseFloat(steamValue) * cashoutRate / 100 : 0
 
   return (
-    <div className="p-4 rounded-xl bg-[#0d1117] border border-white/[0.08] space-y-3">
+    <div className="p-4 rounded-xl bg-[#0d1117] border border-white/[0.04] space-y-3">
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-        {label} {optional && <span className="text-slate-600 normal-case font-normal">(opcional)</span>}
+        {label} {optional && <span className="text-slate-600 normal-case font-normal">{t('drops.register_modal_input_item_optional')}</span>}
       </p>
 
       {value ? (
@@ -174,19 +176,19 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
             onChange={e => handleSearch(e.target.value)}
             onFocus={() => setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 200)}
-            placeholder="Pesquisar item CS2..."
+            placeholder={t('drops.register_modal_placeholder_search_item')}
             autoComplete="off"
             maxLength={80}
-            className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-9 pr-4 focus:outline-none focus:border-primary/60 transition-all placeholder:text-slate-600"
+            className="w-full h-9 rounded-xl border border-white/[0.05] bg-[#111827] text-slate-200 text-sm pl-9 pr-4 focus:outline-none focus:border-primary/60 transition-all placeholder:text-slate-600"
           />
           {searching && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-primary/60 border-t-transparent rounded-full animate-spin" />
           )}
           {open && results.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[#0d1117] border border-white/[0.1] rounded-xl overflow-hidden shadow-2xl">
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[#0d1117] border border-white/[0.04] rounded-xl overflow-hidden shadow-2xl">
               {results.map((r, i) => (
                 <button key={i} onMouseDown={() => handleSelect(r)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#111827] text-left transition-colors border-b border-white/[0.04] last:border-0">
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#111827] text-left transition-colors border-b border-white/[0.02] last:border-0">
                   <div className="w-8 h-8 rounded-lg bg-[#111827] flex-shrink-0 overflow-hidden flex items-center justify-center">
                     <SteamItemImage imageUrl={r.imageUrl} alt={r.name} size={32} />
                   </div>
@@ -207,8 +209,8 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
           step="0.01"
           value={steamValue}
           onChange={e => onValueChange(e.target.value)}
-          placeholder={`Valor bruto (${currency === 'USD' ? '$' : 'R$'})`}
-          className="flex-1 h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60 transition-all placeholder:text-slate-600"
+          placeholder={`${t('drops.placeholder_value')} (${currency === 'USD' ? '$' : 'R$'})`}
+          className="flex-1 h-8 rounded-lg border border-white/[0.05] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60 transition-all placeholder:text-slate-600"
         />
         {parseFloat(steamValue) > 0 && (
           <span className="text-xs text-profit font-mono whitespace-nowrap">
@@ -223,6 +225,7 @@ function ItemPicker({ label, value, steamValue, onItemChange, onValueChange, cas
 // ─── Float Input ──────────────────────────────────────────────────────────────
 
 function FloatInput({ float, onFloatChange }: { float: string; onFloatChange: (f: string) => void }) {
+  const t = useT()
   return (
     <div className="flex items-center gap-2 px-1">
       <input
@@ -232,8 +235,8 @@ function FloatInput({ float, onFloatChange }: { float: string; onFloatChange: (f
         step="0.0001"
         value={float}
         onChange={e => onFloatChange(e.target.value)}
-        placeholder="Float (opcional, ex: 0.1234)"
-        className="flex-1 h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+        placeholder={t('drops.register_modal_placeholder_float')}
+        className="flex-1 h-8 rounded-lg border border-white/[0.05] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
       />
       {float && parseFloat(float) >= 0 && parseFloat(float) <= 1 && (
         <span className="text-[11px] font-mono text-slate-400">{parseFloat(float).toFixed(4)}</span>
@@ -275,14 +278,16 @@ function DropModal({ onSave, onClose }: DropModalProps) {
     ? getWeekIdForDate(new Date(manualDate + 'T12:00:00'))
     : 'unknown'
 
-  const existingDrops = drops.filter(d => d.accountId === accountId && d.weekId === weekId)
-  const slotsLeft = 2 - existingDrops.length
+  const existingDrops = weekId === 'unknown'
+    ? []
+    : drops.filter(d => d.accountId === accountId && d.weekId === weekId)
+  const slotsLeft = weekId === 'unknown' ? 2 : 2 - existingDrops.length
 
   function handleSave() {
     setError('')
-    if (!accountId) { setError('Selecione uma conta'); return }
-    if (!item1 && !item2) { setError('Registre pelo menos 1 item'); return }
-    if (slotsLeft <= 0) { setError('Essa conta já tem 2 drops nessa semana'); return }
+    if (!accountId) { setError(t('drops.register_modal_validation_account')); return }
+    if (!item1 && !item2) { setError(t('drops.register_modal_validation_item')); return }
+    if (slotsLeft <= 0) { setError(t('drops.register_modal_validation_limit')); return }
 
     const rate = settings.cashoutRate / 100
     const toSave: Array<Omit<Drop, 'id' | 'createdAt'>> = []
@@ -332,9 +337,9 @@ function DropModal({ onSave, onClose }: DropModalProps) {
 
   const footer = (
     <div className="flex gap-3 w-full">
-      <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
+      <Button variant="ghost" onClick={onClose} className="flex-1">{t('accounts.delete_modal_cancel')}</Button>
       <Button onClick={handleSave} className="flex-1" disabled={slotsLeft <= 0}>
-        Registrar
+        {t('dash.register_short')}
       </Button>
     </div>
   )
@@ -344,11 +349,11 @@ function DropModal({ onSave, onClose }: DropModalProps) {
       <div className="space-y-4">
         {/* Conta */}
         <div>
-          <label className="text-xs text-slate-400 block mb-1.5">Conta *</label>
+          <label className="text-xs text-slate-400 block mb-1.5">{t('drops.register_modal_input_account')}</label>
           <select
             value={accountId}
             onChange={e => { setAccountId(e.target.value); setItem1(null); setValue1(''); setFloat1(''); setItem2(null); setValue2(''); setFloat2('') }}
-            className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+            className="w-full h-10 rounded-xl border border-white/[0.05] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
           >
             {activeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
@@ -356,12 +361,12 @@ function DropModal({ onSave, onClose }: DropModalProps) {
 
         {/* Quando foi o drop */}
         <div>
-          <label className="text-xs text-slate-400 block mb-2">Quando foi?</label>
+          <label className="text-xs text-slate-400 block mb-2">{t('drops.register_modal_input_when')}</label>
           <div className="grid grid-cols-3 gap-2 mb-2">
             {([
-              { mode: 'this-week' as DateMode, icon: Zap,        label: 'Esta semana' },
-              { mode: 'manual'    as DateMode, icon: Calendar,   label: 'Escolher data' },
-              { mode: 'unknown'   as DateMode, icon: HelpCircle, label: 'Não lembro' },
+              { mode: 'this-week' as DateMode, icon: Zap,        label: t('drops.register_modal_when_this_week') },
+              { mode: 'manual'    as DateMode, icon: Calendar,   label: t('drops.register_modal_when_manual') },
+              { mode: 'unknown'   as DateMode, icon: HelpCircle, label: t('drops.register_modal_when_unknown') },
             ] as const).map(({ mode, icon: Icon, label }) => (
               <button
                 key={mode}
@@ -370,7 +375,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
                 className={`flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-medium transition-all ${
                   dateMode === mode
                     ? 'border-primary/60 bg-primary/10 text-primary'
-                    : 'border-white/[0.08] bg-[#111827] text-slate-400 hover:border-white/[0.16] hover:text-slate-200'
+                    : 'border-white/[0.04] bg-[#111827] text-slate-400 hover:border-white/[0.08] hover:text-slate-200'
                 }`}
               >
                 <Icon size={15} />
@@ -389,17 +394,17 @@ function DropModal({ onSave, onClose }: DropModalProps) {
                 value={manualDate}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={e => setManualDate(e.target.value)}
-                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+                className="w-full h-9 rounded-xl border border-white/[0.05] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
               />
               {manualDate && (
                 <p className="text-xs text-slate-500 px-1">
-                  Semana: {getWeekLabel(getWeekIdForDate(new Date(manualDate + 'T12:00:00')))}
+                  {settings.language === 'en' ? 'Week:' : 'Semana:'} {getWeekLabel(getWeekIdForDate(new Date(manualDate + 'T12:00:00')))}
                 </p>
               )}
             </div>
           )}
           {dateMode === 'unknown' && (
-            <p className="text-xs text-slate-500 px-1">Drop salvo sem data — não entra nos gráficos semanais.</p>
+            <p className="text-xs text-slate-500 px-1">{t('drops.register_modal_when_unknown_hint')}</p>
           )}
         </div>
 
@@ -407,12 +412,12 @@ function DropModal({ onSave, onClose }: DropModalProps) {
         {slotsLeft <= 0 ? (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-loss/10 border border-loss/20 text-loss text-sm">
             <AlertCircle size={14} />
-            Essa conta já tem 2 drops nessa semana.
+            {t('drops.register_modal_limit_reached')}
           </div>
         ) : slotsLeft === 1 && (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-gold/10 border border-gold/20 text-gold text-xs">
             <AlertCircle size={13} />
-            Já tem 1 drop nessa semana — só mais 1 disponível.
+            {t('drops.register_modal_limit_one')}
           </div>
         )}
 
@@ -420,7 +425,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
         {slotsLeft > 0 && (
           <>
             <ItemPicker
-              label="Item 1"
+              label={t('drops.register_modal_input_item_label', { n: 1 })}
               value={item1}
               steamValue={value1}
               onItemChange={i => { setItem1(i); if (!i) setFloat1('') }}
@@ -434,7 +439,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
             {slotsLeft >= 2 && existingDrops.length === 0 && (
               <>
                 <ItemPicker
-                  label="Item 2"
+                  label={t('drops.register_modal_input_item_label', { n: 2 })}
                   optional
                   value={item2}
                   steamValue={value2}
@@ -454,12 +459,12 @@ function DropModal({ onSave, onClose }: DropModalProps) {
         {/* Summary */}
         {totalCashout > 0 && (
           <div className="p-3 rounded-xl bg-profit/10 border border-profit/20">
-            <p className="text-xs text-slate-400 mb-1">Cashout estimado total</p>
+            <p className="text-xs text-slate-400 mb-1">{t('drops.register_modal_est_cashout')}</p>
             <p className="text-profit font-mono font-bold text-base">
               {formatCurrency(totalCashout, currency)}
             </p>
             <p className="text-xs text-slate-500 mt-0.5">
-              com taxa de {settings.cashoutRate}%
+              {t('drops.register_modal_rate_hint', { rate: settings.cashoutRate })}
             </p>
           </div>
         )}
@@ -491,17 +496,17 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
   const parsed = parseFloat(value)
   const valid = Number.isFinite(parsed) && parsed >= 0
   return (
-    <Modal open onClose={onClose} title="Registrar Venda">
+    <Modal open onClose={onClose} title={t('drops.sell_modal_title')}>
       <div className="space-y-4">
-        <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.08]">
+        <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
           <p className="text-sm font-medium text-white">{drop.item?.name || '—'}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Bruto: {formatCurrency(drop.steamValue, currency)}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{t('drops.gross')}: {formatCurrency(drop.steamValue, currency)}</p>
         </div>
         <Input label={`${t('drops.received_value')} (${currency === 'USD' ? '$' : 'R$'})`} type="number" min="0" step="0.01"
           value={value} onChange={e => setValue(e.target.value)}
-          error={!valid && value !== '' ? 'Informe um valor válido' : undefined} />
+          error={!valid && value !== '' ? t('drops.sell_modal_validation_value') : undefined} />
         <div className="flex gap-3">
-          <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button variant="ghost" onClick={onClose} className="flex-1">{t('accounts.delete_modal_cancel')}</Button>
           <Button variant="success" disabled={!valid}
             onClick={() => {
               if (valid) {
@@ -510,7 +515,7 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
                 onSave(drop.id, parseFloat(finalValue.toFixed(2)))
               }
             }} className="flex-1">
-            Confirmar Venda
+            {t('drops.sell_modal_confirm')}
           </Button>
         </div>
       </div>
@@ -555,9 +560,9 @@ function EditDropModal({ drop, onSave, onClose }: {
 
   function handleSave() {
     setError('')
-    if (!accountId) { setError('Selecione uma conta'); return }
+    if (!accountId) { setError(t('drops.register_modal_validation_account')); return }
     let sv = parseFloat(steamValue)
-    if (isNaN(sv) || sv < 0) { setError('Insira um valor bruto válido'); return }
+    if (isNaN(sv) || sv < 0) { setError(t('drops.edit_modal_validation_gross')); return }
 
     const calculatedWeekId = dateMode === 'this-week'
       ? getCurrentWeekId()
@@ -598,28 +603,28 @@ function EditDropModal({ drop, onSave, onClose }: {
   }
 
   return (
-    <Modal open onClose={onClose} title="Editar Drop" size="md">
+    <Modal open onClose={onClose} title={t('drops.edit_modal_title')} size="md">
       <div className="space-y-4">
         {/* Conta */}
         <div>
-          <label className="text-xs text-slate-400 block mb-1.5 font-medium uppercase tracking-wider">Conta *</label>
+          <label className="text-xs text-slate-400 block mb-1.5 font-medium uppercase tracking-wider">{t('drops.register_modal_input_account')}</label>
           <select
             value={accountId}
             onChange={e => setAccountId(e.target.value)}
-            className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+            className="w-full h-10 rounded-xl border border-white/[0.05] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
           >
-            {accounts.map(a => <option key={a.id} value={a.id}>{a.name} {!a.active ? '(inativa)' : ''}</option>)}
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.name} {!a.active ? `(${t('dash.rankings.status_inactive')})` : ''}</option>)}
           </select>
         </div>
 
         {/* Quando foi o drop */}
         <div>
-          <label className="text-xs text-slate-400 block mb-2 font-medium uppercase tracking-wider">Quando foi?</label>
+          <label className="text-xs text-slate-400 block mb-2 font-medium uppercase tracking-wider">{t('drops.register_modal_input_when')}</label>
           <div className="grid grid-cols-3 gap-2 mb-2">
             {([
-              { mode: 'this-week' as DateMode, icon: Zap,        label: 'Esta semana' },
-              { mode: 'manual'    as DateMode, icon: Calendar,   label: 'Escolher data' },
-              { mode: 'unknown'   as DateMode, icon: HelpCircle, label: 'Não lembro' },
+              { mode: 'this-week' as DateMode, icon: Zap,        label: t('drops.register_modal_when_this_week') },
+              { mode: 'manual'    as DateMode, icon: Calendar,   label: t('drops.register_modal_when_manual') },
+              { mode: 'unknown'   as DateMode, icon: HelpCircle, label: t('drops.register_modal_when_unknown') },
             ] as const).map(({ mode, icon: Icon, label }) => (
               <button
                 key={mode}
@@ -628,7 +633,7 @@ function EditDropModal({ drop, onSave, onClose }: {
                 className={`flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-medium transition-all ${
                   dateMode === mode
                     ? 'border-primary/60 bg-primary/10 text-primary'
-                    : 'border-white/[0.08] bg-[#111827] text-slate-400 hover:border-white/[0.16] hover:text-slate-200'
+                    : 'border-white/[0.04] bg-[#111827] text-slate-400 hover:border-white/[0.08] hover:text-slate-200'
                 }`}
               >
                 <Icon size={15} />
@@ -647,24 +652,24 @@ function EditDropModal({ drop, onSave, onClose }: {
                 value={manualDate}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={e => setManualDate(e.target.value)}
-                className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+                className="w-full h-9 rounded-xl border border-white/[0.05] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
               />
               {manualDate && (
                 <p className="text-xs text-slate-500 px-1">
-                  Semana: {getWeekLabel(getWeekIdForDate(new Date(manualDate + 'T12:00:00')))}
+                  {settings.language === 'en' ? 'Week:' : 'Semana:'} {getWeekLabel(getWeekIdForDate(new Date(manualDate + 'T12:00:00')))}
                 </p>
               )}
             </div>
           )}
           {dateMode === 'unknown' && (
-            <p className="text-xs text-slate-500 px-1">Drop salvo sem data — não entra nos gráficos semanais.</p>
+            <p className="text-xs text-slate-500 px-1">{t('drops.register_modal_when_unknown_hint')}</p>
           )}
         </div>
 
         {/* Valores */}
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label={`Valor Bruto (${currency === 'USD' ? '$' : 'R$'})`}
+            label={t('drops.edit_modal_input_gross', { currency: currency === 'USD' ? '$' : 'R$' })}
             type="number"
             min="0"
             step="0.01"
@@ -672,12 +677,12 @@ function EditDropModal({ drop, onSave, onClose }: {
             onChange={e => setSteamValue(e.target.value)}
           />
           <Input
-            label={`Cashout (${currency === 'USD' ? '$' : 'R$'})`}
+            label={t('drops.edit_modal_input_cashout', { currency: currency === 'USD' ? '$' : 'R$' })}
             type="number"
             min="0"
             step="0.01"
             value={cashoutValue}
-            placeholder="Opcional"
+            placeholder={settings.language === 'en' ? 'Optional' : 'Opcional'}
             onChange={e => setCashoutValue(e.target.value)}
           />
         </div>
@@ -685,7 +690,7 @@ function EditDropModal({ drop, onSave, onClose }: {
         {/* Float */}
         {detectItemType(drop.item?.name ?? '') === 'weapon' && (
           <Input
-            label="Float (opcional)"
+            label={t('drops.edit_modal_input_float')}
             type="number"
             min="0"
             max="1"
@@ -702,9 +707,9 @@ function EditDropModal({ drop, onSave, onClose }: {
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button variant="ghost" onClick={onClose} className="flex-1">{t('accounts.delete_modal_cancel')}</Button>
           <Button onClick={handleSave} className="flex-1">
-            Salvar Alterações
+            {t('drops.edit_modal_save')}
           </Button>
         </div>
       </div>
@@ -748,6 +753,7 @@ function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate,
 }) {
   const cashout = drop.cashoutValue ?? drop.steamValue * cashoutRate / 100
   const rarity = getRarityColor(drop.item?.name ?? '', drop.steamValue)
+  const t = useT()
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -755,48 +761,48 @@ function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate,
       transition={{ delay: Math.min(index * 0.04, 0.4), duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className="relative pl-6 sm:pl-8 group"
     >
-      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-6 sm:w-8 h-px bg-white/[0.08] group-hover:bg-primary/20 transition-colors" />
+      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-6 sm:w-8 h-px bg-white/[0.04] group-hover:bg-primary/20 transition-colors" />
       <span
         className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-white/20 transition-all duration-300 group-hover:scale-125"
         style={{ backgroundColor: rarity.color }}
       />
 
       <Card className={cn(
-        'p-4 relative overflow-hidden transition-all duration-300 hover:border-white/[0.12]',
+        'p-4 relative overflow-hidden transition-all duration-300 hover:border-white/[0.06] border-white/[0.025]',
         rarity.border, rarity.glow, rarity.bg
       )}>
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             {accountAvatar ? (
-              <img src={accountAvatar} alt={accountName} className="w-5 h-5 rounded-full object-cover border border-white/[0.08]" />
+              <img src={accountAvatar} alt={accountName} className="w-5 h-5 rounded-full object-cover border border-white/[0.04]" />
             ) : (
-              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-slate-200 border border-white/[0.08] uppercase" style={{ backgroundColor: accountColor }}>
+              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-slate-200 border border-white/[0.04] uppercase" style={{ backgroundColor: accountColor }}>
                 {accountName.slice(0, 2)}
               </div>
             )}
             <span className="text-xs text-slate-400 font-body">{accountName}</span>
-            <span className="text-[9px] bg-white/[0.03] border border-white/[0.06] text-slate-500 px-1.5 py-0.5 rounded-md font-body">Drop {drop.dropNumber}</span>
-            {drop.sold && <span className="text-[9px] bg-profit/15 text-profit px-1.5 py-0.5 rounded-full font-semibold font-body">Vendido</span>}
+            <span className="text-[9px] bg-white/[0.03] border border-white/[0.03] text-slate-500 px-1.5 py-0.5 rounded-md font-body">{t('dash.rankings.col_drops')} {drop.dropNumber}</span>
+            {drop.sold && <span className="text-[9px] bg-profit/15 text-profit px-1.5 py-0.5 rounded-full font-semibold font-body">{t('common.sold')}</span>}
           </div>
-          <div className="flex gap-1 items-center flex-shrink-0">
+          <div className="flex gap-1.5 items-center flex-shrink-0">
             {!drop.sold && (
               <button onClick={onSell}
-                className="text-[10px] font-semibold text-slate-400 hover:text-profit hover:bg-profit/10 px-2 py-1 rounded-lg transition-colors font-body">
-                Vender
+                className="text-[10px] font-semibold text-slate-400 hover:text-profit hover:bg-profit/10 px-3 py-2 rounded-lg transition-colors font-body">
+                {t('drops.btn_sell')}
               </button>
             )}
-            <button onClick={onEdit} aria-label="Editar drop"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.03] transition-colors">
+            <button onClick={onEdit} aria-label={t('drops.edit_modal_title')}
+              className="p-2.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.03] transition-colors">
               <Edit2 size={12} />
             </button>
-            <button onClick={onDelete} aria-label="Deletar drop"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-loss hover:bg-loss/10 transition-colors">
+            <button onClick={onDelete} aria-label={t('accounts.btn_delete')}
+              className="p-2.5 rounded-lg text-slate-500 hover:text-loss hover:bg-loss/10 transition-colors">
               <Trash2 size={12} />
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117]/60 border border-white/[0.03] mb-3">
-          <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/[0.04]">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0d1117]/60 border border-white/[0.02] mb-3">
+          <div className="w-10 h-10 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/[0.03]">
             <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={40} />
           </div>
           <div className="min-w-0 flex-1">
@@ -812,7 +818,7 @@ function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate,
             <p className="font-mono text-xs sm:text-sm font-bold text-profit mt-0.5">{formatCurrency(cashout, currency)}</p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-slate-500 font-body">Bruto</p>
+            <p className="text-[10px] text-slate-500 font-body">{t('drops.gross')}</p>
             <p className="font-mono text-xs font-semibold text-slate-400 mt-0.5">{formatCurrency(drop.steamValue, currency)}</p>
           </div>
         </div>
@@ -826,26 +832,27 @@ function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate,
 function WeekDivider({ weekId, cashout, count, isCurrentWeek, currency }: {
   weekId: string; cashout: number; count: number; isCurrentWeek: boolean; currency: 'BRL' | 'USD'
 }) {
+  const t = useT()
   const label = weekId === 'unknown'
-    ? 'Sem data'
+    ? t('drops.timeline_no_date')
     : isCurrentWeek
-    ? `Ciclo Ativo · ${getWeekLabel(weekId)}`
+    ? `${t('drops.timeline_active_cycle')} · ${getWeekLabel(weekId)}`
     : getWeekLabel(weekId)
 
   return (
     <div className="relative pl-6 sm:pl-8 py-2">
-      <span className="absolute left-[-4.5px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#0d1117] border-2 border-white/30" />
+      <span className="absolute left-[-4.5px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#0d1117] border-2 border-white/20" />
       
       <div className="flex items-center gap-3">
         <span className="text-xs font-bold text-slate-300 tracking-wide font-body uppercase">{label}</span>
-        <span className="h-px flex-1 bg-white/[0.04]" />
+        <span className="h-px flex-1 bg-white/[0.02]" />
         <div className="flex items-center gap-2 shrink-0">
           {cashout > 0 && weekId !== 'unknown' && (
-            <span className="text-xs text-profit font-mono font-bold bg-profit/5 border border-profit/10 px-2 py-0.5 rounded-md font-body">
+            <span className="text-xs text-profit font-mono font-bold bg-profit/5 border border-profit/5 px-2 py-0.5 rounded-md font-body">
               {formatCurrency(cashout, currency)}
             </span>
           )}
-          <span className="text-[10px] text-slate-500 font-body">{count} drop{count !== 1 ? 's' : ''}</span>
+          <span className="text-[10px] text-slate-500 font-body">{count} {count === 1 ? t('drops.timeline_drop_suffix') : t('drops.timeline_drops_suffix')}</span>
         </div>
       </div>
     </div>
@@ -865,21 +872,22 @@ interface MinorDropsTableProps {
 }
 
 function MinorDropsTable({ drops, accounts, currency, cashoutRate, onEdit, onDelete, onSell }: MinorDropsTableProps) {
+  const t = useT()
   return (
     <div className="relative pl-6 sm:pl-8 mt-2">
-      <Card className="bg-white/[0.01] border-white/[0.03] overflow-hidden">
+      <Card className="bg-white/[0.01] border-white/[0.02] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="text-[9px] text-slate-500 font-bold uppercase tracking-wider border-b border-white/[0.03] font-body bg-[#11161d]/20">
-                <th className="py-2.5 px-4">Conta</th>
-                <th className="py-2.5 px-3">Item</th>
-                <th className="py-2.5 px-3 text-right">Bruto</th>
-                <th className="py-2.5 px-3 text-right">Cashout</th>
-                <th className="py-2.5 px-4 text-right">Ações</th>
+              <tr className="text-[9px] text-slate-500 font-bold uppercase tracking-wider border-b border-white/[0.02] font-body bg-[#11161d]/20">
+                <th className="py-2.5 px-4">{t('drops.table_col_account')}</th>
+                <th className="py-2.5 px-3">{t('drops.table_col_item')}</th>
+                <th className="py-2.5 px-3 text-right">{t('drops.table_col_gross')}</th>
+                <th className="py-2.5 px-3 text-right">{t('drops.table_col_cashout')}</th>
+                <th className="py-2.5 px-4 text-right">{t('drops.table_col_actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.03] text-xs">
+            <tbody className="divide-y divide-white/[0.02] text-xs">
               {drops.map(drop => {
                 const acct = accounts.find(a => a.id === drop.accountId)
                 const cashout = drop.cashoutValue ?? drop.steamValue * cashoutRate / 100
@@ -889,7 +897,7 @@ function MinorDropsTable({ drops, accounts, currency, cashoutRate, onEdit, onDel
                     <td className="py-2 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {acct?.avatarUrl ? (
-                          <img src={acct.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-white/[0.06]" />
+                          <img src={acct.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-white/[0.03]" />
                         ) : (
                           <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-slate-200" style={{ backgroundColor: acct?.color ?? '#64748b' }}>
                             {acct?.name?.slice(0, 2).toUpperCase() ?? '?'}
@@ -901,7 +909,7 @@ function MinorDropsTable({ drops, accounts, currency, cashoutRate, onEdit, onDel
 
                     <td className="py-2 px-3 min-w-[160px]">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded bg-[#111827] overflow-hidden flex items-center justify-center border border-white/[0.05] shrink-0">
+                        <div className="w-6 h-6 rounded bg-[#111827] overflow-hidden flex items-center justify-center border border-white/[0.03] shrink-0">
                           <SteamItemImage imageUrl={drop.item?.imageUrl} alt={drop.item?.name} size={24} />
                         </div>
                         <span className="truncate text-slate-300 font-medium font-body max-w-[180px]" title={drop.item?.name}>
@@ -919,22 +927,22 @@ function MinorDropsTable({ drops, accounts, currency, cashoutRate, onEdit, onDel
                     </td>
 
                     <td className="py-2 px-4 text-right whitespace-nowrap">
-                      <div className="flex justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                         {!drop.sold && (
                           <button onClick={() => onSell(drop)}
-                            className="text-[9px] font-bold text-slate-400 hover:text-profit px-1.5 py-0.5 rounded bg-white/[0.02] border border-white/[0.06] hover:bg-profit/10 hover:border-profit/20 transition-all font-body">
-                            Vender
+                            className="text-[9px] font-bold text-slate-400 hover:text-profit px-2 py-1 rounded bg-white/[0.02] border border-white/[0.04] hover:bg-profit/10 hover:border-profit/20 transition-all font-body">
+                            {t('drops.btn_sell')}
                           </button>
                         )}
                         {drop.sold && (
-                          <span className="text-[9px] font-semibold text-profit bg-profit/10 px-1.5 py-0.5 rounded font-body">Sold</span>
+                          <span className="text-[9px] font-semibold text-profit bg-profit/10 px-1.5 py-0.5 rounded font-body">{t('common.sold')}</span>
                         )}
-                        <button onClick={() => onEdit(drop)}
-                          className="p-1 rounded text-slate-500 hover:text-slate-200 transition-colors">
+                        <button onClick={() => onEdit(drop)} aria-label={t('drops.edit_modal_title')}
+                          className="p-2 rounded text-slate-500 hover:text-slate-200 transition-colors">
                           <Edit2 size={10} />
                         </button>
-                        <button onClick={() => onDelete(drop)}
-                          className="p-1 rounded text-slate-500 hover:text-loss transition-colors">
+                        <button onClick={() => onDelete(drop)} aria-label={t('accounts.btn_delete')}
+                          className="p-2 rounded text-slate-500 hover:text-loss transition-colors">
                           <Trash2 size={10} />
                         </button>
                       </div>
@@ -1012,6 +1020,11 @@ export default function Drops() {
   function handleSaveDrops(newDrops: Array<Omit<Drop, 'id' | 'createdAt'>>) {
     newDrops.forEach(d => addDrop(d))
     setShowModal(false)
+    if (newDrops.length === 1) {
+      toast.success(t('drops.toast_drop_added'))
+    } else {
+      toast.success(t('drops.toast_drops_added', { count: newDrops.length }))
+    }
   }
 
   function clearFilters() {
@@ -1027,15 +1040,15 @@ export default function Drops() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white">Drops</h1>
+          <h1 className="text-xl font-bold text-white">{t('nav.drops')}</h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            {drops.length} drops · cashout total{' '}
+            {t('drops.total_drops_and_cashout', { count: drops.length })}{' '}
             <span className="text-profit font-mono">{formatCurrency(totalCashout, currency)}</span>
           </p>
         </div>
         <Button icon={Plus} size="sm" onClick={() => setShowModal(true)} className="shrink-0">
-          <span className="hidden sm:inline">Registrar Drops</span>
-          <span className="sm:hidden">Registrar</span>
+          <span className="hidden sm:inline">{t('dash.register')}</span>
+          <span className="sm:hidden">{t('dash.register_short')}</span>
         </Button>
       </div>
 
@@ -1048,8 +1061,8 @@ export default function Drops() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por item..."
-              className="w-full h-10 rounded-xl border border-white/[0.1] bg-[#11161d] text-slate-200 text-sm pl-9 pr-9 focus:outline-none focus:border-primary/60 placeholder:text-slate-600 transition-colors"
+              placeholder={t('drops.input_search_placeholder')}
+              className="w-full h-10 rounded-xl border border-white/[0.05] bg-[#11161d] text-slate-200 text-sm pl-9 pr-9 focus:outline-none focus:border-primary/60 placeholder:text-slate-600 transition-colors"
             />
             {search && (
               <button onClick={() => setSearch('')}
@@ -1063,11 +1076,11 @@ export default function Drops() {
             className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-all ${
               showFilters || (hasActiveFilters && !search)
                 ? 'border-primary/60 bg-primary/10 text-primary'
-                : 'border-white/[0.1] bg-[#11161d] text-slate-400 hover:text-slate-200 hover:border-white/[0.2]'
+                : 'border-white/[0.05] bg-[#11161d] text-slate-400 hover:text-slate-200 hover:border-white/[0.1]'
             }`}
           >
             <Filter size={14} />
-            <span className="hidden sm:inline">Filtros</span>
+            <span className="hidden sm:inline">{t('drops.btn_filters')}</span>
             {hasActiveFilters && (
               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
             )}
@@ -1076,47 +1089,47 @@ export default function Drops() {
 
         {/* Expanded filters */}
         {showFilters && (
-          <div className="rounded-xl border border-white/[0.08] bg-[#11161d] p-3 space-y-2">
+          <div className="rounded-xl border border-white/[0.04] bg-[#11161d] p-3 space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <select
                 value={filterAccount}
                 onChange={e => setFilterAccount(e.target.value)}
-                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.1] text-slate-300 focus:outline-none focus:border-primary/60"
+                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.05] text-slate-300 focus:outline-none focus:border-primary/60"
               >
-                <option value="all">Todas as contas</option>
+                <option value="all">{t('drops.filter_all_accounts')}</option>
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
 
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value as FilterStatus)}
-                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.1] text-slate-300 focus:outline-none focus:border-primary/60"
+                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.05] text-slate-300 focus:outline-none focus:border-primary/60"
               >
-                <option value="all">Qualquer status</option>
-                <option value="unsold">Não vendido</option>
-                <option value="sold">Vendido</option>
+                <option value="all">{t('drops.filter_any_status')}</option>
+                <option value="unsold">{t('drops.filter_unsold')}</option>
+                <option value="sold">{t('drops.filter_sold')}</option>
               </select>
 
               <select
                 value={filterType}
                 onChange={e => setFilterType(e.target.value as FilterType)}
-                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.1] text-slate-300 focus:outline-none focus:border-primary/60"
+                className="h-9 px-3 text-xs rounded-xl bg-[#111827] border border-white/[0.05] text-slate-300 focus:outline-none focus:border-primary/60"
               >
-                <option value="all">Qualquer tipo</option>
-                <option value="weapon">Armas</option>
-                <option value="case">Caixas</option>
-                <option value="sticker">Sticker / Graffiti</option>
-                <option value="other">Outros</option>
+                <option value="all">{t('drops.filter_any_type')}</option>
+                <option value="weapon">{t('drops.filter_weapons')}</option>
+                <option value="case">{t('drops.filter_cases')}</option>
+                <option value="sticker">{t('drops.filter_stickers')}</option>
+                <option value="other">{t('drops.filter_others')}</option>
               </select>
             </div>
 
             {hasActiveFilters && (
               <div className="flex items-center justify-between pt-0.5">
                 <p className="text-xs text-slate-500">
-                  {filtered.length} de {drops.length} drops
+                  {t('drops.filter_stats', { filtered: filtered.length, total: drops.length })}
                 </p>
                 <button onClick={clearFilters} className="text-xs text-primary hover:underline">
-                  Limpar filtros
+                  {t('drops.btn_clear_filters')}
                 </button>
               </div>
             )}
@@ -1129,18 +1142,18 @@ export default function Drops() {
         <Empty
           icon={Package}
           title={t('drops.empty_title')}
-          description="Registre os itens recebidos. Você pode registrar até 2 por conta por semana."
-          action={{ label: 'Registrar Drops', onClick: () => setShowModal(true) }}
+          description={t('drops.empty_desc_default')}
+          action={{ label: t('dash.register'), onClick: () => setShowModal(true) }}
         />
       ) : grouped.length === 0 ? (
         <Empty
           icon={Search}
           title={t('drops.empty_filtered')}
           description={t('drops.empty_filtered_desc')}
-          action={{ label: 'Limpar filtros', onClick: clearFilters }}
+          action={{ label: t('drops.btn_clear_filters'), onClick: clearFilters }}
         />
       ) : (
-        <div className="relative border-l border-white/[0.06] ml-2.5 sm:ml-3 pl-0 space-y-8 py-2">
+        <div className="relative border-l border-white/[0.03] ml-2.5 sm:ml-3 pl-0 space-y-8 py-2">
           {grouped.map(({ weekId, drops: wdrops, cashout }) => {
             return (
               <div key={weekId} className="space-y-4">
@@ -1166,7 +1179,7 @@ export default function Drops() {
                           accountColor={acct?.color ?? '#64748b'}
                           cashoutRate={settings.cashoutRate}
                           currency={currency}
-                          onDelete={() => deleteDrop(drop.id)}
+                          onDelete={() => { deleteDrop(drop.id); toast.success(t('drops.toast_drop_deleted')) }}
                           onSell={() => setSellingDrop(drop)}
                           onEdit={() => setEditingDrop(drop)}
                         />
@@ -1183,11 +1196,11 @@ export default function Drops() {
       <AnimatePresence>
         {showModal && (
           accounts.filter(a => a.active).length === 0 ? (
-            <Modal open onClose={() => setShowModal(false)} title="Sem contas ativas">
+            <Modal open onClose={() => setShowModal(false)} title={t('drops.modal_no_active_accounts_title')}>
               <div className="text-center py-4 space-y-3">
-                <p className="text-slate-400">Adicione uma conta ativa antes de registrar drops.</p>
+                <p className="text-slate-400">{t('drops.modal_no_active_accounts_desc')}</p>
                 <Button onClick={() => { setShowModal(false); useStore.getState().setCurrentPage('accounts') }}>
-                  Ir para Contas
+                  {t('drops.modal_no_active_accounts_action')}
                 </Button>
               </div>
             </Modal>
@@ -1196,10 +1209,10 @@ export default function Drops() {
           )
         )}
         {sellingDrop && (
-          <SellModal drop={sellingDrop} onSave={(id, v) => { markDropSold(id, v); setSellingDrop(null) }} onClose={() => setSellingDrop(null)} />
+          <SellModal drop={sellingDrop} onSave={(id, v) => { markDropSold(id, v); setSellingDrop(null); toast.success(t('drops.toast_drop_sold')) }} onClose={() => setSellingDrop(null)} />
         )}
         {editingDrop && (
-          <EditDropModal drop={editingDrop} onSave={(id, updates) => { updateDrop(id, updates); setEditingDrop(null) }} onClose={() => setEditingDrop(null)} />
+          <EditDropModal drop={editingDrop} onSave={(id, updates) => { updateDrop(id, updates); setEditingDrop(null); toast.success(t('drops.toast_drop_updated')) }} onClose={() => setEditingDrop(null)} />
         )}
       </AnimatePresence>
     </div>

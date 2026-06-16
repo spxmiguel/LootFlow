@@ -17,6 +17,106 @@ import { Card, Badge, Button, Empty } from '../components/ui'
 import { SteamItemImage } from '../components/SteamItemImage'
 import { useT } from '../hooks/useT'
 
+import { ActivityHeatmap } from '../components/ActivityHeatmap'
+import { Timeline } from '../components/Timeline'
+import { computeUnlockedAchievements, TIER_COLORS } from '../lib/achievements'
+import { computeInsights, computePredictions } from '../lib/insights'
+
+// ─── Gamification Helper Components ───────────────────────────────────────────
+
+function AchievementsCard({ accounts, drops, goals, settings }: any) {
+  const allAchievements = computeUnlockedAchievements(accounts, drops, goals, settings)
+  const completed = allAchievements.filter(a => a.progress >= 100)
+  const inProgress = allAchievements.filter(a => a.progress > 0 && a.progress < 100)
+
+  return (
+    <Card className="p-5 border-white/[0.025]">
+      <div className="flex items-center gap-2 mb-4">
+        <Trophy className="w-4 h-4 text-gold" />
+        <h3 className="font-display font-bold text-slate-100 text-sm">
+          {settings.language === 'en' ? 'Achievements' : 'Conquistas'}
+        </h3>
+        <Badge color="gold">{completed.length} / {allAchievements.length}</Badge>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {completed.slice(0, 4).map(ua => (
+          <div key={ua.achievement.id} className="p-3 rounded-xl bg-white/[0.01] border border-white/[0.025] flex flex-col items-center text-center">
+            <span className="text-2xl mb-1">{ua.achievement.icon}</span>
+            <p className="text-xs font-semibold text-slate-200 truncate w-full">
+              {settings.language === 'en' ? ua.achievement.name_en : ua.achievement.name_pt}
+            </p>
+            <p className="text-[10px] text-slate-500 mt-0.5 truncate w-full">
+              {settings.language === 'en' ? ua.achievement.desc_en : ua.achievement.desc_pt}
+            </p>
+          </div>
+        ))}
+        {completed.length === 0 && (
+          <div className="col-span-full py-4 text-center text-xs text-slate-500 font-body">
+            {settings.language === 'en' ? 'Start registering drops to unlock achievements!' : 'Comece a registrar drops para desbloquear conquistas!'}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function InsightsGrid({ accounts, drops, goals, settings }: any) {
+  const insights = computeInsights(accounts, drops, goals, settings)
+  const predictions = computePredictions(accounts, drops, goals, settings)
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Insights */}
+      {insights.length > 0 && (
+        <Card className="p-5 border-white/[0.025]">
+          <h3 className="font-display font-bold text-slate-100 text-sm mb-3">
+            {settings.language === 'en' ? 'System Insights' : 'Insights do Sistema'}
+          </h3>
+          <div className="space-y-3">
+            {insights.slice(0, 3).map(ins => (
+              <div key={ins.id} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] border border-white/[0.025]">
+                <div>
+                  <p className="text-xs font-semibold text-slate-200">
+                    {settings.language === 'en' ? ins.title_en : ins.title_pt}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {settings.language === 'en' ? ins.detail_en : ins.detail_pt}
+                  </p>
+                </div>
+                <Badge color={ins.tone === 'profit' ? 'green' : ins.tone === 'loss' ? 'red' : ins.tone === 'gold' ? 'gold' : 'blue'}>
+                  {ins.value}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Predictions */}
+      {predictions.length > 0 && (
+        <Card className="p-5 border-white/[0.025]">
+          <h3 className="font-display font-bold text-slate-100 text-sm mb-3">
+            {settings.language === 'en' ? 'ETA Predictions' : 'Previsões de ETA'}
+          </h3>
+          <div className="space-y-3">
+            {predictions.slice(0, 3).map(pred => (
+              <div key={pred.id} className="p-2.5 rounded-xl bg-white/[0.01] border border-white/[0.025]">
+                <p className="text-xs font-semibold text-slate-200">
+                  {settings.language === 'en' ? pred.label_en : pred.label_pt}
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {settings.language === 'en' ? pred.detail_en : pred.detail_pt}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
+
 // ─── Custom Recharts Tooltip ──────────────────────────────────────────────────
 
 function ChartTooltip({ active, payload, label, currency }: Record<string, unknown> & { currency: 'BRL' | 'USD' }) {
@@ -181,9 +281,14 @@ export function Dashboard() {
 
     if (monetary) {
       return {
-        statement: `Faltam ${formatCurrency(monetary.remaining, currency)} pra bater ${monetary.goal.name}`,
-        context: `${monetary.progress.toFixed(1).replace('.', ',')}% concluído até agora.`,
-        badge: 'Meta',
+        statement: t('dash.insight.remaining', {
+          remaining: formatCurrency(monetary.remaining, currency),
+          goal: monetary.goal.name
+        }),
+        context: t('dash.insight.remaining_desc', {
+          progress: settings.language === 'en' ? monetary.progress.toFixed(1) : monetary.progress.toFixed(1).replace('.', ',')
+        }),
+        badge: settings.language === 'en' ? 'Goal' : 'Meta',
         tone: 'primary' as InsightTone,
       }
     }
@@ -191,26 +296,31 @@ export function Dashboard() {
     const weeklyRemaining = Math.max(0, settings.weeklyGoalAmount - currentWeekStats.totalCashout)
     return {
       statement: weeklyRemaining > 0
-        ? `Faltam ${formatCurrency(weeklyRemaining, currency)} pra meta semanal`
-        : `Meta semanal batida com ${formatCurrency(currentWeekStats.totalCashout, currency)}`,
-      context: `Meta configurada: ${formatCurrency(settings.weeklyGoalAmount, currency)} em cashout.`,
-      badge: weeklyRemaining > 0 ? 'Em curso' : 'Batida',
+        ? t('dash.insight.weekly_remaining', { remaining: formatCurrency(weeklyRemaining, currency) })
+        : t('dash.insight.weekly_hit', { cashout: formatCurrency(currentWeekStats.totalCashout, currency) }),
+      context: t('dash.insight.weekly_desc', { target: formatCurrency(settings.weeklyGoalAmount, currency) }),
+      badge: weeklyRemaining > 0 ? t('dash.insight.weekly_badge_active') : t('dash.insight.weekly_badge_hit'),
       tone: weeklyRemaining > 0 ? 'primary' as InsightTone : 'profit' as InsightTone,
     }
-  }, [activeGoals, currency, currentWeekStats.totalCashout, settings.weeklyGoalAmount])
+  }, [activeGoals, currency, currentWeekStats.totalCashout, settings.weeklyGoalAmount, settings.language, t])
 
   const weekDelta = currentWeekStats.totalCashout - previousWeekStats.totalCashout
   const weekComparison = previousWeekStats.totalDrops === 0 && previousWeekStats.totalCashout === 0
     ? {
-        statement: `Essa semana já tem ${stats.currentWeekDrops} drop${stats.currentWeekDrops !== 1 ? 's' : ''} registrado${stats.currentWeekDrops !== 1 ? 's' : ''}`,
-        context: 'Registre mais uma semana para comparar tendência de verdade.',
-        badge: 'Semana',
+        statement: t('dash.insight.delta_positive', {
+          drops: stats.currentWeekDrops,
+          s: stats.currentWeekDrops !== 1 ? 's' : ''
+        }),
+        context: t('dash.insight.delta_positive_desc'),
+        badge: t('dash.insight.badge_week'),
         tone: 'gold' as InsightTone,
       }
     : {
-        statement: weekDelta >= 0 ? 'Essa semana foi melhor que a anterior' : 'Essa semana está abaixo da anterior',
-        context: `${weekDelta >= 0 ? '+' : ''}${formatCurrency(weekDelta, currency)} vs. semana passada.`,
-        badge: weekDelta >= 0 ? 'Subiu' : 'Atenção',
+        statement: weekDelta >= 0 ? t('dash.insight.delta_comparison_positive') : t('dash.insight.delta_comparison_negative'),
+        context: t('dash.insight.delta_comparison_desc', {
+          delta: `${weekDelta >= 0 ? '+' : ''}${formatCurrency(weekDelta, currency)}`
+        }),
+        badge: weekDelta >= 0 ? t('dash.insight.badge_up') : t('dash.insight.badge_attention'),
         tone: weekDelta >= 0 ? 'profit' as InsightTone : 'loss' as InsightTone,
       }
 
@@ -222,8 +332,14 @@ export function Dashboard() {
         id: `drop-${drop.id}`,
         icon: Package,
         tone: 'primary' as InsightTone,
-        title: `${account?.name ?? 'Conta'} registrou ${drop.item?.name?.split('|')[0].trim() || 'um drop'}`,
-        detail: `${formatCurrency(cashout, currency)} cashout · Drop #${drop.dropNumber}`,
+        title: t('dash.feed.registered_drop', {
+          account: account?.name ?? 'Conta',
+          item: drop.item?.name?.split('|')[0].trim() || t('dash.feed.drop_hash')
+        }),
+        detail: t('dash.feed.drop_detail', {
+          cashout: formatCurrency(cashout, currency),
+          number: drop.dropNumber
+        }),
         when: formatDateRelative(drop.createdAt ?? drop.registeredAt ?? new Date().toISOString()),
         imageUrl: drop.item?.imageUrl,
         itemName: drop.item?.name,
@@ -241,16 +357,18 @@ export function Dashboard() {
         id: `payback-${as.account.id}`,
         icon: CheckCircle2,
         tone: 'profit' as InsightTone,
-        title: `${as.account.name} bateu payback`,
-        detail: `${as.paybackMultiplier.toFixed(1).replace('.', ',')}x o custo Prime recuperado`,
-        when: 'Agora',
+        title: t('dash.feed.payback_hit', { account: as.account.name }),
+        detail: t('dash.feed.payback_multiplier', {
+          multiplier: settings.language === 'en' ? as.paybackMultiplier.toFixed(1) : as.paybackMultiplier.toFixed(1).replace('.', ',')
+        }),
+        when: t('dash.feed.time_now'),
         avatarUrl: as.account.avatarUrl,
         accountColor: as.account.color,
         accountName: as.account.name,
       }))
 
     return [...dropEvents, ...paybackEvents].slice(0, 7)
-  }, [activeGoals, accounts, currency, settings.cashoutRate, stats.accountStats, stats.recentDrops])
+  }, [activeGoals, accounts, currency, settings.cashoutRate, settings.language, stats.accountStats, stats.recentDrops, t])
 
   const netBalance = stats.totalCashoutAllTime - stats.totalInvestedAllTime
   const paybackProgress = stats.totalInvestedAllTime > 0
@@ -262,15 +380,15 @@ export function Dashboard() {
       {/* Header - single button only */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-100">Dashboard</h1>
+          <h1 className="font-display text-2xl font-bold text-slate-100">{t('nav.dashboard')}</h1>
           <p className="text-sm text-slate-500 font-body mt-0.5">
-            Visão geral dos seus drops CS2
+            {t('dash.subtitle')}
           </p>
         </div>
         <Button variant="primary" size="sm" onClick={() => setCurrentPage('drops')}>
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Registrar Drops</span>
-          <span className="sm:hidden">Registrar</span>
+          <span className="hidden sm:inline">{t('dash.register')}</span>
+          <span className="sm:hidden">{t('dash.register_short')}</span>
         </Button>
       </div>
 
@@ -285,14 +403,20 @@ export function Dashboard() {
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="w-4.5 h-4.5 text-loss shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-slate-200">Drops semanais pendentes ({currentWeekLabel})</p>
+              <p className="text-sm font-semibold text-slate-200">{t('dash.alert.title', { week: currentWeekLabel })}</p>
               <p className="text-xs text-slate-400 mt-0.5 font-body">
-                {accountsMissingDrops.length} conta{accountsMissingDrops.length !== 1 ? 's' : ''} precisa{accountsMissingDrops.length !== 1 ? 'm' : 'se'} de atenção: {accountsMissingDrops.slice(0, 3).map(a => a.name).join(', ')}{accountsMissingDrops.length > 3 ? ` e mais ${accountsMissingDrops.length - 3}` : ''}.
+                {accountsMissingDrops.length === 1
+                  ? t('dash.alert.desc.singular', { account: accountsMissingDrops[0].name })
+                  : t('dash.alert.desc.plural', {
+                      count: accountsMissingDrops.length,
+                      accounts: accountsMissingDrops.slice(0, 3).map(a => a.name).join(', '),
+                      more: accountsMissingDrops.length > 3 ? t('dash.alert.desc.more', { n: accountsMissingDrops.length - 3 }) : ''
+                    })}
               </p>
             </div>
           </div>
           <Button variant="danger" size="sm" className="self-start sm:self-center">
-            Registrar Drops
+            {t('dash.register')}
           </Button>
         </motion.div>
       )}
@@ -306,7 +430,7 @@ export function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Card className="p-5 shadow-[0_0_15px_rgba(74,222,128,0.03)] bg-gradient-to-br from-[#11161d] to-[#141b27] relative overflow-hidden h-full flex flex-col justify-between">
+          <Card className="p-5 shadow-[0_0_15px_rgba(74,222,128,0.03)] bg-gradient-to-br from-[#11161d] to-[#141b27] border-white/[0.025] relative overflow-hidden h-full flex flex-col justify-between">
             <div className={cn(
               "absolute -right-16 -top-16 w-32 h-32 rounded-full blur-3xl pointer-events-none",
               netBalance >= 0 ? "bg-profit/5" : "bg-loss/5"
@@ -316,10 +440,10 @@ export function Dashboard() {
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   <span className={cn("w-2.5 h-2.5 rounded-full animate-pulse", netBalance >= 0 ? "bg-profit" : "bg-loss")} />
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold font-body">Saldo Líquido</p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold font-body">{t('dash.net_balance')}</p>
                 </div>
                 <Badge color={netBalance >= 0 ? 'green' : 'red'}>
-                  {netBalance >= 0 ? 'Lucro' : 'Payback em Andamento'}
+                  {netBalance >= 0 ? t('dash.net_balance.profit') : t('dash.net_balance.payback')}
                 </Badge>
               </div>
 
@@ -330,18 +454,21 @@ export function Dashboard() {
                 {netBalance < 0 ? '-' : ''}{formatCurrency(Math.abs(netBalance), currency)}
               </h3>
               <p className="text-xs text-slate-400 font-body leading-relaxed mb-4">
-                Total recuperado: <span className="text-profit font-semibold">{formatCurrency(stats.totalCashoutAllTime, currency)}</span> de <span className="text-slate-300 font-medium">{formatCurrency(stats.totalInvestedAllTime, currency)}</span> investidos.
+                {t('dash.net_balance.desc', {
+                  recovered: formatCurrency(stats.totalCashoutAllTime, currency),
+                  invested: formatCurrency(stats.totalInvestedAllTime, currency)
+                })}
               </p>
             </div>
 
             <div className="space-y-2 mt-auto">
               <div className="flex justify-between text-xs font-body">
-                <span className="text-slate-400 font-medium">Retorno do Investimento (Payback)</span>
+                <span className="text-slate-400 font-medium">{t('dash.roi_payback')}</span>
                 <span className={cn('font-mono font-bold', paybackProgress >= 100 ? 'text-profit' : 'text-primary')}>
                   {paybackProgress}%
                 </span>
               </div>
-              <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden p-[1px] border border-white/[0.04]">
+              <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden p-[1px] border border-white/[0.02]">
                 <motion.div
                   className={cn(
                     "h-full rounded-full bg-gradient-to-r",
@@ -364,29 +491,29 @@ export function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Card className="p-5 hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-[#11161d] to-[#121b27] relative overflow-hidden h-full flex flex-col justify-between">
+          <Card className="p-5 hover:border-primary/20 transition-all duration-300 bg-gradient-to-br from-[#11161d] to-[#121b27] border-white/[0.025] relative overflow-hidden h-full flex flex-col justify-between">
             <div className="absolute -right-16 -top-16 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             
             <div>
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   <Activity className="w-3.5 h-3.5 text-primary animate-pulse" />
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold font-body">Semana Atual</p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold font-body">{t('dash.current_week')}</p>
                 </div>
-                <Badge color="green">Ciclo Ativo</Badge>
+                <Badge color="green">{t('dash.current_week.active')}</Badge>
               </div>
 
               <h3 className="text-sm sm:text-base font-bold text-slate-100 leading-snug mb-1">
-                {formatCurrency(currentWeekStats.totalCashout, currency)} <span className="text-[10px] text-slate-500 font-normal">recuperado</span>
+                {formatCurrency(currentWeekStats.totalCashout, currency)} <span className="text-[10px] text-slate-500 font-normal">{t('dash.current_week.recovered')}</span>
               </h3>
               <p className="text-xs text-slate-400 font-body leading-relaxed mb-4">
-                Bruto est.: {formatCurrency(currentWeekStats.totalSteamValue, currency)}
+                {t('dash.current_week.gross_est')} {formatCurrency(currentWeekStats.totalSteamValue, currency)}
               </p>
             </div>
 
             <div className="space-y-2 mt-auto">
               <div className="flex justify-between text-[10px] text-slate-500 font-body">
-                <span>Progresso Drops</span>
+                <span>{t('dash.current_week.progress_label')}</span>
                 <span>{stats.currentWeekDrops} / {stats.currentWeekTarget}</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
@@ -405,19 +532,19 @@ export function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Card className="p-5 hover:border-gold/30 transition-all duration-300 bg-gradient-to-br from-[#11161d] to-[#161c22] relative overflow-hidden h-full flex flex-col justify-between">
+          <Card className="p-5 hover:border-gold/20 transition-all duration-300 bg-gradient-to-br from-[#11161d] to-[#161c22] border-white/[0.025] relative overflow-hidden h-full flex flex-col justify-between">
             <div className="absolute -right-16 -top-16 w-32 h-32 bg-gold/5 rounded-full blur-3xl pointer-events-none" />
             
             <div>
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   <Target className="w-3.5 h-3.5 text-gold animate-bounce" />
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold font-body">Meta Próxima</p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold font-body">{t('dash.closest_goal')}</p>
                 </div>
                 {closestGoal ? (
                   <Badge color="gold">{closestGoal.progress.toFixed(0)}%</Badge>
                 ) : (
-                  <Badge color="default">Nenhuma</Badge>
+                  <Badge color="default">{t('dash.closest_goal.none')}</Badge>
                 )}
               </div>
 
@@ -427,13 +554,13 @@ export function Dashboard() {
                     {closestGoal.goal.name}
                   </h3>
                   <p className="text-xs text-slate-400 font-body leading-relaxed mb-4">
-                    Alvo: {closestGoal.goal.type === 'drops' ? `${closestGoal.goal.targetAmount} drops` : formatCurrency(closestGoal.goal.targetAmount, currency)}
+                    {t('goals.card_target')}: {closestGoal.goal.type === 'drops' ? `${closestGoal.goal.targetAmount} drops` : formatCurrency(closestGoal.goal.targetAmount, currency)}
                   </p>
                 </>
               ) : (
                 <>
                   <h3 className="text-sm font-bold text-slate-400 leading-snug mb-4 font-body">
-                    Nenhuma meta em andamento
+                    {t('dash.closest_goal.no_goals')}
                   </h3>
                 </>
               )}
@@ -443,7 +570,7 @@ export function Dashboard() {
               {closestGoal && (
                 <>
                   <div className="flex justify-between text-[10px] text-slate-500 font-body">
-                    <span>Progresso</span>
+                    <span>{t('dash.closest_goal.progress')}</span>
                     <span>{closestGoal.goal.type === 'drops' ? `${closestGoal.current} drops` : formatCurrency(closestGoal.current, currency)}</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
@@ -456,7 +583,7 @@ export function Dashboard() {
               )}
               {!closestGoal && (
                 <Button variant="ghost" size="sm" className="w-full justify-center text-xs" onClick={() => setCurrentPage('goals')}>
-                  Criar meta
+                  {t('dash.closest_goal.create_btn')}
                 </Button>
               )}
             </div>
@@ -468,12 +595,12 @@ export function Dashboard() {
       {isEmpty ? (
         <Empty
           icon={<Package className="w-8 h-8" />}
-          title="Nenhum drop registrado"
+          title={t('dash.no_drops')}
           description={hasAccounts
-            ? 'Suas contas já estão cadastradas. Agora registre o primeiro drop para começar a acompanhar cashout e ROI.'
-            : 'Adicione suas contas Prime para começar a acompanhar drops, cashout e ROI.'}
+            ? t('dash.empty.desc_has_accounts')
+            : t('dash.empty.desc_no_accounts')}
           action={{
-            label: hasAccounts ? 'Registrar Drops' : 'Adicionar Conta',
+            label: hasAccounts ? t('dash.register') : t('dash.empty.action_add_account'),
             onClick: () => setCurrentPage(hasAccounts ? 'drops' : 'accounts'),
           }}
         />
@@ -484,26 +611,26 @@ export function Dashboard() {
             
             {/* Quick Metrics Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">Cashout Recuperado</span>
+              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.025] hover:bg-white/[0.02] transition-colors">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">{t('analytics.total_cashout')}</span>
                 <span className="text-base font-mono font-bold text-profit mt-1">
                   {formatCurrency(stats.totalCashoutAllTime, currency)}
                 </span>
               </Card>
-              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">ROI Geral</span>
+              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.025] hover:bg-white/[0.02] transition-colors">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">{t('dash.rankings.col_roi')} {settings.language === 'en' ? 'Overall' : 'Geral'}</span>
                 <span className="text-base font-mono font-bold text-primary mt-1">
                   {stats.overallROI === Infinity ? '∞' : `${formatPercent(stats.overallROI, 0)}`}
                 </span>
               </Card>
-              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">Bruto Acumulado</span>
+              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.025] hover:bg-white/[0.02] transition-colors">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">{t('analytics.gross_value')}</span>
                 <span className="text-base font-mono font-bold text-slate-200 mt-1">
                   {formatCurrencyCompact(stats.totalSteamValueAllTime, currency)}
                 </span>
               </Card>
-              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">Investimento Total</span>
+              <Card className="p-3.5 flex flex-col justify-between bg-white/[0.01] border-white/[0.025] hover:bg-white/[0.02] transition-colors">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider font-body">{t('dash.invested')}</span>
                 <span className="text-base font-mono font-bold text-slate-400 mt-1">
                   {formatCurrency(stats.totalInvestedAllTime, currency)}
                 </span>
@@ -519,13 +646,13 @@ export function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Card className="p-5">
+                <Card className="p-5 border-white/[0.025]">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-xs text-slate-500 font-body uppercase tracking-wider">Cashout semanal</p>
-                      <p className="font-display font-bold text-slate-100 mt-0.5">Últimas 8 semanas</p>
+                      <p className="text-xs text-slate-500 font-body uppercase tracking-wider">{t('dash.chart.weekly_cashout')}</p>
+                      <p className="font-display font-bold text-slate-100 mt-0.5">{t('dash.chart.last_8_weeks')}</p>
                     </div>
-                    <Badge color="blue">Histórico</Badge>
+                    <Badge color="blue">{t('dash.chart.history')}</Badge>
                   </div>
                   <div className="h-52">
                     <ResponsiveContainer width="100%" height="100%">
@@ -536,7 +663,7 @@ export function Dashboard() {
                             <stop offset="95%" stopColor="#4ade80" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" />
                         <XAxis
                           dataKey="week"
                           tick={{ fill: '#475569', fontSize: 11, fontFamily: 'Figtree' }}
@@ -572,17 +699,17 @@ export function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
               >
-                <Card className="p-5 h-full flex flex-col justify-between">
+                <Card className="p-5 h-full flex flex-col justify-between border-white/[0.025]">
                   <div className="flex items-center gap-2 mb-4">
                     <Flame className="w-4 h-4 text-gold" />
-                    <p className="font-display font-bold text-slate-100 text-sm">Semana Atual</p>
+                    <p className="font-display font-bold text-slate-100 text-sm">{t('dash.current_week')}</p>
                   </div>
 
                   <div className="space-y-4 flex-1">
                     {/* Progress */}
                     <div>
                       <div className="flex justify-between text-xs font-body mb-2">
-                        <span className="text-slate-500">Drops</span>
+                        <span className="text-slate-500">{t('dash.rankings.col_drops')}</span>
                         <span className={cn('font-medium', weekProgress >= 100 ? 'text-profit' : 'text-slate-300')}>
                           {stats.currentWeekDrops} / {stats.currentWeekTarget}
                         </span>
@@ -598,14 +725,14 @@ export function Dashboard() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
-                        <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Bruto</p>
+                      <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.025]">
+                        <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">{t('dash.rankings.col_gross')}</p>
                         <p className="font-mono text-sm font-medium text-slate-200 mt-0.5">
                           {formatCurrencyCompact(currentWeekStats.totalSteamValue, currency)}
                         </p>
                       </div>
-                      <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
-                        <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">Cashout</p>
+                      <div className="p-3 rounded-xl bg-[#111827] border border-white/[0.025]">
+                        <p className="text-[10px] text-slate-600 font-body uppercase tracking-wider">{t('dash.rankings.col_cashout')}</p>
                         <p className="font-mono text-sm font-medium text-profit mt-0.5">
                           {formatCurrencyCompact(currentWeekStats.totalCashout, currency)}
                         </p>
@@ -616,7 +743,7 @@ export function Dashboard() {
                     {stats.bestWeek && (
                       <div className="p-3 rounded-xl bg-gold/[0.05] border border-gold/10">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <Trophy className="w-3.5 h-3.5 text-gold" />
+                           <Trophy className="w-3.5 h-3.5 text-gold" />
                           <p className="text-xs text-gold font-body font-medium">{t('dash.best_week')}</p>
                         </div>
                         <p className="font-mono text-sm font-medium text-slate-200">
@@ -633,7 +760,7 @@ export function Dashboard() {
                     className="mt-4 w-full"
                     onClick={() => setCurrentPage('drops')}
                   >
-                    Ver todos os drops <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
+                    {settings.language === 'en' ? 'View all drops' : 'Ver todos os drops'} <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 </Card>
               </motion.div>
@@ -646,25 +773,25 @@ export function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <Card className="p-5">
+                <Card className="p-5 border-white/[0.025]">
                   <div className="flex items-center justify-between mb-4">
-                    <p className="font-display font-bold text-slate-100">Performance por Conta</p>
+                    <p className="font-display font-bold text-slate-100">{t('dash.rankings.title')}</p>
                     <Button variant="ghost" size="sm" onClick={() => setCurrentPage('accounts')}>
-                      Ver todas <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
+                      {t('dash.rankings.view_all')} <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                     </Button>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="text-[10px] text-slate-600 uppercase tracking-wider font-body">
-                          <th className="text-left pb-3">Conta</th>
-                          <th className="text-right pb-3">Drops</th>
-                          <th className="text-right pb-3">Bruto</th>
-                          <th className="text-right pb-3">Cashout</th>
-                          <th className="text-right pb-3">ROI</th>
+                          <th className="text-left pb-3">{t('dash.rankings.col_account')}</th>
+                          <th className="text-right pb-3">{t('dash.rankings.col_drops')}</th>
+                          <th className="text-right pb-3">{t('dash.rankings.col_gross')}</th>
+                          <th className="text-right pb-3">{t('dash.rankings.col_cashout')}</th>
+                          <th className="text-right pb-3">{t('dash.rankings.col_roi')}</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/[0.04]">
+                      <tbody className="divide-y divide-white/[0.02]">
                         {stats.accountStats.slice(0, 5).map(as => (
                           <tr key={as.account.id} className="group">
                             <td className="py-3 pr-4">
@@ -677,7 +804,7 @@ export function Dashboard() {
                                   {as.account.name}
                                 </span>
                                 {!as.account.active && (
-                                  <Badge color="default">inativa</Badge>
+                                  <Badge color="default">{t('dash.rankings.status_inactive')}</Badge>
                                 )}
                               </div>
                             </td>
@@ -705,6 +832,24 @@ export function Dashboard() {
             )}
 
 
+            {/* Heatmap & Timeline if enabled */}
+            {settings.gamification?.showHeatmap && (
+              <ActivityHeatmap drops={drops} />
+            )}
+
+            {settings.gamification?.showTimeline && (
+              <Timeline accounts={accounts} drops={drops} goals={goals} settings={settings} />
+            )}
+
+            {/* Achievements if enabled */}
+            {settings.gamification?.showAchievements && (
+              <AchievementsCard accounts={accounts} drops={drops} goals={goals} settings={settings} />
+            )}
+
+            {/* Insights and Predictions if enabled */}
+            {settings.gamification?.showInsights && (
+              <InsightsGrid accounts={accounts} drops={drops} goals={goals} settings={settings} />
+            )}
           </div>
 
           {/* Right panel: Activity Feed (spans 1 column on desktop) */}
@@ -715,12 +860,12 @@ export function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
             >
-              <Card className="p-5 h-full flex flex-col justify-between bg-gradient-to-b from-[#11161d] to-[#0c0f14] border-white/[0.05]">
+              <Card className="p-5 h-full flex flex-col justify-between bg-gradient-to-b from-[#11161d] to-[#0c0f14] border-white/[0.025]">
                 <div>
-                  <div className="flex items-center justify-between mb-4 border-b border-white/[0.04] pb-3">
+                  <div className="flex items-center justify-between mb-4 border-b border-white/[0.02] pb-3">
                     <div>
-                      <p className="font-display font-bold text-slate-100">Feed recente</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Drops, payback e metas</p>
+                      <p className="font-display font-bold text-slate-100">{t('dash.feed.title')}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{t('dash.feed.subtitle')}</p>
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -735,24 +880,24 @@ export function Dashboard() {
                               <img
                                 src={item.avatarUrl}
                                 alt={item.accountName || 'Avatar'}
-                                className="w-9 h-9 rounded-full object-cover border border-white/[0.08]"
+                                className="w-9 h-9 rounded-full object-cover border border-white/[0.04]"
                               />
                             ) : item.accountName ? (
                               <div
-                                className="w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-200 border border-white/[0.08] uppercase"
+                                className="w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-200 border border-white/[0.04] uppercase"
                                 style={{ backgroundColor: item.accountColor ?? '#3b82f6' }}
                               >
                                 {item.accountName.slice(0, 2)}
                               </div>
                             ) : (
-                              <div className={cn('w-9 h-9 rounded-full flex items-center justify-center border border-white/[0.08]', tone.icon)}>
+                              <div className={cn('w-9 h-9 rounded-full flex items-center justify-center border border-white/[0.04]', tone.icon)}>
                                 <Icon className="h-4 w-4" />
                               </div>
                             )}
 
                             {/* Drop overlay badge */}
                             {item.imageUrl && (
-                              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-md bg-[#0d1117] border border-white/[0.08] overflow-hidden flex items-center justify-center shadow-md">
+                              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-md bg-[#0d1117] border border-white/[0.04] overflow-hidden flex items-center justify-center shadow-md">
                                 <SteamItemImage imageUrl={item.imageUrl} alt={item.itemName} size={18} />
                               </div>
                             )}
@@ -764,7 +909,7 @@ export function Dashboard() {
                           </div>
                           
                           <div className="shrink-0 text-right">
-                            <span className="text-[9px] font-semibold text-slate-500 bg-white/[0.03] border border-white/[0.05] px-1.5 py-0.5 rounded-md font-body">
+                            <span className="text-[9px] font-semibold text-slate-500 bg-white/[0.03] border border-white/[0.03] px-1.5 py-0.5 rounded-md font-body">
                               {item.when}
                             </span>
                           </div>
@@ -774,7 +919,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setCurrentPage('drops')} className="mt-4 w-full justify-center">
-                  Ver todos <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
+                  {t('dash.feed.view_all')} <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                 </Button>
               </Card>
             </motion.div>

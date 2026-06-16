@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Loader2, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn, fileToCompressedDataURL } from '../lib/utils'
+import { useStore } from '../store'
 
 // ─── Button ───────────────────────────────────────────────────────────────────
 
@@ -76,9 +77,9 @@ export function Card({ children, className, glass = true, hover, glow, onClick }
       onClick={onClick}
       style={glow ? { boxShadow: `0 0 24px ${glow}` } : undefined}
       className={cn(
-        'rounded-2xl border border-white/[0.04]',
+        'rounded-2xl border border-white/[0.025]',
         glass ? 'lf-card' : 'bg-[#11161d]',
-        hover && 'cursor-pointer hover:border-white/[0.10] hover:-translate-y-0.5 transition-all duration-200',
+        hover && 'cursor-pointer hover:border-white/[0.06] hover:-translate-y-0.5 transition-all duration-200',
         className,
       )}
     >
@@ -167,7 +168,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           className={cn(
             'w-full h-10 rounded-xl border bg-[#111827] text-slate-200 text-sm font-body',
-            'border-white/[0.1] placeholder:text-slate-600',
+            'border-white/[0.06] placeholder:text-slate-600',
             'focus:outline-none focus:border-primary/60 focus:bg-[#1a2235] focus:ring-1 focus:ring-primary/20',
             'transition-all duration-150',
             'disabled:opacity-40 disabled:cursor-not-allowed',
@@ -205,7 +206,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         ref={ref}
         className={cn(
           'w-full rounded-xl border bg-[#111827] text-slate-200 text-sm font-body px-3.5 py-2.5',
-          'border-white/[0.08] placeholder:text-slate-600 resize-none',
+          'border-white/[0.05] placeholder:text-slate-600 resize-none',
           'focus:outline-none focus:border-primary/50 focus:bg-white/[0.06]',
           'transition-all duration-150 min-h-[80px]',
           className,
@@ -232,7 +233,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         ref={ref}
         className={cn(
           'w-full h-10 rounded-xl border bg-[#111827] text-slate-200 text-sm font-body px-3.5',
-          'border-white/[0.1]',
+          'border-white/[0.06]',
           'focus:outline-none focus:border-primary/60',
           'transition-all duration-150 cursor-pointer',
           '[&>option]:bg-[#111827]',
@@ -324,17 +325,17 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
               transition={{ type: 'spring', stiffness: 400, damping: 35 }}
               className={cn(
                 'w-full pointer-events-auto flex flex-col',
-                'bg-[#0d1117] border border-white/[0.08] rounded-t-2xl shadow-modal sm:rounded-2xl',
+                'bg-[#0d1117] border border-white/[0.04] rounded-t-2xl shadow-modal sm:rounded-2xl',
                 'max-h-[calc(100dvh-5.5rem)] sm:max-h-[90vh]',
                 widthClass,
               )}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.09] sm:px-6 shrink-0">
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.05] sm:px-6 shrink-0">
                 <h2 className="font-display text-base font-bold text-slate-100">{title}</h2>
                 <button
                   onClick={onClose}
-                  aria-label="Fechar"
+                  aria-label={useStore.getState().settings.language === 'en' ? 'Close' : 'Fechar'}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-200 hover:bg-[#1e2d45] active:scale-90 transition-all"
                 >
                   <X className="w-4 h-4" />
@@ -346,7 +347,7 @@ export function Modal({ open = true, onClose, title, children, width, size, foot
 
               {/* Footer */}
               {footer && (
-                <div className="px-5 py-4 border-t border-white/[0.09] flex items-center justify-end gap-2 sm:px-6 shrink-0">
+                <div className="px-5 py-4 border-t border-white/[0.05] flex items-center justify-end gap-2 sm:px-6 shrink-0">
                   {footer}
                 </div>
               )}

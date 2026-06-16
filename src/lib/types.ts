@@ -104,6 +104,14 @@ export interface WhatsAppSettings {
   consentAt?: string;       // ISO timestamp — quando usuário consentiu coleta do telefone (LGPD Art. 7, I)
 }
 
+export interface GamificationSettings {
+  showInsights: boolean;          // painel de insights automáticos
+  showHeatmap: boolean;           // heatmap de atividade estilo GitHub
+  showTimeline: boolean;          // timeline de eventos
+  showAchievements: boolean;      // sistema de conquistas
+  showHallOfFame: boolean;        // hall da fama
+}
+
 export interface AppSettings {
   cashoutRate: number;            // 0-100, e.g. 85 = 85% of Steam value
   currency: 'BRL' | 'USD';       // display currency (Steam prices fetched in R$; USD = converted)
@@ -116,6 +124,7 @@ export interface AppSettings {
   showOnboarding: boolean;
   profile?: ProfileOverride;
   whatsapp?: WhatsAppSettings;   // notificações via bot WhatsApp
+  gamification?: GamificationSettings;  // toggles de gamificação/retenção
 }
 
 // ─── Notificações (fila Firestore lida pelo bot) ─────────────────────────────

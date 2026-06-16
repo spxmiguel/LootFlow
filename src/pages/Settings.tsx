@@ -4,6 +4,7 @@ import {
   Settings2, Palette, Database, Download, Upload, Trash2,
   Shield, RotateCcw, Check, AlertTriangle, Zap, ChevronRight,
   RefreshCw, Lock, Info, ExternalLink, ChevronDown, UserX, MessageCircle,
+  Loader2,
 } from 'lucide-react'
 import { LegalModal, type LegalType } from '../components/LegalModal'
 import type { WhatsAppSettings, DaySchedule } from '../lib/types'
@@ -16,6 +17,7 @@ import { CUSTOM_FIREBASE_KEY, getCustomFirebaseConfig, isUsingCustomFirebase, FI
 import { formatCurrency } from '../lib/utils'
 import { Button, Card, Input, Toggle } from '../components/ui'
 import { firestoreQueueNotification } from '../lib/firebase'
+import { useT } from '../hooks/useT'
 import toast from 'react-hot-toast'
 
 const SECTION_COLORS = {
@@ -33,7 +35,7 @@ function Section({ icon: Icon, color, title, subtitle, defaultOpen = false, chil
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <Card className="p-0 overflow-hidden border border-white/[0.04] bg-[#0d1117]/30">
+    <Card className="p-0 overflow-hidden border border-white/[0.025] bg-[#0d1117]/30">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -66,7 +68,7 @@ function Section({ icon: Icon, color, title, subtitle, defaultOpen = false, chil
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="p-5 pt-0 border-t border-white/[0.04] space-y-4">
+            <div className="p-5 pt-0 border-t border-white/[0.025] space-y-4">
               {children}
             </div>
           </motion.div>
@@ -139,6 +141,7 @@ function formatCooldown(secs: number): string {
 }
 
 function WhatsAppSection() {
+  const t = useT()
   const { settings, updateSettings } = useStore()
   const { user } = useAuth()
 
@@ -231,16 +234,16 @@ function WhatsAppSection() {
       }
       updateSettings({ whatsapp: newWA })
       setHasChanges(false)
-      toast.success('✅ Configurações salvas!')
+      toast.success(t('wa.toast_saved'))
     } finally {
       setSaving(false)
     }
   }
 
   async function sendVerifyCode(newPhone?: string) {
-    if (!user?.uid) { toast.error('Você precisa estar logado'); return }
+    if (!user?.uid) { toast.error(settings.language === 'en' ? 'You need to be logged in' : 'Você precisa estar logado'); return }
     const targetPhone = newPhone ?? phone
-    if (targetPhone.length < 12) { toast.error('Número inválido'); return }
+    if (targetPhone.length < 12) { toast.error(settings.language === 'en' ? 'Invalid number' : 'Número inválido'); return }
     const code = String(Math.floor(100000 + Math.random() * 900000))
     setSendingCode(true)
     try {
@@ -269,9 +272,9 @@ function WhatsAppSection() {
       setCooldownLeft(cd)
       setEditingPhone(false)
       setHasChanges(false)
-      toast.success('Código enviado no WhatsApp! Digite-o abaixo.')
+      toast.success(t('wa.toast_code_sent'))
     } catch {
-      toast.error('Erro ao enviar código. Tente novamente.')
+      toast.error(t('wa.toast_code_error'))
     } finally {
       setSendingCode(false)
     }
@@ -282,8 +285,8 @@ function WhatsAppSection() {
     setTesting(true)
     try {
       await firestoreQueueNotification(user.uid, 'test')
-      toast.success('Mensagem de teste enviada em segundos!')
-    } catch { toast.error('Erro ao enviar solicitação.') }
+      toast.success(t('wa.toast_test_sent'))
+    } catch { toast.error(t('wa.toast_test_error')) }
     finally { setTesting(false) }
   }
 
@@ -292,37 +295,37 @@ function WhatsAppSection() {
     setForcingReminder(true)
     try {
       await firestoreQueueNotification(user.uid, 'force_reminder')
-      toast.success('Lembrete real enviado em segundos!')
-    } catch { toast.error('Erro ao enviar.') }
+      toast.success(t('wa.toast_reminder_sent'))
+    } catch { toast.error(t('wa.toast_reminder_error')) }
     finally { setForcingReminder(false) }
   }
 
-  const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const DAY_LABELS = settings.language === 'en' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
   const botStatus = !hasPhone
-    ? { label: '📱 Número não configurado', color: 'text-slate-500' }
+    ? { label: t('wa.status_no_phone'), color: 'text-slate-500' }
     : !verified
-    ? { label: '⏳ Aguardando verificação', color: 'text-yellow-500' }
+    ? { label: t('wa.status_pending'), color: 'text-yellow-500' }
     : !(draft.enabled ?? wa?.enabled)
-    ? { label: '⏸ Lembretes desativados', color: 'text-slate-500' }
-    : { label: '✅ Ativo — lembretes habilitados', color: 'text-profit' }
+    ? { label: t('wa.status_disabled'), color: 'text-slate-500' }
+    : { label: t('wa.status_active'), color: 'text-profit' }
 
   return (
     <div className="space-y-5">
       {/* 1. Conexão & Status */}
-      <Section icon={MessageCircle} color="green" title="Conexão & Status" subtitle="Ative o bot e configure seu número de celular" defaultOpen={true}>
+      <Section icon={MessageCircle} color="green" title={t('wa.section_connection')} subtitle={t('wa.section_connection_desc')} defaultOpen={true}>
         {/* Info */}
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.04]">
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.025]">
           <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            O número que você coloca aqui é o <span className="text-slate-300">seu</span> número — onde vai <span className="text-slate-300">receber</span> as mensagens. O bot envia de um número dedicado.
+            {t('wa.info_phone')}
           </p>
         </div>
 
         {/* Toggle principal + status */}
-        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.025]">
           <div>
-            <p className="text-sm text-white font-medium">Ativar lembretes</p>
+            <p className="text-sm text-white font-medium">{t('wa.enable_alerts')}</p>
             <p className={`text-[11px] mt-0.5 ${botStatus.color}`}>{botStatus.label}</p>
           </div>
           <Toggle value={draft.enabled ?? false} onChange={v => updateDraft({ enabled: v })} />
@@ -330,20 +333,20 @@ function WhatsAppSection() {
 
         {/* Número */}
         <div>
-          <label className="text-xs text-slate-400 block mb-1.5">Seu número do WhatsApp</label>
+          <label className="text-xs text-slate-400 block mb-1.5">{t('wa.input_phone')}</label>
           {!editingPhone && hasPhone ? (
-            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-[#111827] border border-white/[0.025]">
               <div>
                 <p className="text-sm text-white font-mono">+{phone}</p>
                 <p className={`text-[11px] mt-0.5 ${verified ? 'text-profit' : 'text-yellow-500'}`}>
-                  {verified ? '✓ Verificado' : '⏳ Aguardando verificação'}
+                  {verified ? t('wa.status_verified') : t('wa.status_pending')}
                 </p>
               </div>
               <button
                 onClick={() => { setPhoneInput(phone.startsWith('55') ? phone.slice(2) : phone); setEditingPhone(true) }}
-                className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg border border-white/[0.1] hover:border-white/30 transition-all"
+                className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg border border-white/[0.025] hover:border-white/30 transition-all"
               >
-                Trocar
+                {t('wa.btn_change')}
               </button>
             </div>
           ) : (
@@ -354,32 +357,31 @@ function WhatsAppSection() {
                   type="tel"
                   value={phoneInput}
                   onChange={e => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                  placeholder="11 99999-9999"
-                  className="w-full h-9 rounded-xl border border-white/[0.1] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
+                  placeholder={t('wa.placeholder_phone')}
+                  className="w-full h-9 rounded-xl border border-white/[0.025] bg-[#111827] text-slate-200 text-sm pl-10 pr-3 focus:outline-none focus:border-primary/60 placeholder:text-slate-600"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   disabled={sendingCode || phoneInput.length < 10}
                   onClick={() => sendVerifyCode(`55${phoneInput}`)}
-                  className="flex-1 h-8 rounded-xl bg-primary/10 border border-primary/40 text-primary text-xs font-medium hover:bg-primary/20 transition-all disabled:opacity-50"
+                  className="flex-1 h-8 rounded-xl bg-primary/10 border border-primary/40 text-primary text-xs font-medium hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {sendingCode ? 'Enviando...' : 'Enviar código de verificação'}
+                  {sendingCode && <Loader2 size={12} className="animate-spin" />}
+                  {sendingCode ? t('wa.btn_sending') : t('wa.btn_send_code')}
                 </button>
                 {hasPhone && (
                   <button
                     onClick={() => { setEditingPhone(false); setPhoneInput('') }}
-                    className="px-3 h-8 rounded-xl border border-white/[0.1] text-slate-500 text-xs hover:text-slate-300 transition-all"
+                    className="px-3 h-8 rounded-xl border border-white/[0.025] text-slate-500 text-xs hover:text-slate-300 transition-all"
                   >
-                    Cancelar
+                    {t('wa.btn_cancel')}
                   </button>
                 )}
               </div>
-              <p className="text-[10px] text-slate-600">DDD + número — somente dígitos</p>
+              <p className="text-[10px] text-slate-600">{t('wa.phone_hint')}</p>
               <p className="text-[10px] text-slate-600/70 leading-relaxed">
-                Ao enviar o código, você autoriza o LootFlow a enviar mensagens automáticas para este número via bot WhatsApp.
-                Para revogar, envie <span className="text-slate-500">PARAR</span> para o bot ou desative os lembretes.
-                Base legal: consentimento (LGPD Art. 7, I).
+                {t('wa.phone_legal')}
               </p>
             </div>
           )}
@@ -389,9 +391,9 @@ function WhatsAppSection() {
         {hasPhone && !verified && !editingPhone && (
           <div className="p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/25 space-y-3">
             <div>
-              <p className="text-xs text-yellow-400 font-medium">⏳ Verificação pendente</p>
+              <p className="text-xs text-yellow-400 font-medium">{t('wa.alert_pending_title')}</p>
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                O bot enviou um código de 6 dígitos pro seu WhatsApp. Digite ele abaixo:
+                {t('wa.alert_pending_desc')}
               </p>
             </div>
             <div className="flex gap-2">
@@ -402,7 +404,7 @@ function WhatsAppSection() {
                 value={codeInput}
                 onChange={e => setCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
-                className="flex-1 h-9 rounded-xl border border-white/[0.1] bg-[#0d1117] text-white text-center font-mono text-lg tracking-widest focus:outline-none focus:border-yellow-500/50 placeholder:text-slate-700"
+                className="flex-1 h-9 rounded-xl border border-white/[0.025] bg-[#0d1117] text-white text-center font-mono text-lg tracking-widest focus:outline-none focus:border-yellow-500/50 placeholder:text-slate-700"
               />
               <button
                 disabled={codeInput.length !== 6 || verifying}
@@ -414,15 +416,16 @@ function WhatsAppSection() {
                     if (codeInput === stored) {
                       updateSettings({ whatsapp: { ...settings.whatsapp!, verified: true, verifyCode: undefined } })
                       setCodeInput('')
-                      toast.success('✅ Número verificado! Bot ativado.')
+                      toast.success(t('wa.toast_verified'))
                     } else {
-                      toast.error('Código inválido. Verifique e tente de novo.')
+                      toast.error(t('wa.toast_invalid_code'))
                     }
                   } finally { setVerifying(false) }
                 }}
-                className="px-4 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-medium hover:bg-yellow-500/20 transition-all disabled:opacity-40"
+                className="px-4 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-medium hover:bg-yellow-500/20 transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
               >
-                {verifying ? '...' : 'Verificar'}
+                {verifying && <Loader2 size={12} className="animate-spin" />}
+                {t('wa.btn_verify')}
               </button>
             </div>
             <button
@@ -431,37 +434,37 @@ function WhatsAppSection() {
               className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {sendingCode
-                ? 'Enviando...'
+                ? t('wa.btn_sending')
                 : cooldownLeft > 0
-                ? `Aguarde ${formatCooldown(cooldownLeft)} para reenviar`
-                : 'Não recebi — reenviar código'}
+                ? t('wa.resend_cooldown', { time: formatCooldown(cooldownLeft) })
+                : t('wa.resend_btn')}
             </button>
           </div>
         )}
       </Section>
 
       {/* 2. Tipos de Alerta */}
-      <Section icon={MessageCircle} color="blue" title="Tipos de Alerta" subtitle="Escolha quais relatórios e mensagens quer receber" defaultOpen={true}>
+      <Section icon={MessageCircle} color="blue" title={t('wa.section_alert_types')} subtitle={t('wa.section_alert_types_desc')} defaultOpen={true}>
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.04]">
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.025]">
             <div>
-              <p className="text-sm text-white">Resumo semanal</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Toda quarta: resumo da semana que fechou (terça 21h)</p>
+              <p className="text-sm text-white">{t('wa.summary_label')}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{t('wa.summary_desc')}</p>
             </div>
             <Toggle value={draft.weeklySummary ?? true} onChange={v => updateDraft({ weeklySummary: v })} />
           </div>
 
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-loss/20">
             <div>
-              <p className="text-sm text-white">Modo "enche o saco" 😤</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Repete o lembrete no intervalo configurado</p>
+              <p className="text-sm text-white">{t('wa.annoy_label')}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{t('wa.annoy_desc')}</p>
             </div>
             <Toggle value={draft.encheSaco ?? false} onChange={v => updateDraft({ encheSaco: v })} />
           </div>
 
           {(draft.encheSaco ?? false) && (
             <div className="pl-1 py-1">
-              <label className="text-xs text-slate-500 block mb-2">Repetir a cada</label>
+              <label className="text-xs text-slate-500 block mb-2">{t('wa.annoy_repeat_label')}</label>
               <div className="flex gap-1.5 flex-wrap">
                 {[
                   { label: '30 min', value: 30 },
@@ -477,7 +480,7 @@ function WhatsAppSection() {
                     className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
                       (draft.encheSacoInterval ?? 60) === opt.value
                         ? 'bg-loss/10 border-loss/40 text-loss'
-                        : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                        : 'bg-[#0d1117] border-white/[0.025] text-slate-500 hover:text-slate-300'
                     }`}
                   >
                     {opt.label}
@@ -487,31 +490,31 @@ function WhatsAppSection() {
             </div>
           )}
 
-          <div className="rounded-xl border border-white/[0.08] overflow-hidden">
+          <div className="rounded-xl border border-white/[0.025] overflow-hidden">
             <button
               type="button"
               onClick={() => setShowDevTone(v => !v)}
               className="w-full flex items-center justify-between gap-3 p-3 bg-[#111827] text-left hover:bg-[#131c2e] transition-colors"
             >
               <div>
-                <p className="text-sm text-white">Modo zoeira/dev</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Mensagens agressivas ficam escondidas e exigem opt-in consciente.</p>
+                <p className="text-sm text-white">{t('wa.dev_mode_label')}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">{t('wa.dev_mode_desc')}</p>
               </div>
               <ChevronDown size={15} className={`text-slate-500 transition-transform ${showDevTone ? 'rotate-180' : ''}`} />
             </button>
             {showDevTone && (
-              <div className="bg-[#0d1117] border-t border-white/[0.04] p-3 space-y-3">
+              <div className="bg-[#0d1117] border-t border-white/[0.025] p-3 space-y-3">
                 <div className="flex items-start gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3">
                   <AlertTriangle size={13} className="mt-0.5 shrink-0 text-yellow-400" />
                   <p className="text-[11px] leading-relaxed text-slate-400">
-                    Conteúdo propositalmente ofensivo. Use só em ambiente privado, demo interna ou desenvolvimento.
+                    {t('wa.dev_mode_warning')}
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-red-500/20">
                   <div>
-                    <p className="text-sm text-white">Ativar modo zoeira/dev</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">O bot usa mensagens agressivas até os drops serem registrados.</p>
+                    <p className="text-sm text-white">{t('wa.dev_mode_active_label')}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{t('wa.dev_mode_active_desc')}</p>
                   </div>
                   <Toggle value={draft.xingamentos ?? false} onChange={async v => {
                     const wasOff = !(draft.xingamentos ?? false)
@@ -525,20 +528,20 @@ function WhatsAppSection() {
                 {(draft.xingamentos ?? false) && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Mensagens ativas</p>
+                      <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">{t('wa.active_messages')}</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => updateDraft({ enabledXingamentos: undefined })}
                           className="text-[10px] text-slate-600 hover:text-profit transition-colors"
                         >
-                          Todas
+                          {t('wa.active_messages_all')}
                         </button>
                         <span className="text-slate-800 text-[10px]">·</span>
                         <button
                           onClick={() => updateDraft({ enabledXingamentos: [] })}
                           className="text-[10px] text-slate-600 hover:text-loss transition-colors"
                         >
-                          Nenhuma
+                          {t('wa.active_messages_none')}
                         </button>
                       </div>
                     </div>
@@ -551,7 +554,7 @@ function WhatsAppSection() {
                             className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer ${
                               enabled
                                 ? 'bg-red-500/5 border-red-500/15 text-slate-300'
-                                : 'bg-transparent border-white/[0.04] text-slate-600'
+                                : 'bg-transparent border-white/[0.025] text-slate-600'
                             }`}
                             onClick={() => {
                               const current = draft.enabledXingamentos ?? XINGAMENTOS_META.map(m => m.id)
@@ -574,7 +577,7 @@ function WhatsAppSection() {
                     <p className="text-[10px] text-slate-700 mt-2 text-center">
                       {(() => {
                         const n = draft.enabledXingamentos == null ? XINGAMENTOS_META.length : draft.enabledXingamentos.length
-                        return `${n} de ${XINGAMENTOS_META.length} ativas`
+                        return t('wa.active_messages_status', { n, total: XINGAMENTOS_META.length })
                       })()}
                     </p>
                   </div>
@@ -586,8 +589,8 @@ function WhatsAppSection() {
       </Section>
 
       {/* 3. Grade de Horários */}
-      <Section icon={MessageCircle} color="gold" title="Grade de Horários" subtitle="Dias e horários permitidos para envio" defaultOpen={false}>
-        <p className="text-[11px] text-slate-600 mb-3">Ative os dias e configure o horário em que o bot pode te mandar mensagem.</p>
+      <Section icon={MessageCircle} color="gold" title={t('wa.section_schedule')} subtitle={t('wa.section_schedule_desc')} defaultOpen={false}>
+        <p className="text-[11px] text-slate-600 mb-3">{t('wa.schedule_intro')}</p>
         <div className="space-y-1.5">
           {[0, 1, 2, 3, 4, 5, 6].map(day => {
             const conf = schedule[day] ?? { enabled: false, activeStart: '09:00', activeEnd: '22:00' }
@@ -598,7 +601,7 @@ function WhatsAppSection() {
                   conf.enabled
                     ? 'bg-[#111827]'
                     : 'bg-transparent'
-                } border-white/[0.05]`}
+                } border-white/[0.025]`}
               >
                 <div className="flex items-center gap-3 px-3 py-2">
                   <span className={`text-xs font-medium w-7 ${conf.enabled ? 'text-white' : 'text-slate-600'}`}>
@@ -618,7 +621,7 @@ function WhatsAppSection() {
                         onChange={e => updateDraft({
                           schedule: { ...schedule, [day]: { ...conf, activeStart: e.target.value } },
                         })}
-                        className="h-7 w-20 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
+                        className="h-7 w-20 rounded-lg border border-white/[0.025] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
                       />
                       <span className="text-slate-600 text-xs">→</span>
                       <input
@@ -627,7 +630,7 @@ function WhatsAppSection() {
                         onChange={e => updateDraft({
                           schedule: { ...schedule, [day]: { ...conf, activeEnd: e.target.value } },
                         })}
-                        className="h-7 w-20 rounded-lg border border-white/[0.1] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
+                        className="h-7 w-20 rounded-lg border border-white/[0.025] bg-[#0d1117] text-slate-200 text-xs px-2 focus:outline-none focus:border-primary/60"
                       />
                     </div>
                   )}
@@ -639,31 +642,31 @@ function WhatsAppSection() {
       </Section>
 
       {/* 4. Testes & Diagnóstico */}
-      <Section icon={MessageCircle} color="purple" title="Testes & Diagnóstico" subtitle="Valide o funcionamento do bot de mensagens" defaultOpen={false}>
+      <Section icon={MessageCircle} color="purple" title={t('wa.section_diagnostics')} subtitle={t('wa.section_diagnostics_desc')} defaultOpen={false}>
         <div className="space-y-2">
           <Button
             onClick={handleTest}
             disabled={testing || !hasPhone}
             variant="ghost"
             size="sm"
-            className="w-full border border-white/[0.1] hover:border-profit/40 hover:text-profit"
+            className="w-full border border-white/[0.025] hover:border-profit/40 hover:text-profit"
           >
-            {testing ? '⏳ Enviando...' : '📲 Enviar mensagem de teste'}
+            {testing ? t('wa.btn_test_msg_sending') : t('wa.btn_test_msg')}
           </Button>
           <Button
             onClick={handleForceReminder}
             disabled={forcingReminder || !hasPhone}
             variant="ghost"
             size="sm"
-            className="w-full border border-white/[0.1] hover:border-primary/40 hover:text-primary"
+            className="w-full border border-white/[0.025] hover:border-primary/40 hover:text-primary"
           >
-            {forcingReminder ? '⏳ Enviando...' : '🔔 Simular lembrete real agora'}
+            {forcingReminder ? t('wa.btn_simulate_reminder_sending') : t('wa.btn_simulate_reminder')}
           </Button>
         </div>
       </Section>
 
       {/* Botão Salvar */}
-      <div className={`p-4 rounded-xl border bg-[#0d1117]/30 transition-all ${hasChanges ? 'border-primary/30' : 'border-white/[0.04]'}`}>
+      <div className={`p-4 rounded-xl border bg-[#0d1117]/30 transition-all ${hasChanges ? 'border-primary/30' : 'border-white/[0.025]'}`}>
         <Button
           onClick={handleSave}
           disabled={saving || !hasChanges}
@@ -674,11 +677,11 @@ function WhatsAppSection() {
               : 'opacity-40 cursor-not-allowed'
           }`}
         >
-          {saving ? '⏳ Salvando...' : hasChanges ? '💾 Salvar alterações' : '✓ Tudo salvo'}
+          {saving ? t('wa.btn_saving') : hasChanges ? t('wa.btn_save') : t('wa.btn_saved')}
         </Button>
         {hasChanges && (
           <p className="text-[10px] text-primary/70 text-center mt-1.5">
-            Alterações pendentes — clique em salvar para o bot receber as novas configurações
+            {t('wa.save_card_hint')}
           </p>
         )}
       </div>
@@ -694,6 +697,7 @@ const tabs: { id: 'finance' | 'appearance' | 'notifications' | 'privacy'; label:
 ]
 
 export default function Settings() {
+  const t = useT()
   const {
     accounts, drops, goals, settings,
     updateSettings, updateTheme, reset,
@@ -710,6 +714,8 @@ export default function Settings() {
   const [cacheStats, setCacheStats] = useState<{ entries: number; sizeKB: number } | null>(null)
   const [showCustomFirebase, setShowCustomFirebase] = useState(false)
   const [showFirebaseTutorial, setShowFirebaseTutorial] = useState(false)
+  const [exportingJSON, setExportingJSON] = useState(false)
+  const [importingJSON, setImportingJSON] = useState(false)
   const [exportOpts, setExportOpts] = useState<ExportOptions>(() => ({
     ...DEFAULT_EXPORT_OPTIONS,
     currency: (settings.currency as ExportCurrency) ?? 'BRL',
@@ -758,33 +764,33 @@ export default function Settings() {
   function handleSaveCustomFirebase() {
     const { apiKey, authDomain, projectId, appId } = customFbForm
     if (!apiKey || !authDomain || !projectId || !appId) {
-      toast.error('Preencha pelo menos: API Key, Auth Domain, Project ID e App ID.')
+      toast.error(t('settings.firebase_validation_fields'))
       return
     }
     if (!authDomain.includes('.') || authDomain.includes('<') || authDomain.includes('>')) {
-      toast.error('Auth Domain inválido (ex: meu-projeto.firebaseapp.com)')
+      toast.error(t('settings.firebase_validation_domain'))
       return
     }
     if (!/^[a-z0-9-]+$/.test(projectId)) {
-      toast.error('Project ID inválido — use apenas letras minúsculas, números e hífens.')
+      toast.error(t('settings.firebase_validation_project'))
       return
     }
     if (!appId.startsWith('1:')) {
-      toast.error('App ID inválido — deve começar com "1:" (ex: 1:123456:web:abc123)')
+      toast.error(t('settings.firebase_validation_app'))
       return
     }
     try {
       localStorage.setItem(CUSTOM_FIREBASE_KEY, JSON.stringify(customFbForm))
-      toast.success('Firebase próprio salvo! Recarregue a página para ativar.')
+      toast.success(t('settings.firebase_toast_saved'))
     } catch {
-      toast.error('Erro ao salvar configuração.')
+      toast.error(settings.language === 'en' ? 'Error saving configuration.' : 'Erro ao salvar configuração.')
     }
   }
 
   function handleClearCustomFirebase() {
     localStorage.removeItem(CUSTOM_FIREBASE_KEY)
     setCustomFbForm({ apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' })
-    toast.success('Firebase padrão restaurado. Recarregue a página.')
+    toast.success(t('settings.firebase_toast_restored'))
   }
 
   function handleCashoutRate(val: number) {
@@ -795,19 +801,24 @@ export default function Settings() {
     try {
       exportDrops(drops, accounts, settings, exportOpts)
       const labels: Record<ExportFormat, string> = { csv: 'CSV', xlsx: 'XLSX', txt: 'TXT' }
-      toast.success(`${labels[exportOpts.format]} exportado!`)
+      toast.success(t('settings.export_toast_exported', { format: labels[exportOpts.format] }))
     } catch {
-      toast.error('Erro ao exportar')
+      toast.error(t('settings.export_toast_error'))
     }
   }
 
   function handleExportJSON() {
-    try {
-      exportBackupJSON(storage.exportAll())
-      toast.success('Backup exportado!')
-    } catch {
-      toast.error('Erro ao exportar backup')
-    }
+    setExportingJSON(true)
+    setTimeout(() => {
+      try {
+        exportBackupJSON(storage.exportAll())
+        toast.success(t('settings.export_toast_backup_exported'))
+      } catch {
+        toast.error(t('settings.export_toast_backup_error'))
+      } finally {
+        setExportingJSON(false)
+      }
+    }, 700)
   }
 
   function handleImportJSON(e: React.ChangeEvent<HTMLInputElement>) {
@@ -816,35 +827,43 @@ export default function Settings() {
     e.target.value = ''
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Arquivo muito grande (máx 5 MB)')
+      toast.error(t('settings.export_import_toast_large'))
       return
     }
     if (!file.name.endsWith('.json') && file.type !== 'application/json') {
-      toast.error('Apenas arquivos .json são aceitos')
+      toast.error(t('settings.export_import_toast_invalid_type'))
       return
     }
 
+    setImportingJSON(true)
     const reader = new FileReader()
-    reader.onerror = () => toast.error('Erro ao ler o arquivo')
+    reader.onerror = () => {
+      toast.error(t('settings.export_import_toast_read_error'))
+      setImportingJSON(false)
+    }
     reader.onload = (ev) => {
-      try {
-        const raw = ev.target?.result
-        if (typeof raw !== 'string') throw new Error('Leitura inválida')
-        const data = JSON.parse(raw)
-        storage.validateImport(data)
-        storage.importAll(data)
-        toast.success('Backup importado com sucesso!')
-        setTimeout(() => window.location.reload(), 800)
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Arquivo inválido')
-      }
+      setTimeout(() => {
+        try {
+          const raw = ev.target?.result
+          if (typeof raw !== 'string') throw new Error('Leitura inválida')
+          const data = JSON.parse(raw)
+          storage.validateImport(data)
+          storage.importAll(data)
+          toast.success(t('settings.export_import_toast_success'))
+          setTimeout(() => window.location.reload(), 800)
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : (settings.language === 'en' ? 'Invalid file' : 'Arquivo inválido'))
+        } finally {
+          setImportingJSON(false)
+        }
+      }, 700)
     }
     reader.readAsText(file)
   }
 
   function handleClearCache() {
     clearSteamCache()
-    toast.success('Cache Steam limpo!')
+    toast.success(t('settings.steam_cache_toast_cleared'))
     setCacheStats(getSteamCacheStats())
   }
 
@@ -860,7 +879,7 @@ export default function Settings() {
     }
     storage.clearAll()
     reset()
-    toast.success('Dados apagados')
+    toast.success(t('settings.danger_toast_deleted_local'))
     setResetConfirm(false)
     setTimeout(() => window.location.reload(), 500)
   }
@@ -874,10 +893,10 @@ export default function Settings() {
     }
     if (deleteConfirmTimerRef.current) { clearTimeout(deleteConfirmTimerRef.current); deleteConfirmTimerRef.current = null }
     setDeleteConfirm(null)
-    if (type === 'drops') { clearDrops(); toast.success('Drops apagados') }
-    else if (type === 'accounts') { clearAccounts(); toast.success('Contas apagadas') }
-    else if (type === 'goals') { clearGoals(); toast.success('Metas apagadas') }
-    else if (type === 'settings') { resetSettingsToDefault(); toast.success('Configurações restauradas') }
+    if (type === 'drops') { clearDrops(); toast.success(t('settings.selective_clear_toast_drops')) }
+    else if (type === 'accounts') { clearAccounts(); toast.success(t('settings.selective_clear_toast_accounts')) }
+    else if (type === 'goals') { clearGoals(); toast.success(t('settings.selective_clear_toast_goals')) }
+    else if (type === 'settings') { resetSettingsToDefault(); toast.success(t('settings.selective_clear_toast_settings')) }
   }
 
   const cashoutRate = settings.cashoutRate
@@ -888,14 +907,14 @@ export default function Settings() {
     <div className="p-4 md:p-6 lg:p-8 space-y-5 pb-12">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-xl font-display font-bold text-white font-body">Configurações</h1>
-        <p className="text-slate-500 text-xs mt-0.5">Personalize o LootFlow ao seu jeito</p>
+        <h1 className="text-xl font-display font-bold text-white font-body">{t('settings.title')}</h1>
+        <p className="text-slate-500 text-xs mt-0.5">{t('settings.subtitle')}</p>
       </motion.div>
 
       {/* 2-Column Sidebar Layout */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
         {/* Tab Navigation Vertical Sidebar */}
-        <div className="flex flex-col gap-1 w-full md:w-60 shrink-0 bg-[#0d1117]/60 border border-white/[0.04] rounded-xl p-2.5">
+        <div className="flex flex-col gap-1 w-full md:w-60 shrink-0 bg-[#0d1117]/60 border border-white/[0.025] rounded-xl p-2.5">
           {tabs.map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -910,7 +929,7 @@ export default function Settings() {
                 }`}
               >
                 <Icon size={16} className="shrink-0" />
-                <span>{tab.label}</span>
+                <span>{t(`settings.tab_${tab.id}` as any)}</span>
               </button>
             )
           })}
@@ -929,16 +948,18 @@ export default function Settings() {
             {activeTab === 'finance' && (
               <div className="space-y-5">
                 {/* 1. Taxa de Cashout */}
-                <Section icon={Settings2} color="blue" title="Taxa de Cashout" subtitle="Percentual do valor bruto recebido na venda" defaultOpen={true}>
+                <Section icon={Settings2} color="blue" title={t('settings.section_cashout_rate')} subtitle={t('settings.section_cashout_rate_desc')} defaultOpen={true}>
                   {/* Cashout rate */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-white font-medium">Taxa de Cashout</p>
+                      <p className="text-sm text-white font-medium">{t('settings.cashout_rate_label')}</p>
                       <span className="text-lg font-mono font-bold text-primary">{cashoutRate}%</span>
                     </div>
                     <p className="text-xs text-slate-500 mb-3">
-                      Percentual do valor bruto que você realmente recebe na venda.<br/>
-                      Ex: item {formatCurrency(10, settings.currency)} de valor bruto → cashout {formatCurrency(10 * cashoutRate / 100, settings.currency)}
+                      {t('settings.cashout_rate_hint', {
+                        gross: formatCurrency(10, settings.currency),
+                        cashout: formatCurrency(10 * cashoutRate / 100, settings.currency)
+                      })}
                     </p>
                     <input
                       type="range"
@@ -957,8 +978,8 @@ export default function Settings() {
                   </div>
 
                   {/* Manual override */}
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <label className="text-xs text-slate-400 mb-1.5 block">Ou insira manualmente</label>
+                  <div className="pt-3 border-t border-white/[0.025]">
+                    <label className="text-xs text-slate-400 mb-1.5 block">{t('settings.cashout_rate_manual')}</label>
                     <div className="flex gap-2">
                       <Input
                         type="number"
@@ -975,24 +996,24 @@ export default function Settings() {
                 </Section>
 
                 {/* 2. Moeda & Conversão */}
-                <Section icon={Settings2} color="green" title="Moeda & Conversão" subtitle="Escolha a moeda de exibição e taxa do dólar" defaultOpen={false}>
+                <Section icon={Settings2} color="green" title={t('settings.section_currency')} subtitle={t('settings.section_currency_desc')} defaultOpen={false}>
                   {/* Currency */}
-                  <SettingRow label="Moeda / Currency" hint={settings.currency === 'USD' ? `Taxa: 1 USD = R$ ${settings.usdRate ?? 5.2}` : 'Valores em Real Brasileiro'}>
+                  <SettingRow label={t('settings.currency_label')} hint={settings.currency === 'USD' ? t('settings.currency_hint_usd', { rate: settings.usdRate ?? 5.2 }) : t('settings.currency_hint_brl')}>
                     <div className="flex gap-2">
                       <button
                         onClick={() => updateSettings({ currency: 'BRL' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'BRL' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'BRL' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/[0.025] text-slate-400 hover:text-slate-200'}`}
                       >R$ BRL</button>
                       <button
                         onClick={() => updateSettings({ currency: 'USD' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'USD' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.currency === 'USD' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/[0.025] text-slate-400 hover:text-slate-200'}`}
                       >$ USD</button>
                     </div>
                   </SettingRow>
 
                   {settings.currency === 'USD' && (
-                    <div className="pt-3 border-t border-white/[0.04] pl-4 border-l-2 border-primary/20 space-y-1.5">
-                      <label className="text-xs text-slate-400 block">Taxa de Conversão (1 USD = R$ ...)</label>
+                    <div className="pt-3 border-t border-white/[0.025] pl-4 border-l-2 border-primary/20 space-y-1.5">
+                      <label className="text-xs text-slate-400 block">{t('settings.currency_conversion_label')}</label>
                       <Input
                         type="number"
                         min="1"
@@ -1006,10 +1027,10 @@ export default function Settings() {
                 </Section>
 
                 {/* 3. Meta Semanal */}
-                <Section icon={Settings2} color="gold" title="Meta Semanal" subtitle="Defina o valor alvo de cashout por semana" defaultOpen={false}>
+                <Section icon={Settings2} color="gold" title={t('settings.section_weekly_goal')} subtitle={t('settings.section_weekly_goal_desc')} defaultOpen={false}>
                   {/* Weekly goal */}
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Meta semanal de cashout ({settings.currency === 'USD' ? '$' : 'R$'})</label>
+                    <label className="text-xs text-slate-400 mb-1.5 block">{t('settings.weekly_goal_label', { symbol: settings.currency === 'USD' ? '$' : 'R$' })}</label>
                     <Input
                       type="number"
                       min="0"
@@ -1035,10 +1056,10 @@ export default function Settings() {
             {activeTab === 'appearance' && (
               <div className="space-y-5">
                 {/* 1. Tema & Cores */}
-                <Section icon={Palette} color="purple" title="Tema & Cores" subtitle="Personalize as cores do painel" defaultOpen={true}>
+                <Section icon={Palette} color="purple" title={t('settings.section_theme')} subtitle={t('settings.section_theme_desc')} defaultOpen={true}>
                   {/* Primary color */}
                   <div>
-                    <label className="text-xs text-slate-400 mb-2 block">Cor Principal</label>
+                    <label className="text-xs text-slate-400 mb-2 block">{t('settings.theme_primary_label')}</label>
                     <div className="flex gap-2 flex-wrap mb-2">
                       {PRESET_COLORS.map(c => (
                         <button
@@ -1058,7 +1079,7 @@ export default function Settings() {
                         type="color"
                         value={settings.theme.primaryColor}
                         onChange={e => updateTheme({ primaryColor: e.target.value })}
-                        className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
+                        className="w-8 h-8 rounded-lg border border-white/[0.025] bg-transparent cursor-pointer"
                       />
                       <Input
                         value={settings.theme.primaryColor}
@@ -1070,14 +1091,14 @@ export default function Settings() {
                   </div>
 
                   {/* Accent color */}
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <label className="text-xs text-slate-400 mb-2 block">Cor de Destaque</label>
+                  <div className="pt-3 border-t border-white/[0.025]">
+                    <label className="text-xs text-slate-400 mb-2 block">{t('settings.theme_accent_label')}</label>
                     <div className="flex gap-2 items-center">
                       <input
                         type="color"
                         value={settings.theme.accentColor}
                         onChange={e => updateTheme({ accentColor: e.target.value })}
-                        className="w-8 h-8 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer"
+                        className="w-8 h-8 rounded-lg border border-white/[0.025] bg-transparent cursor-pointer"
                       />
                       <Input
                         value={settings.theme.accentColor}
@@ -1088,8 +1109,8 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <SettingRow label="Glassmorphism" hint="Efeito de vidro nas cards">
+                  <div className="pt-3 border-t border-white/[0.025]">
+                    <SettingRow label={t('settings.theme_glassmorphism')} hint={t('settings.theme_glassmorphism_hint')}>
                       <Toggle
                         value={settings.theme.glassmorphism}
                         onChange={v => updateTheme({ glassmorphism: v })}
@@ -1099,16 +1120,16 @@ export default function Settings() {
                 </Section>
 
                 {/* 2. Interface & Otimização */}
-                <Section icon={Palette} color="blue" title="Interface & Otimização" subtitle="Ajustes visuais e de performance" defaultOpen={false}>
-                  <SettingRow label="Otimizar site" hint="Desativa animações e efeitos para melhor performance">
+                <Section icon={Palette} color="blue" title={t('settings.section_interface')} subtitle={t('settings.section_interface_desc')} defaultOpen={false}>
+                  <SettingRow label={t('settings.interface_animations')} hint={t('settings.interface_animations_hint')}>
                     <Toggle
                       value={!settings.theme.animations}
                       onChange={v => updateTheme({ animations: !v })}
                     />
                   </SettingRow>
 
-                  <div className="pt-3 border-t border-white/[0.04]">
-                    <SettingRow label="Sidebar compacta" hint="Colapsa labels no menu lateral">
+                  <div className="pt-3 border-t border-white/[0.025]">
+                    <SettingRow label={t('settings.interface_sidebar')} hint={t('settings.interface_sidebar_hint')}>
                       <Toggle
                         value={settings.theme.sidebarCompact}
                         onChange={v => updateTheme({ sidebarCompact: v })}
@@ -1118,16 +1139,16 @@ export default function Settings() {
                 </Section>
 
                 {/* 3. Idioma */}
-                <Section icon={Palette} color="gold" title="Idioma / Language" subtitle="Mude o idioma da interface" defaultOpen={false}>
-                  <SettingRow label="Idioma / Language" hint="Idioma da interface / Interface language">
+                <Section icon={Palette} color="gold" title={t('settings.section_language')} subtitle={t('settings.section_language_desc')} defaultOpen={false}>
+                  <SettingRow label={t('settings.language_label')} hint={t('settings.language_hint')}>
                     <div className="flex gap-2">
                       <button
                         onClick={() => updateSettings({ language: 'pt' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/[0.025] text-slate-400 hover:text-slate-200'}`}
                       >🇧🇷 PT</button>
                       <button
                         onClick={() => updateSettings({ language: 'en' })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/[0.025] text-slate-400 hover:text-slate-200'}`}
                       >🇺🇸 EN</button>
                     </div>
                   </SettingRow>
@@ -1146,11 +1167,11 @@ export default function Settings() {
             {activeTab === 'privacy' && (
               <div className="space-y-5">
                 {/* Firebase Cloud Sync Card */}
-                <Section icon={Database} color="blue" title="Firebase" subtitle="Sincronização na nuvem" defaultOpen={true}>
+                <Section icon={Database} color="blue" title={t('settings.section_firebase')} subtitle={t('settings.section_firebase_desc')} defaultOpen={true}>
                   <div className="space-y-3">
                     <SettingRow
-                      label="Sincronizar com Firebase"
-                      hint="Com sync ativo, exclusões locais também removem do Firestore. Desativado, novas alterações ficam só no dispositivo."
+                      label={t('settings.firebase_sync_label')}
+                      hint={t('settings.firebase_sync_hint')}
                     >
                       <Toggle
                         value={settings.firebaseSyncEnabled !== false}
@@ -1162,54 +1183,54 @@ export default function Settings() {
                       <Check size={15} className="text-profit mt-0.5 flex-shrink-0" />
                       <div className="text-xs text-slate-400">
                         <p className="text-profit font-semibold mb-1">
-                          {isUsingCustomFirebase() ? 'Firebase próprio ativo ✓' : 'Firebase padrão ativo ✓'}
+                          {isUsingCustomFirebase() ? t('settings.firebase_status_custom') : t('settings.firebase_status_default')}
                         </p>
-                        <p>Login com Google disponível. Dados sincronizam entre dispositivos.</p>
+                        <p>{t('settings.firebase_status_desc')}</p>
                       </div>
                     </div>
 
                     <button
                       onClick={() => setShowCustomFirebase(v => !v)}
-                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04] hover:border-white/[0.10] transition-colors text-left"
+                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.025] hover:border-white/[0.06] transition-colors text-left"
                     >
                       <div>
-                        <p className="text-sm text-white">Usar Firebase próprio</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Para privacidade total — seus dados ficam no seu projeto Firebase</p>
+                        <p className="text-sm text-white">{t('settings.firebase_custom_toggle')}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{t('settings.firebase_custom_hint')}</p>
                       </div>
                       <ChevronDown size={15} className={`text-slate-500 transition-transform ${showCustomFirebase ? 'rotate-180' : ''}`} />
                     </button>
 
                     {showCustomFirebase && (
-                      <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.04]">
+                      <div className="space-y-3 p-3 rounded-xl bg-[#0d1117] border border-white/[0.025]">
                         <button
                           onClick={() => setShowFirebaseTutorial(v => !v)}
                           className="w-full flex items-center justify-between text-xs text-primary hover:underline"
                         >
-                          <span>Como criar meu Firebase?</span>
+                          <span>{t('settings.firebase_tutorial_toggle')}</span>
                           <ChevronDown size={13} className={`transition-transform ${showFirebaseTutorial ? 'rotate-180' : ''}`} />
                         </button>
 
                         {showFirebaseTutorial && (
                           <div className="text-xs text-slate-500 space-y-1.5 p-3 bg-black/20 rounded-xl leading-relaxed">
                             <p className="text-slate-300 font-semibold">Tutorial — Firebase gratuito em 5 passos:</p>
-                            <p>1. Acesse <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-primary underline">console.firebase.google.com</a> → "Criar projeto"</p>
-                            <p>2. Crie o projeto (desative Google Analytics se quiser)</p>
-                            <p>3. Clique em "Web" (&lt;/&gt;) → registre o app → copie o objeto <code className="text-slate-300">firebaseConfig</code></p>
-                            <p>4. No menu lateral: <strong className="text-slate-300">Build → Firestore Database</strong> → criar banco → "Modo produção"</p>
-                            <p>5. Em Firestore → <strong className="text-slate-300">Rules</strong>, cole:</p>
+                            <p>{t('settings.firebase_tutorial_step1')}</p>
+                            <p>{t('settings.firebase_tutorial_step2')}</p>
+                            <p>{t('settings.firebase_tutorial_step3')}</p>
+                            <p>{t('settings.firebase_tutorial_step4')}</p>
+                            <p>{t('settings.firebase_tutorial_step5')}</p>
                             <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth.uid == uid;\n    }\n  }\n}'}</pre>
-                            <p>6. Cole os valores abaixo e salve.</p>
+                            <p>{t('settings.firebase_tutorial_step6')}</p>
                           </div>
                         )}
 
                         <div className="space-y-2">
                           {([
                             ['apiKey', 'API Key *'],
-                            ['authDomain', 'Auth Domain * (ex: meu-projeto.firebaseapp.com)'],
+                            ['authDomain', settings.language === 'en' ? 'Auth Domain * (e.g.: my-project.firebaseapp.com)' : 'Auth Domain * (ex: meu-projeto.firebaseapp.com)'],
                             ['projectId', 'Project ID *'],
                             ['appId', 'App ID *'],
-                            ['storageBucket', 'Storage Bucket (opcional)'],
-                            ['messagingSenderId', 'Messaging Sender ID (opcional)'],
+                            ['storageBucket', settings.language === 'en' ? 'Storage Bucket (optional)' : 'Storage Bucket (opcional)'],
+                            ['messagingSenderId', settings.language === 'en' ? 'Messaging Sender ID (optional)' : 'Messaging Sender ID (opcional)'],
                           ] as const).map(([field, label]) => (
                             <div key={field}>
                               <label className="text-[10px] text-slate-500 block mb-1">{label}</label>
@@ -1218,7 +1239,7 @@ export default function Settings() {
                                 value={customFbForm[field as keyof typeof customFbForm]}
                                 onChange={e => setCustomFbForm(f => ({ ...f, [field]: e.target.value }))}
                                 placeholder={FIREBASE_CONFIG[field as keyof typeof FIREBASE_CONFIG] ? '•'.repeat(8) : ''}
-                                className="w-full h-8 rounded-lg border border-white/[0.1] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60"
+                                className="w-full h-8 rounded-lg border border-white/[0.025] bg-[#111827] text-slate-200 text-xs px-3 focus:outline-none focus:border-primary/60"
                               />
                             </div>
                           ))}
@@ -1226,11 +1247,11 @@ export default function Settings() {
 
                         <div className="flex gap-2 pt-1">
                           <Button size="sm" onClick={handleSaveCustomFirebase} className="flex-1">
-                            Salvar e recarregar
+                            {t('settings.firebase_custom_save_btn')}
                           </Button>
                           {isUsingCustomFirebase() && (
                             <Button size="sm" variant="ghost" onClick={handleClearCustomFirebase}>
-                              Usar padrão
+                              {t('settings.firebase_custom_default_btn')}
                             </Button>
                           )}
                         </div>
@@ -1240,19 +1261,19 @@ export default function Settings() {
                 </Section>
 
                 {/* Cache Steam */}
-                <Section icon={Zap} color="gold" title="Cache Steam" subtitle="Preços salvos localmente" defaultOpen={false}>
+                <Section icon={Zap} color="gold" title={t('settings.section_steam_cache')} subtitle={t('settings.section_steam_cache_desc')} defaultOpen={false}>
                   <p className="text-xs text-slate-500">
-                    O LootFlow salva preços do Steam Market localmente por 30 minutos para não sobrecarregar a API e manter a UI responsiva.
+                    {t('settings.steam_cache_hint')}
                   </p>
 
                   {cacheStats !== null && (
                     <div className="bg-[#111827]/60 rounded-xl p-3 grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-xs text-slate-500">Itens em cache</p>
+                        <p className="text-xs text-slate-500">{t('settings.steam_cache_entries')}</p>
                         <p className="text-lg font-mono font-bold text-white">{cacheStats.entries}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500">Tamanho aprox.</p>
+                        <p className="text-xs text-slate-500">{t('settings.steam_cache_size')}</p>
                         <p className="text-lg font-mono font-bold text-white">{cacheStats.sizeKB} KB</p>
                       </div>
                     </div>
@@ -1260,26 +1281,26 @@ export default function Settings() {
 
                   <div className="flex gap-2">
                     <Button variant="ghost" icon={RefreshCw} size="sm" onClick={handleCheckCache} className="flex-1">
-                      Ver Cache
+                      {t('settings.steam_cache_btn_view')}
                     </Button>
                     <Button variant="danger" icon={Trash2} size="sm" onClick={handleClearCache} className="flex-1">
-                      Limpar Cache
+                      {t('settings.steam_cache_btn_clear')}
                     </Button>
                   </div>
                 </Section>
 
                 {/* Exportar Dados */}
-                <Section icon={Download} color="green" title="Exportar Dados" subtitle={`${drops.length} drops · ${accounts.length} contas`} defaultOpen={false}>
+                <Section icon={Download} color="green" title={t('settings.section_export')} subtitle={t('settings.section_export_desc', { drops: drops.length, accounts: accounts.length })} defaultOpen={false}>
                   <div className="flex items-start gap-2.5 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
                     <AlertTriangle size={14} className="text-yellow-400 mt-0.5 shrink-0" />
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      No modo local, limpar cache/navegador pode apagar seus dados. Faça backup JSON antes de limpar o navegador, trocar de dispositivo ou testar em produção.
+                      {t('settings.export_alert_hint')}
                     </p>
                   </div>
 
                   {/* Format selection */}
                   <div>
-                    <p className="text-xs text-slate-400 mb-2">Formato</p>
+                    <p className="text-xs text-slate-400 mb-2">{t('settings.export_format_label')}</p>
                     <div className="flex gap-1.5">
                       {(['csv', 'xlsx', 'txt'] as ExportFormat[]).map(f => (
                         <button
@@ -1288,26 +1309,26 @@ export default function Settings() {
                           className={`h-8 px-3 rounded-xl text-xs font-semibold border uppercase transition-all ${
                             exportOpts.format === f
                               ? 'bg-profit/10 border-profit/40 text-profit'
-                              : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                              : 'bg-[#0d1117] border-white/[0.025] text-slate-500 hover:text-slate-300'
                           }`}
                         >{f}</button>
                       ))}
                     </div>
                     <p className="text-[10px] text-slate-600 mt-1.5">
-                      {exportOpts.format === 'csv'  && 'Planilha CSV — abre em Excel, Sheets e LibreOffice'}
-                      {exportOpts.format === 'xlsx' && 'Excel com abas: Drops + Contas'}
-                      {exportOpts.format === 'txt'  && 'Relatório em texto formatado, legível em qualquer editor'}
+                      {exportOpts.format === 'csv'  && t('settings.export_format_hint_csv')}
+                      {exportOpts.format === 'xlsx' && t('settings.export_format_hint_xlsx')}
+                      {exportOpts.format === 'txt'  && t('settings.export_format_hint_txt')}
                     </p>
                   </div>
 
                   {/* Filter selection */}
                   <div>
-                    <p className="text-xs text-slate-400 mb-2">Filtrar drops</p>
+                    <p className="text-xs text-slate-400 mb-2">{t('settings.export_filter_label')}</p>
                     <div className="flex gap-1.5 flex-wrap">
                       {([
-                        { id: 'all',    label: 'Todos' },
-                        { id: 'sold',   label: 'Vendidos' },
-                        { id: 'unsold', label: 'Não vendidos' },
+                        { id: 'all',    label: t('settings.export_filter_all') },
+                        { id: 'sold',   label: t('settings.export_filter_sold') },
+                        { id: 'unsold', label: t('settings.export_filter_unsold') },
                       ] as { id: ExportFilter; label: string }[]).map(f => (
                         <button
                           key={f.id}
@@ -1315,7 +1336,7 @@ export default function Settings() {
                           className={`h-8 px-3 rounded-xl text-xs font-medium border transition-all ${
                             exportOpts.filter === f.id
                               ? 'bg-primary/10 border-primary/40 text-primary'
-                              : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                              : 'bg-[#0d1117] border-white/[0.025] text-slate-500 hover:text-slate-300'
                           }`}
                         >{f.label}</button>
                       ))}
@@ -1324,12 +1345,12 @@ export default function Settings() {
 
                   {/* Columns configuration */}
                   <div>
-                    <p className="text-xs text-slate-400 mb-2">Campos</p>
+                    <p className="text-xs text-slate-400 mb-2">{t('settings.export_columns_label')}</p>
                     <div className="space-y-1.5">
                       {([
-                        { id: 'all',        label: 'Todos os campos',         hint: 'Semana, conta, item, bruto, cashout, vendido, datas, nota' },
-                        { id: 'minimal',    label: 'Somente nomes dos drops', hint: 'Semana, conta, nº drop, item — sem valores' },
-                        { id: 'with-dates', label: 'Com datas',               hint: 'Todos os campos + data de venda e registro' },
+                        { id: 'all',        label: t('settings.export_columns_all'),         hint: t('settings.export_columns_all_hint') },
+                        { id: 'minimal',    label: t('settings.export_columns_minimal'), hint: t('settings.export_columns_minimal_hint') },
+                        { id: 'with-dates', label: t('settings.export_columns_dates'),               hint: t('settings.export_columns_dates_hint') },
                       ] as { id: ExportColumns; label: string; hint: string }[]).map(c => (
                         <button
                           key={c.id}
@@ -1337,7 +1358,7 @@ export default function Settings() {
                           className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
                             exportOpts.columns === c.id
                               ? 'bg-[#111827] border-primary/30'
-                              : 'bg-[#0d1117] border-white/[0.04] hover:border-white/[0.10]'
+                              : 'bg-[#0d1117] border-white/[0.025] hover:border-white/[0.06]'
                           }`}
                         >
                           <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
@@ -1355,7 +1376,7 @@ export default function Settings() {
                   {/* Export Currency options */}
                   {exportOpts.columns !== 'minimal' && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-2">Moeda dos valores</p>
+                      <p className="text-xs text-slate-400 mb-2">{t('settings.export_currency_label')}</p>
                       <div className="flex gap-1.5">
                         {(['BRL', 'USD'] as ExportCurrency[]).map(c => (
                           <button
@@ -1364,14 +1385,14 @@ export default function Settings() {
                             className={`h-8 px-3 rounded-xl text-xs font-semibold border transition-all ${
                               exportOpts.currency === c
                                 ? 'bg-primary/10 border-primary/40 text-primary'
-                                : 'bg-[#0d1117] border-white/[0.08] text-slate-500 hover:text-slate-300'
+                                : 'bg-[#0d1117] border-white/[0.025] text-slate-500 hover:text-slate-300'
                             }`}
                           >{c === 'BRL' ? '🇧🇷 R$ BRL' : '🇺🇸 $ USD'}</button>
                         ))}
                       </div>
                       {exportOpts.currency === 'USD' && (
                         <p className="text-[10px] text-slate-600 mt-1">
-                          Taxa: 1 USD = R$ {(settings as any).usdRate ?? 5.2}
+                          {t('settings.export_currency_hint_usd', { rate: settings.usdRate ?? 5.2 })}
                         </p>
                       )}
                     </div>
@@ -1381,8 +1402,8 @@ export default function Settings() {
                   {exportOpts.columns !== 'minimal' && (
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm text-white">Linha de total</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Adiciona soma de bruto e cashout no final</p>
+                        <p className="text-sm text-white">{t('settings.export_total_row_label')}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{t('settings.export_total_row_hint')}</p>
                       </div>
                       <Toggle value={exportOpts.includeTotal} onChange={v => setExportOpts(o => ({ ...o, includeTotal: v }))} />
                     </div>
@@ -1396,55 +1417,60 @@ export default function Settings() {
                     className="w-full"
                   >
                     <Download size={14} />
-                    Exportar {exportOpts.format.toUpperCase()} · {drops.length} drops
+                    {t('settings.export_btn_format', { format: exportOpts.format.toUpperCase(), count: drops.length })}
                   </Button>
 
                   {/* JSON backup export */}
-                  <div className="pt-1 border-t border-white/[0.08]">
+                  <div className="pt-1 border-t border-white/[0.025]">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm text-white">Backup completo</p>
-                        <p className="text-xs text-slate-500 mt-0.5">JSON com contas, drops e metas — para restaurar depois</p>
+                        <p className="text-sm text-white">{t('settings.export_backup_label')}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{t('settings.export_backup_hint')}</p>
                       </div>
                       <button
                         onClick={handleExportJSON}
-                        className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#111827]/40 border border-white/[0.08] hover:border-gold/40 text-slate-400 hover:text-gold text-xs transition-all shrink-0"
+                        disabled={exportingJSON}
+                        className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-[#111827]/40 border border-white/[0.025] hover:border-gold/40 text-slate-400 hover:text-gold text-xs transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        <Download size={12} />JSON
+                        {exportingJSON ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                        {t('settings.export_backup_btn')}
                       </button>
                     </div>
                   </div>
 
                   {/* JSON import wrapper */}
-                  <div className="pt-1 border-t border-white/[0.08]">
-                    <p className="text-xs text-slate-500 mb-2">Importar backup</p>
+                  <div className="pt-1 border-t border-white/[0.025]">
+                    <p className="text-xs text-slate-500 mb-2">{t('settings.export_import_label')}</p>
                     <input type="file" accept=".json" ref={importRef} onChange={handleImportJSON} className="hidden" />
                     <Button
                       variant="ghost"
                       icon={Upload}
                       size="sm"
+                      loading={importingJSON}
                       onClick={() => importRef.current?.click()}
                       className="w-full"
                     >
-                      Importar JSON
+                      {t('settings.export_import_btn')}
                     </Button>
                     <p className="text-xs text-slate-600 mt-1.5 flex items-center gap-1">
                       <AlertTriangle size={10} />
-                      Isso vai sobrescrever todos os dados antigos
+                      {t('settings.export_import_warning')}
                     </p>
                   </div>
                 </Section>
 
                 {/* Apagar dados seletivamente */}
-                <Section icon={Lock} color="purple" title="Dados Locais e Privacidade" subtitle="Controle total sobre seus dados" defaultOpen={false}>
+                <Section icon={Lock} color="purple" title={t('settings.section_selective_clear')} subtitle={t('settings.section_selective_clear_desc')} defaultOpen={false}>
                   <div>
-                    <p className="text-xs text-slate-400 mb-3">Apagar dados seletivamente</p>
+                    <p className="text-xs text-slate-400 mb-3">{t('settings.selective_clear_hint')}</p>
                     <div className="space-y-2">
                       {/* Drops delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.025]">
                         <div className="min-w-0">
-                          <p className="text-sm text-white">Drops</p>
-                          <p className="text-xs text-slate-500">{drops.length} registro{drops.length !== 1 ? 's' : ''}</p>
+                          <p className="text-sm text-white">{t('settings.selective_clear_drops')}</p>
+                          <p className="text-xs text-slate-500">
+                            {t('settings.selective_clear_drops_count', { count: drops.length, s: drops.length !== 1 ? 's' : '' })}
+                          </p>
                         </div>
                         <Button
                           variant="danger"
@@ -1453,15 +1479,17 @@ export default function Settings() {
                           onClick={() => handleSelectiveDelete('drops')}
                           disabled={drops.length === 0}
                         >
-                          {deleteConfirm === 'drops' ? 'Confirmar?' : 'Apagar'}
+                          {deleteConfirm === 'drops' ? t('settings.selective_clear_confirm_btn') : t('settings.selective_clear_delete_btn')}
                         </Button>
                       </div>
 
                       {/* Accounts delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.025]">
                         <div className="min-w-0">
-                          <p className="text-sm text-white">Contas</p>
-                          <p className="text-xs text-slate-500">{accounts.length} registro{accounts.length !== 1 ? 's' : ''}</p>
+                          <p className="text-sm text-white">{t('settings.selective_clear_accounts')}</p>
+                          <p className="text-xs text-slate-500">
+                            {t('settings.selective_clear_accounts_count', { count: accounts.length, s: accounts.length !== 1 ? 's' : '' })}
+                          </p>
                         </div>
                         <Button
                           variant="danger"
@@ -1470,15 +1498,17 @@ export default function Settings() {
                           onClick={() => handleSelectiveDelete('accounts')}
                           disabled={accounts.length === 0}
                         >
-                          {deleteConfirm === 'accounts' ? 'Confirmar?' : 'Apagar'}
+                          {deleteConfirm === 'accounts' ? t('settings.selective_clear_confirm_btn') : t('settings.selective_clear_delete_btn')}
                         </Button>
                       </div>
 
                       {/* Goals delete row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.025]">
                         <div className="min-w-0">
-                          <p className="text-sm text-white">Metas</p>
-                          <p className="text-xs text-slate-500">{goals.length} registro{goals.length !== 1 ? 's' : ''}</p>
+                          <p className="text-sm text-white">{t('settings.selective_clear_goals')}</p>
+                          <p className="text-xs text-slate-500">
+                            {t('settings.selective_clear_goals_count', { count: goals.length, s: goals.length !== 1 ? 's' : '' })}
+                          </p>
                         </div>
                         <Button
                           variant="danger"
@@ -1487,15 +1517,15 @@ export default function Settings() {
                           onClick={() => handleSelectiveDelete('goals')}
                           disabled={goals.length === 0}
                         >
-                          {deleteConfirm === 'goals' ? 'Confirmar?' : 'Apagar'}
+                          {deleteConfirm === 'goals' ? t('settings.selective_clear_confirm_btn') : t('settings.selective_clear_delete_btn')}
                         </Button>
                       </div>
 
                       {/* Config defaults reset row */}
-                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.04]">
+                      <div className="flex items-center justify-between gap-4 px-3 py-2.5 rounded-xl bg-[#111827]/40 border border-white/[0.025]">
                         <div className="min-w-0">
-                          <p className="text-sm text-white">Configurações</p>
-                          <p className="text-xs text-slate-500">Restaurar valores padrão</p>
+                          <p className="text-sm text-white">{t('settings.selective_clear_settings')}</p>
+                          <p className="text-xs text-slate-500">{t('settings.selective_clear_settings_desc')}</p>
                         </div>
                         <Button
                           variant="danger"
@@ -1503,31 +1533,29 @@ export default function Settings() {
                           size="sm"
                           onClick={() => handleSelectiveDelete('settings')}
                         >
-                          {deleteConfirm === 'settings' ? 'Confirmar?' : 'Resetar'}
+                          {deleteConfirm === 'settings' ? t('settings.selective_clear_confirm_btn') : t('settings.selective_clear_reset_btn')}
                         </Button>
                       </div>
                     </div>
                   </div>
 
                   {/* Storage usage details */}
-                  <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.04] rounded-xl mt-2">
+                  <div className="flex items-start gap-3 p-3 bg-[#111827]/60 border border-white/[0.025] rounded-xl mt-2">
                     <Info size={14} className="text-slate-500 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-slate-500 space-y-1">
-                      <p>Contas, drops e metas ficam no <span className="text-slate-400">localStorage</span> do seu navegador.</p>
-                      <p>Se logado com Google, uma cópia é sincronizada no Firestore (desative o toggle acima para impedir).</p>
-                      <p>Nenhum IP, comportamento de navegação ou dado de terceiros é coletado. Projeto <span className="text-slate-400">open source</span> — você pode auditar o código.</p>
+                      <p>{t('settings.privacy_notice')}</p>
                     </div>
                   </div>
                 </Section>
 
                 {/* Danger Zone */}
-                <Section icon={Shield} color="red" title="Zona de Perigo" subtitle="Ações irreversíveis" defaultOpen={false}>
+                <Section icon={Shield} color="red" title={t('settings.section_danger')} subtitle={t('settings.section_danger_desc')} defaultOpen={false}>
                   <div className="space-y-3">
                     {/* Reset local data */}
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="text-sm text-white">Apagar todos os dados locais</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Remove contas, drops, metas e configurações deste dispositivo.</p>
+                        <p className="text-sm text-white">{t('settings.danger_clear_local')}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{t('settings.danger_clear_local_hint')}</p>
                       </div>
                       <Button
                         variant="danger"
@@ -1535,7 +1563,7 @@ export default function Settings() {
                         onClick={handleReset}
                         className="shrink-0"
                       >
-                        {resetConfirm ? 'Confirmar?' : 'Resetar'}
+                        {resetConfirm ? t('settings.selective_clear_confirm_btn') : t('settings.selective_clear_reset_btn')}
                       </Button>
                     </div>
 
@@ -1543,11 +1571,11 @@ export default function Settings() {
                     {user && (
                       <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-loss/20 bg-loss/5">
                         <div className="min-w-0">
-                          <p className="text-sm text-white">Excluir conta permanentemente</p>
+                          <p className="text-sm text-white">{t('settings.danger_delete_account')}</p>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            Apaga <strong className="text-slate-400">todos os dados do Firestore</strong> e locais. Conforme LGPD, art. 18.
-                            {deleteAccountConfirm === 1 && <span className="text-gold"> Clique mais uma vez para confirmar.</span>}
-                            {deleteAccountConfirm === 2 && <span className="text-loss"> Clique para confirmar definitivamente.</span>}
+                            {t('settings.danger_delete_account_hint')}
+                            {deleteAccountConfirm === 1 && <span className="text-gold">{t('settings.danger_delete_account_confirm1')}</span>}
+                            {deleteAccountConfirm === 2 && <span className="text-loss">{t('settings.danger_delete_account_confirm2')}</span>}
                           </p>
                         </div>
                         <Button
@@ -1557,7 +1585,7 @@ export default function Settings() {
                           disabled={deletingAccount}
                           className="shrink-0"
                         >
-                          {deletingAccount ? 'Apagando…' : deleteAccountConfirm === 0 ? 'Excluir' : 'Confirmar?'}
+                          {deletingAccount ? (settings.language === 'en' ? 'Deleting...' : 'Apagando...') : deleteAccountConfirm === 0 ? (settings.language === 'en' ? 'Delete' : 'Excluir') : t('settings.selective_clear_confirm_btn')}
                         </Button>
                       </div>
                     )}
@@ -1570,20 +1598,20 @@ export default function Settings() {
       </div>
 
       {/* Version & Legal Footer */}
-      <div className="text-center text-xs text-slate-700 pt-5 space-y-1.5 border-t border-white/[0.04] mt-8">
-        <p>LootFlow v1.0.0 · Feito para acompanhar drops com calma</p>
+      <div className="text-center text-xs text-slate-700 pt-5 space-y-1.5 border-t border-white/[0.025] mt-8">
+        <p>{t('settings.footer_version')}</p>
         <div className="flex items-center justify-center gap-3">
           <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
-            Política de Privacidade
+            {t('settings.footer_privacy')}
           </button>
           <span>·</span>
           <button onClick={() => setLegalModal('terms')} className="hover:text-slate-500 transition-colors underline underline-offset-2">
-            Termos de Uso
+            {t('settings.footer_terms')}
           </button>
           <span>·</span>
           <a href="https://github.com/spxmiguel/LootFlow" target="_blank" rel="noreferrer"
             className="hover:text-slate-500 transition-colors inline-flex items-center gap-1 underline underline-offset-2">
-            GitHub <ExternalLink size={10} />
+            {t('settings.footer_github')} <ExternalLink size={10} />
           </a>
         </div>
       </div>
