@@ -10,7 +10,8 @@ service cloud.firestore {
     // Public social surface. These docs must only contain privacy-filtered
     // aggregates, never raw drops, accounts, email, or history.
     match /publicProfiles/{userId} {
-      allow read: if true;
+      allow read: if resource.data.showProfile == true
+                  || (request.auth != null && request.auth.uid == userId);
       allow create, update: if request.auth != null
                             && request.auth.uid == userId
                             && request.resource.data.uid == userId;
@@ -28,13 +29,18 @@ service cloud.firestore {
     // Convites e amizades só podem ser lidos pelas duas contas envolvidas.
     match /friendRequests/{requestId} {
       allow read: if request.auth != null
-                  && request.auth.uid in [resource.data.senderId, resource.data.recipientId];
+                  && request.auth.uid in resource.data.participantIds;
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.senderId
                     && request.resource.data.senderId != request.resource.data.recipientId
-                    && request.resource.data.id == requestId;
+                    && request.resource.data.id == requestId
+                    && request.resource.data.participantIds.size() == 2
+                    && request.resource.data.participantIds.hasOnly([
+                      request.resource.data.senderId,
+                      request.resource.data.recipientId
+                    ]);
       allow delete: if request.auth != null
-                    && request.auth.uid in [resource.data.senderId, resource.data.recipientId];
+                    && request.auth.uid in resource.data.participantIds;
       allow update: if false;
     }
 
@@ -53,7 +59,16 @@ service cloud.firestore {
                     ]);
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.memberIds;
-      allow update: if false;
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.memberIds
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.memberIds == resource.data.memberIds
+                    && request.resource.data.acceptedBy == resource.data.acceptedBy
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['memberProfiles', 'updatedAt'])
+                    && request.resource.data.memberProfiles.diff(resource.data.memberProfiles)
+                      .affectedKeys().hasOnly([request.auth.uid]);
     }
 
     // Device code auth (YouTube TV style flow)

@@ -30,9 +30,10 @@ import { DEFAULT_GAMIFICATION_TITLE, normalizeGamificationTitle } from '../lib/g
 import {
   isFirebaseReady, getFirebaseAuth, firestoreSaveDoc, firestoreDeleteDoc,
   firestoreLoadCollection, firestoreLookupFriendCode, firestoreLoadPublicProfile,
-  firestoreLoadPublicProfiles, firestoreSavePublicProfile,
+  firestoreSavePublicProfile,
   firestoreAcceptFriendRequest, firestoreCreateFriendRequest,
   firestoreDeleteFriendRequest, firestoreDeleteFriendship,
+  firestoreUpdateFriendshipProfile,
 } from '../lib/firebase'
 
 const generateDefaultAchievements = (): Achievement[] => {
@@ -331,12 +332,12 @@ function buildPublicProfile(state: AppState): PublicProfileSummary | null {
   return {
     uid: user.uid,
     friendCode,
-    name: showProfile || allowRankings ? name : undefined,
-    avatarUrl: showProfile || allowRankings ? (settings.profile?.customPhotoURL || user.photoURL || undefined) : undefined,
-    activeTitle: allowRankings || (showProfile && settings.gamification?.showTitles !== false) ? gamification.activeTitle : undefined,
-    level: allowRankings || showProfile ? gamification.level : undefined,
-    xp: allowRankings || showProfile ? gamification.totalXP : undefined,
-    totalDrops: allowRankings || (showProfile && !privacy.hideStatistics) ? drops.length : undefined,
+    name: showProfile ? name : undefined,
+    avatarUrl: showProfile ? (settings.profile?.customPhotoURL || user.photoURL || undefined) : undefined,
+    activeTitle: showProfile && settings.gamification?.showTitles !== false ? gamification.activeTitle : undefined,
+    level: showProfile ? gamification.level : undefined,
+    xp: showProfile && !privacy.hideStatistics ? gamification.totalXP : undefined,
+    totalDrops: showProfile && !privacy.hideStatistics ? drops.length : undefined,
     totalCases: showProfile && settings.gamification?.showCaseTracker !== false ? cases.length : undefined,
     collectionCount: showProfile && !privacy.hideCollection ? collection.length : undefined,
     perfectWeeks: showProfile && settings.gamification?.showPerfectWeek !== false ? gamification.totalPerfectWeeks : undefined,
@@ -350,10 +351,32 @@ function buildPublicProfile(state: AppState): PublicProfileSummary | null {
   }
 }
 
+function buildFriendProfile(state: AppState): Friend | null {
+  const { user, authMode, settings, gamification, drops } = state
+  if (authMode !== 'firebase' || user?.provider !== 'google') return null
+  return {
+    id: user.uid,
+    name: settings.profile?.displayName || user.displayName || settings.friendCode || 'LootFlow',
+    avatarUrl: settings.profile?.customPhotoURL || user.photoURL || undefined,
+    activeTitle: gamification.activeTitle,
+    level: gamification.level,
+    xp: gamification.totalXP,
+    totalDrops: drops.length,
+    friendCode: (settings.friendCode || generateFriendCode(user)).toUpperCase(),
+  }
+}
+
 function publishPublicProfileSnapshot(state: AppState): void {
   const profile = buildPublicProfile(state)
   if (!profile || state.settings.firebaseSyncEnabled === false || !isFirebaseReady()) return
   firestoreSavePublicProfile(profile).catch(e => logger.error('[Social] publish public profile:', e))
+  const friendProfile = buildFriendProfile(state)
+  if (!friendProfile) return
+  state.friends.forEach(friend => {
+    const friendshipId = [friendProfile.id, friend.id].sort().join('_')
+    firestoreUpdateFriendshipProfile(friendshipId, friendProfile.id, friendProfile)
+      .catch(e => logger.error('[Social] publish friendship profile:', e))
+  })
 }
 
 function getWeekXpReward(completionPercent: number): number {
@@ -803,6 +826,7 @@ export const useStore = create<AppState>()(
         const requestId = [user.uid, match.uid].sort().join('_')
         const outgoingRequest: FriendRequest = {
           id: requestId,
+          participantIds: [user.uid, match.uid].sort(),
           senderId: user.uid,
           senderName: settings.profile?.displayName || user.displayName || ownCode,
           senderAvatar: settings.profile?.customPhotoURL || user.photoURL || undefined,
@@ -810,6 +834,7 @@ export const useStore = create<AppState>()(
           senderActiveTitle: gamification.activeTitle,
           senderLevel: gamification.level,
           senderXp: gamification.totalXP,
+          senderTotalDrops: get().drops.length,
           recipientId: match.uid,
           recipientName: profile?.name || match.friendCode,
           recipientAvatar: profile?.avatarUrl,
@@ -817,6 +842,7 @@ export const useStore = create<AppState>()(
           recipientActiveTitle: profile?.activeTitle,
           recipientLevel: profile?.level ?? 1,
           recipientXp: profile?.xp ?? 0,
+          recipientTotalDrops: profile?.totalDrops ?? 0,
           type: 'outgoing',
           createdAt: new Date().toISOString(),
         }
@@ -857,6 +883,7 @@ export const useStore = create<AppState>()(
             activeTitle: request.senderActiveTitle,
             level: request.senderLevel ?? 1,
             xp: request.senderXp ?? 0,
+            totalDrops: request.senderTotalDrops ?? 0,
             friendCode: request.senderFriendCode,
           },
           [request.recipientId]: {
@@ -866,6 +893,7 @@ export const useStore = create<AppState>()(
             activeTitle: request.recipientActiveTitle,
             level: request.recipientLevel ?? 1,
             xp: request.recipientXp ?? 0,
+            totalDrops: request.recipientTotalDrops ?? 0,
             friendCode: request.recipientFriendCode,
           },
         },
@@ -918,6 +946,25 @@ export const useStore = create<AppState>()(
       set({ friendRequests: requests, friends })
       storage.saveFriendRequests(requests)
       storage.saveFriends(friends)
+      const ownProfile = buildFriendProfile(get())
+      if (ownProfile) {
+        friendships.forEach(friendship => {
+          const savedProfile = friendship.memberProfiles[user.uid]
+          const profileChanged =
+            !savedProfile ||
+            savedProfile.name !== ownProfile.name ||
+            savedProfile.avatarUrl !== ownProfile.avatarUrl ||
+            savedProfile.activeTitle !== ownProfile.activeTitle ||
+            savedProfile.level !== ownProfile.level ||
+            savedProfile.xp !== ownProfile.xp ||
+            savedProfile.totalDrops !== ownProfile.totalDrops ||
+            savedProfile.friendCode !== ownProfile.friendCode
+          if (profileChanged) {
+            firestoreUpdateFriendshipProfile(friendship.id, user.uid, ownProfile)
+              .catch(e => logger.error('[Social] refresh friendship profile:', e))
+          }
+        })
+      }
       void get().fetchRankings()
     },
 
@@ -1016,10 +1063,6 @@ export const useStore = create<AppState>()(
       }
       publishPublicProfileSnapshot(get())
       const ownProfile = buildPublicProfile(get())
-      const friendProfiles = await firestoreLoadPublicProfiles(friends.map(friend => friend.id)).catch(e => {
-        logger.error('[Social] fetchRankings:', e)
-        return []
-      })
       const entries: LeaderboardEntry[] = []
       if (ownProfile) {
         entries.push({
@@ -1032,17 +1075,15 @@ export const useStore = create<AppState>()(
           totalDrops: ownProfile.totalDrops ?? drops.length,
         })
       }
-      const profilesById = new Map(friendProfiles.map(profile => [profile.uid, profile]))
       friends.forEach(friend => {
-        const profile = profilesById.get(friend.id)
         entries.push({
           id: friend.id,
-          name: profile?.name || friend.name,
-          avatarUrl: profile?.avatarUrl || friend.avatarUrl,
-          activeTitle: profile?.activeTitle,
-          level: profile?.level ?? friend.level,
-          xp: profile?.xp ?? friend.xp,
-          totalDrops: profile?.totalDrops ?? 0,
+          name: friend.name,
+          avatarUrl: friend.avatarUrl,
+          activeTitle: friend.activeTitle,
+          level: friend.level,
+          xp: friend.xp,
+          totalDrops: friend.totalDrops ?? 0,
         })
       })
       set({ rankings: entries.sort((a, b) => b.xp - a.xp) })

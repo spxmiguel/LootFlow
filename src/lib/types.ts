@@ -268,11 +268,13 @@ export interface Friend {
   activeTitle?: string;
   level: number;
   xp: number;
+  totalDrops?: number;
   friendCode: string;
 }
 
 export interface FriendRequest {
   id: string;
+  participantIds: string[];
   senderId: string;
   senderName: string;
   senderAvatar?: string;
@@ -280,6 +282,7 @@ export interface FriendRequest {
   senderActiveTitle?: string;
   senderLevel?: number;
   senderXp?: number;
+  senderTotalDrops?: number;
   recipientId: string;
   recipientName: string;
   recipientAvatar?: string;
@@ -287,6 +290,7 @@ export interface FriendRequest {
   recipientActiveTitle?: string;
   recipientLevel?: number;
   recipientXp?: number;
+  recipientTotalDrops?: number;
   type: 'incoming' | 'outgoing';
   createdAt: string; // ISO date
 }

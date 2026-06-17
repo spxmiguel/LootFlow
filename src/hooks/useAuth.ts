@@ -10,7 +10,6 @@ import {
   getGoogleProvider,
   isFirebaseReady,
   firestoreDeleteAllUserData,
-  firestoreSubscribePublicProfiles,
   firestoreSubscribeSocial,
   firestoreSubscribeUserCollection,
 } from '../lib/firebase'
@@ -82,8 +81,6 @@ export function useAuth() {
   const hydrateCloud = useStore(s => s.hydrateCloud)
   const applySocialSnapshot = useStore(s => s.applySocialSnapshot)
   const applyRealtimeCollection = useStore(s => s.applyRealtimeCollection)
-  const friends = useStore(s => s.friends)
-  const fetchRankings = useStore(s => s.fetchRankings)
   const userRef = useRef(user)
   userRef.current = user
 
@@ -146,31 +143,6 @@ export function useAuth() {
 
     return () => unsubscribe.forEach(stop => stop())
   }, [applyRealtimeCollection, applySocialSnapshot, authMode, authReady, user])
-
-  useEffect(() => {
-    if (
-      authMode !== 'firebase' ||
-      user?.provider !== 'google' ||
-      !authReady ||
-      !isFirebaseReady() ||
-      friends.length === 0
-    ) return
-
-    let refreshTimer: number | undefined
-    const scheduleRefresh = () => {
-      window.clearTimeout(refreshTimer)
-      refreshTimer = window.setTimeout(() => void fetchRankings(), 250)
-    }
-    const unsubscribe = firestoreSubscribePublicProfiles(
-      friends.map(friend => friend.id),
-      scheduleRefresh,
-      error => logger.error('[Realtime] ranking listener error:', error),
-    )
-    return () => {
-      window.clearTimeout(refreshTimer)
-      unsubscribe()
-    }
-  }, [authMode, authReady, fetchRankings, friends, user])
 
   useEffect(() => {
     const finishReady = () => setAuthReady(true)
