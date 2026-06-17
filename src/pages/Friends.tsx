@@ -3,7 +3,14 @@ import { Crown, Lock, Plus, RefreshCw, Send, Trash2, UserCheck, Users } from 'lu
 import { useStore } from '../store'
 import { Button, Card, Empty, Input, Badge } from '../components/ui'
 import { useT } from '../hooks/useT'
+import { DEFAULT_SETTINGS } from '../lib/storage'
 import toast from 'react-hot-toast'
+
+function fallbackFriendCode(uid: string): string {
+  let hash = 0
+  for (const char of uid) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0
+  return `LF-${Math.abs(hash).toString(36).toUpperCase().padStart(6, '0').slice(0, 6)}`
+}
 
 export default function Friends() {
   const t = useT()
@@ -21,17 +28,18 @@ export default function Friends() {
     acceptFriendRequest,
     declineFriendRequest,
     fetchRankings,
+    updateSettings,
   } = useStore()
   const [friendCode, setFriendCode] = useState('')
   const [requestCode, setRequestCode] = useState('')
   const [busy, setBusy] = useState(false)
   const onlineEnabled = authMode === 'firebase' && user?.provider === 'google'
-  const rankingsEnabled = onlineEnabled && settings.gamification?.showRankings !== false
+  const rankingsEnabled = onlineEnabled && settings.gamification?.showRankings === true && !settings.liteMode
 
   const ownCode = useMemo(() => {
     if (settings.friendCode) return settings.friendCode
     const base = user?.uid ?? 'LOCAL'
-    return `LF-${base.slice(0, 8).toUpperCase()}`
+    return fallbackFriendCode(base)
   }, [settings.friendCode, user?.uid])
 
   useEffect(() => {
@@ -192,8 +200,24 @@ export default function Friends() {
         </div>
 
         {!rankingsEnabled ? (
-          <div className="rounded-xl border border-white/[0.025] bg-[#111827]/40 p-4 text-sm text-slate-500">
-            {t('friends.rankings_disabled')}
+          <div className="rounded-xl border border-white/[0.025] bg-[#111827]/40 p-4 text-sm text-slate-500 space-y-3">
+            <p>{!onlineEnabled ? t('friends.rankings_disabled_offline') : t('friends.rankings_disabled')}</p>
+            {onlineEnabled && (
+              <Button
+                size="sm"
+                icon={Crown}
+                onClick={() => updateSettings({
+                  liteMode: false,
+                  gamification: {
+                    ...DEFAULT_SETTINGS.gamification!,
+                    ...(settings.gamification ?? {}),
+                    showRankings: true,
+                  },
+                })}
+              >
+                {t('friends.rankings_enable')}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">

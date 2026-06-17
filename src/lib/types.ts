@@ -291,6 +291,27 @@ export interface LeaderboardEntry {
   totalDrops: number;
 }
 
+export interface PublicProfileSummary {
+  uid: string;
+  friendCode: string;
+  name?: string;
+  avatarUrl?: string;
+  activeTitle?: string;
+  level?: number;
+  xp?: number;
+  totalDrops?: number;
+  totalCases?: number;
+  collectionCount?: number;
+  perfectWeeks?: number;
+  showProfile: boolean;
+  allowRankings: boolean;
+  showStatistics: boolean;
+  showCollection: boolean;
+  showProfit: boolean;
+  totalProfit?: number;
+  updatedAt: string;
+}
+
 export interface CaseOpeningLog {
   id: string;
   dropId?: string;

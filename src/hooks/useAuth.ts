@@ -43,6 +43,10 @@ function saveSession(mode: 'local' | 'firebase', user: AppUser) {
   try { localStorage.setItem(SESSION_KEY, JSON.stringify({ mode, user, savedAt: Date.now() })) } catch {}
 }
 
+function storageOwnerForUser(user: AppUser): string {
+  return user.provider === 'google' ? `google_${user.uid}` : 'local'
+}
+
 // iOS Safari clears sessionStorage on cross-origin redirect — use localStorage instead
 function setRedirectPending() {
   try { localStorage.setItem(REDIRECT_PENDING_KEY, '1') } catch {}
@@ -132,6 +136,7 @@ export function useAuth() {
 
               clearRedirectPending()
               const appUser = makeAppUser(result.user)
+              storage.setOwner(storageOwnerForUser(appUser))
               setUser(appUser)
               setAuthMode('firebase')
               saveSession('firebase', appUser)
@@ -173,10 +178,11 @@ export function useAuth() {
 
           // Popup completed (possibly after PWA was killed and restarted)
           localStorage.removeItem(POPUP_PENDING_KEY)
-          clearRedirectPending()
-          const appUser = makeAppUser(fbUser)
-          setUser(appUser)
-          setAuthMode('firebase')
+              clearRedirectPending()
+              const appUser = makeAppUser(fbUser)
+              storage.setOwner(storageOwnerForUser(appUser))
+              setUser(appUser)
+              setAuthMode('firebase')
           saveSession('firebase', appUser)
           hydrateCloud(appUser)
             .catch(e => {
@@ -206,6 +212,7 @@ export function useAuth() {
       }
 
       if (session.mode === 'local') {
+        storage.setOwner('local')
         setUser(session.user)
         setAuthMode('local')
         hydrate()
@@ -218,6 +225,7 @@ export function useAuth() {
         // Do NOT call hydrateCloud here: the auth token isn't ready yet and
         // Firestore would return PERMISSION_DENIED. onAuthStateChanged fires
         // once the token is valid and handles the cloud sync from there.
+        storage.setOwner(storageOwnerForUser(session.user))
         setUser(session.user)
         setAuthMode('firebase')
         hydrate()
@@ -236,6 +244,7 @@ export function useAuth() {
       uid: 'local', displayName: 'Usuário Local',
       email: null, photoURL: null, isAnonymous: true, provider: 'local',
     }
+    storage.setOwner('local')
     setUser(localUser)
     setAuthMode('local')
     hydrate()
@@ -267,6 +276,7 @@ export function useAuth() {
           const credential = GoogleAuthProvider.credential(idToken, accessToken)
           const result = await signInWithCredential(auth, credential)
           const appUser = makeAppUser(result.user)
+          storage.setOwner(storageOwnerForUser(appUser))
           setUser(appUser)
           setAuthMode('firebase')
           saveSession('firebase', appUser)
@@ -343,6 +353,7 @@ export function useAuth() {
         if (result === POPUP_TIMEOUT) throw { code: 'auth/popup-blocked' }
         localStorage.removeItem(POPUP_PENDING_KEY)
         const appUser = makeAppUser(result.user)
+        storage.setOwner(storageOwnerForUser(appUser))
         setUser(appUser)
         setAuthMode('firebase')
         saveSession('firebase', appUser)
@@ -396,7 +407,10 @@ export function useAuth() {
     localStorage.removeItem(SESSION_KEY)
     localStorage.removeItem(POPUP_PENDING_KEY)
     clearRedirectPending()
+    storage.setOwner('local')
     setUser(null)
+    setAuthMode('local')
+    hydrate()
     toast.success('Até mais!')
   }
 
@@ -439,6 +453,7 @@ export function useAuth() {
       const credential = GoogleAuthProvider.credential(idToken, accessToken || null)
       const result = await signInWithCredential(auth, credential)
       const appUser = makeAppUser(result.user)
+      storage.setOwner(storageOwnerForUser(appUser))
       setUser(appUser)
       setAuthMode('firebase')
       saveSession('firebase', appUser)

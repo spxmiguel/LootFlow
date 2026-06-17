@@ -2,6 +2,7 @@ import { format, parseISO, startOfDay } from 'date-fns'
 import { ptBR, enUS } from 'date-fns/locale'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { storage } from './storage'
 
 // ─── Tailwind Merge Helper ───────────────────────────────────────────────────
 
@@ -13,11 +14,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getActiveLanguage(): 'pt' | 'en' {
   try {
-    const rawSettings = localStorage.getItem('lootflow_settings')
-    if (rawSettings) {
-      const settings = JSON.parse(rawSettings)
-      return settings.language ?? 'pt'
-    }
+    return storage.loadSettings().language ?? 'pt'
   } catch {}
   return 'pt'
 }
@@ -83,14 +80,7 @@ export function formatCurrency(value: number, currency: 'BRL' | 'USD' = 'BRL'): 
   let safe = value == null || isNaN(value) ? 0 : value
   if (currency === 'USD') {
     try {
-      const rawSettings = localStorage.getItem('lootflow_settings')
-      if (rawSettings) {
-        const settings = JSON.parse(rawSettings)
-        const rate = settings.usdRate || 5.2
-        safe = safe / rate
-      } else {
-        safe = safe / 5.2
-      }
+      safe = safe / (storage.loadSettings().usdRate || 5.2)
     } catch {
       safe = safe / 5.2
     }
@@ -108,14 +98,7 @@ export function formatCurrencyCompact(value: number, currency: 'BRL' | 'USD' = '
   let safe = value == null || isNaN(value) ? 0 : value
   if (currency === 'USD') {
     try {
-      const rawSettings = localStorage.getItem('lootflow_settings')
-      if (rawSettings) {
-        const settings = JSON.parse(rawSettings)
-        const rate = settings.usdRate || 5.2
-        safe = safe / rate
-      } else {
-        safe = safe / 5.2
-      }
+      safe = safe / (storage.loadSettings().usdRate || 5.2)
     } catch {
       safe = safe / 5.2
     }

@@ -26,9 +26,45 @@ const KEYS = {
   gamification: 'lootflow_gamification',
 } as const
 
+const OWNER_KEY = 'lootflow_storage_owner'
+let storageOwner = 'local'
+
+function sanitizeOwner(owner: string): string {
+  return owner.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 96) || 'local'
+}
+
+function scopedKey(key: string): string {
+  return `lootflow:${storageOwner}:${key}`
+}
+
+function hasLegacyValue(key: string): boolean {
+  try { return localStorage.getItem(key) !== null } catch { return false }
+}
+
+function loadRaw(key: string): string | null {
+  try {
+    const scoped = localStorage.getItem(scopedKey(key))
+    if (scoped !== null) return scoped
+
+    // Legacy global keys are only trusted for local/offline mode. Google data
+    // must never be hydrated from global localStorage, otherwise switching
+    // accounts can show or upload another account's cached data.
+    if (storageOwner === 'local') {
+      const legacy = localStorage.getItem(key)
+      if (legacy !== null) {
+        localStorage.setItem(scopedKey(key), legacy)
+        return legacy
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 function load<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = loadRaw(key)
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
     return fallback
@@ -37,10 +73,37 @@ function load<T>(key: string, fallback: T): T {
 
 function save<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
+    localStorage.setItem(scopedKey(key), JSON.stringify(value))
+    localStorage.setItem(OWNER_KEY, storageOwner)
   } catch (e) {
     logger.error('localStorage save error:', e)
   }
+}
+
+function remove(key: string): void {
+  try {
+    localStorage.removeItem(scopedKey(key))
+    if (storageOwner === 'local') localStorage.removeItem(key)
+  } catch {}
+}
+
+function setOwner(owner: string): void {
+  storageOwner = sanitizeOwner(owner)
+  try { localStorage.setItem(OWNER_KEY, storageOwner) } catch {}
+}
+
+function getOwner(): string {
+  return storageOwner
+}
+
+function hasCurrentOwnerData(): boolean {
+  return Object.values(KEYS).some(key => {
+    try { return localStorage.getItem(scopedKey(key)) !== null } catch { return false }
+  })
+}
+
+function hasLegacyData(): boolean {
+  return Object.values(KEYS).some(hasLegacyValue)
 }
 
 // ─── Default Settings ──────────────────────────────────────────────────────────
@@ -168,9 +231,13 @@ export const storage = {
   saveFriendRequests,
   saveAchievements,
   saveGamificationState,
+  setOwner,
+  getOwner,
+  hasCurrentOwnerData,
+  hasLegacyData,
 
   clearAll: () => {
-    Object.values(KEYS).forEach(k => localStorage.removeItem(k))
+    Object.values(KEYS).forEach(k => remove(k))
   },
 
   exportAll: () => ({

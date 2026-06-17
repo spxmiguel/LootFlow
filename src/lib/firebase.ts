@@ -2,10 +2,10 @@ import { logger } from './logger'
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { initializeAuth, getAuth, browserLocalPersistence, browserPopupRedirectResolver, GoogleAuthProvider, type Auth } from 'firebase/auth'
 import {
-  getFirestore, collection, doc, getDocs, setDoc,
+  getFirestore, collection, doc, getDoc, getDocs, setDoc,
   deleteDoc, type Firestore,
 } from 'firebase/firestore'
-import type { FirebaseConfig } from './types'
+import type { FirebaseConfig, PublicProfileSummary } from './types'
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -89,6 +89,37 @@ export async function firestoreSaveDoc(
   await setDoc(doc(db, 'users', userId, collectionName, docId), sanitize(data), { merge: true })
 }
 
+export async function firestoreSavePublicProfile(profile: PublicProfileSummary): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized')
+  const data = sanitize(profile as unknown as Record<string, unknown>)
+  await Promise.all([
+    setDoc(doc(db, 'publicProfiles', profile.uid), data, { merge: true }),
+    setDoc(doc(db, 'friendCodes', profile.friendCode.toUpperCase()), {
+      uid: profile.uid,
+      friendCode: profile.friendCode.toUpperCase(),
+      updatedAt: profile.updatedAt,
+    }),
+  ])
+}
+
+export async function firestoreLookupFriendCode(friendCode: string): Promise<{ uid: string; friendCode: string } | null> {
+  if (!db) throw new Error('Firestore not initialized')
+  const snap = await getDoc(doc(db, 'friendCodes', friendCode.toUpperCase()))
+  return snap.exists() ? (snap.data() as { uid: string; friendCode: string }) : null
+}
+
+export async function firestoreLoadPublicProfile(uid: string): Promise<PublicProfileSummary | null> {
+  if (!db) throw new Error('Firestore not initialized')
+  const snap = await getDoc(doc(db, 'publicProfiles', uid))
+  return snap.exists() ? (snap.data() as PublicProfileSummary) : null
+}
+
+export async function firestoreLoadPublicProfiles(uids: string[]): Promise<PublicProfileSummary[]> {
+  const unique = [...new Set(uids)].filter(Boolean)
+  const profiles = await Promise.all(unique.map(uid => firestoreLoadPublicProfile(uid).catch(() => null)))
+  return profiles.filter((profile): profile is PublicProfileSummary => profile !== null)
+}
+
 export async function firestoreDeleteDoc(
   userId: string,
   collectionName: string,
@@ -104,11 +135,31 @@ export async function firestoreDeleteDoc(
 
 export async function firestoreDeleteAllUserData(userId: string): Promise<void> {
   if (!db) return
-  const cols = ['accounts', 'drops', 'goals', 'settings', '_test']
+  const publicProfileRef = doc(db, 'publicProfiles', userId)
+  const publicProfileSnap = await getDoc(publicProfileRef).catch(() => null)
+  const friendCode = publicProfileSnap?.exists() ? (publicProfileSnap.data() as { friendCode?: string }).friendCode : undefined
+  const cols = [
+    'accounts',
+    'drops',
+    'goals',
+    'settings',
+    'collection',
+    'cases',
+    'friends',
+    'friendRequests',
+    'achievements',
+    'gamification',
+    'notifications',
+    '_test',
+  ]
   const results = await Promise.allSettled(cols.map(async col => {
     const snap = await getDocs(collection(db!, 'users', userId, col))
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)))
   }))
+  await Promise.allSettled([
+    deleteDoc(publicProfileRef),
+    friendCode ? deleteDoc(doc(db, 'friendCodes', friendCode.toUpperCase())) : Promise.resolve(),
+  ])
   const failed = results.filter(r => r.status === 'rejected')
   if (failed.length > 0) {
     throw new Error(`Falha ao apagar ${failed.length}/${cols.length} coleções do Firestore`)

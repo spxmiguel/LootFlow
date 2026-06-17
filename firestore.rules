@@ -7,6 +7,24 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Public social surface. These docs must only contain privacy-filtered
+    // aggregates, never raw drops, accounts, email, or history.
+    match /publicProfiles/{userId} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+                            && request.auth.uid == userId
+                            && request.resource.data.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /friendCodes/{code} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                            && resource.data.uid == request.auth.uid;
+    }
+
     // Device code auth (YouTube TV style flow)
     // - Unauthenticated Electron app creates a pending code
     // - Anyone can read (Electron polls for completion)

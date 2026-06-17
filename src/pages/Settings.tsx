@@ -1298,7 +1298,7 @@ export default function Settings() {
                             <p>{t('settings.firebase_tutorial_step3')}</p>
                             <p>{t('settings.firebase_tutorial_step4')}</p>
                             <p>{t('settings.firebase_tutorial_step5')}</p>
-                            <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth.uid == uid;\n    }\n  }\n}'}</pre>
+                            <pre className="font-mono text-[10px] bg-black/30 rounded-lg px-2 py-1.5 text-slate-400 whitespace-pre-wrap">{'rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{d=**} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n    match /publicProfiles/{uid} {\n      allow read: if true;\n      allow write: if request.auth != null && request.auth.uid == uid && request.resource.data.uid == uid;\n    }\n    match /friendCodes/{code} {\n      allow read: if true;\n      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;\n      allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;\n    }\n  }\n}'}</pre>
                             <p>{t('settings.firebase_tutorial_step6')}</p>
                           </div>
                         )}
