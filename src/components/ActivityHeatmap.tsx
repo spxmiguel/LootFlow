@@ -206,8 +206,8 @@ export function ActivityHeatmap({ drops, compact = false }: ActivityHeatmapProps
               {t('heatmap.active_days', { count: activeDays })}
             </span>
             {currentStreak > 0 && (
-              <span className="text-[11px] px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-400 font-medium">
-                🔥 {t('heatmap.streak', { count: currentStreak })}
+              <span className="text-[11px] px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-400 font-medium flex items-center gap-1">
+                <Flame className="w-3 h-3" /> {t('heatmap.streak', { count: currentStreak })}
               </span>
             )}
           </div>
@@ -287,8 +287,8 @@ export function ActivityHeatmap({ drops, compact = false }: ActivityHeatmapProps
               {activeDays} {lang === 'en' ? 'active' : 'ativos'}
             </span>
             {currentStreak > 0 && (
-              <span className="text-[10px] text-orange-400">
-                🔥 {currentStreak}
+              <span className="text-[10px] text-orange-400 flex items-center gap-1">
+                <Flame className="w-3 h-3" /> {currentStreak}
               </span>
             )}
           </div>

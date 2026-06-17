@@ -41,6 +41,10 @@ const Drops = lazy(() => import('./pages/Drops'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 const Goals = lazy(() => import('./pages/Goals'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Collection = lazy(() => import('./pages/Collection'))
+const Achievements = lazy(() => import('./pages/Achievements'))
+const Friends = lazy(() => import('./pages/Friends'))
+const PublicProfile = lazy(() => import('./pages/PublicProfile'))
 
 function PageFallback() {
   return (
@@ -55,6 +59,7 @@ function PageContent() {
   const pages: Record<string, React.ComponentType> = {
     dashboard: Dashboard, accounts: Accounts, drops: Drops,
     analytics: Analytics, goals: Goals, settings: Settings,
+    collection: Collection, achievements: Achievements, friends: Friends, rankings: Friends,
   }
   const Component = pages[currentPage] ?? Dashboard
   return (
@@ -81,6 +86,7 @@ export default function App() {
   const [storageConsent, setStorageConsent] = useState(() =>
     localStorage.getItem(STORAGE_CONSENT_KEY) === 'true'
   )
+  const isPublicProfile = window.location.pathname.startsWith('/u/')
 
   const dismissBanner = () => {
     localStorage.setItem(STORAGE_CONSENT_KEY, 'true')
@@ -97,7 +103,13 @@ export default function App() {
           style: { background: '#0f172a', color: '#e2e8f0', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '13px' },
         }}
       />
-      {ELECTRON_AUTH_PARAM ? (
+      {isPublicProfile ? (
+        <ErrorBoundary page="profile">
+          <Suspense fallback={<PageFallback />}>
+            <PublicProfile />
+          </Suspense>
+        </ErrorBoundary>
+      ) : ELECTRON_AUTH_PARAM ? (
         // ?electron-auth=1 → always render AuthPage (shows ElectronCallbackScreen)
         // regardless of login state — user may already be signed in on this browser
         <ErrorBoundary page="auth">

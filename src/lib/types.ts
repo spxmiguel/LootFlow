@@ -110,6 +110,22 @@ export interface GamificationSettings {
   showTimeline: boolean;          // timeline de eventos
   showAchievements: boolean;      // sistema de conquistas
   showHallOfFame: boolean;        // hall da fama
+  showPerfectWeek?: boolean;
+  showLevels?: boolean;
+  showTitles?: boolean;
+  showRankings?: boolean;
+  showCollection?: boolean;
+  showCaseTracker?: boolean;
+}
+
+export interface PrivacySettings {
+  hideProfile?: boolean;
+  hideStatistics?: boolean;
+  hideAchievements?: boolean;
+  hideCollection?: boolean;
+  hideTotalProfit?: boolean;
+  hideAccounts?: boolean;
+  hideHistory?: boolean;
 }
 
 export interface AppSettings {
@@ -122,9 +138,13 @@ export interface AppSettings {
   firebaseSyncEnabled: boolean;  // when false, no data is sent to Firestore
   theme: ThemeConfig;
   showOnboarding: boolean;
+  liteMode?: boolean;
   profile?: ProfileOverride;
   whatsapp?: WhatsAppSettings;   // notificações via bot WhatsApp
   gamification?: GamificationSettings;  // toggles de gamificação/retenção
+  privacy?: PrivacySettings;
+  profilePrivacy?: 'public' | 'private' | 'friends';
+  friendCode?: string;
 }
 
 // ─── Notificações (fila Firestore lida pelo bot) ─────────────────────────────
@@ -209,7 +229,11 @@ export type Page =
   | 'drops'
   | 'analytics'
   | 'goals'
-  | 'settings';
+  | 'settings'
+  | 'collection'
+  | 'friends'
+  | 'rankings'
+  | 'achievements';
 
 export type ModalType =
   | 'add-account'
@@ -220,4 +244,93 @@ export type ModalType =
   | 'edit-goal'
   | 'firebase-config'
   | 'export'
+  | 'add-case-opening'
+  | 'friend-request'
+  | 'view-public-profile'
   | null;
+
+// ─── LootFlow 2.0 Feature Entity Types ────────────────────────────────────────
+
+export interface CollectionItem {
+  marketHashName: string;
+  name: string;
+  imageUrl: string;
+  count: number;
+  firstSeen: string; // ISO date
+  lastSeen: string; // ISO date
+  maxValueSeen: number; // in BRL
+}
+
+export interface Friend {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  activeTitle?: string;
+  level: number;
+  xp: number;
+  friendCode: string;
+}
+
+export interface FriendRequest {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  senderFriendCode: string;
+  type: 'incoming' | 'outgoing';
+  createdAt: string; // ISO date
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  activeTitle?: string;
+  level: number;
+  xp: number;
+  totalDrops: number;
+}
+
+export interface CaseOpeningLog {
+  id: string;
+  dropId?: string;
+  caseItem: SteamItem;
+  casePriceAtOpen?: number; // BRL
+  keyPriceAtOpen?: number; // BRL
+  keyPrice: number; // BRL, legacy alias for keyPriceAtOpen
+  obtainedItem: SteamItem;
+  receivedItem?: SteamItem;
+  obtainedValue: number; // BRL, legacy alias for receivedValueAtOpen
+  receivedValueAtOpen?: number; // BRL
+  openedAt?: string; // ISO date
+  profitLoss?: number; // BRL
+  wear?: WearCondition;
+  statTrak?: boolean;
+  sold: boolean;
+  soldValue?: number; // BRL
+  createdAt: string; // ISO date
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  unlocked: boolean;
+  unlockedAt?: string;
+  progress: number;
+  maxProgress: number;
+  category: string;
+}
+
+export interface GamificationState {
+  totalPerfectWeeks: number;
+  currentPerfectWeekStreak: number;
+  bestPerfectWeekStreak: number;
+  totalXP: number;
+  level: number;
+  levelProgress: number;
+  activeTitle?: string;
+  unlockedTitles: string[];
+  completedPerfectWeeks?: string[];
+  xpAwardedWeeks?: Record<string, number>;
+}

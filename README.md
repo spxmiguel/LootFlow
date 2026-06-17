@@ -1,331 +1,201 @@
-# ⚡ LootFlow
+# LootFlow 2.0
 
-<div align="center">
+The ultimate CS2 Prime Drop tracker, collection manager, progression system and social hub.
 
-![Platform](https://img.shields.io/badge/platform-Web%20%7C%20PWA-brightgreen?style=flat-square)
-![Stack](https://img.shields.io/badge/stack-React%20%2B%20TypeScript%20%2B%20Firebase-blue?style=flat-square)
-![License](https://img.shields.io/badge/license-Source%20Available-red?style=flat-square)
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento%20%7C%20in%20development-orange?style=flat-square)
-![Language](https://img.shields.io/badge/idioma-PT%20%7C%20EN-blueviolet?style=flat-square)
-![AI](https://img.shields.io/badge/built%20with-Claude%20Sonnet-8B5CF6?style=flat-square&logo=anthropic)
+LootFlow helps CS2 Prime farmers track weekly drops, cashout, ROI, goals, case openings, collection discovery, and social progress across one or many accounts.
 
-**[🇧🇷 Português](#-português) · [🇺🇸🇬🇧 English](#-english)**
+## Features
 
-</div>
+- Multi-account CS2 Prime drop tracking with weekly limits.
+- Steam Market item search with cached pricing.
+- Cashout, ROI, payback, and goal progress calculations.
+- Discovery-based collection system with locked and unlocked item states.
+- Perfect Weeks, XP, levels, titles, and 357 achievements.
+- Case opening tracker with historical case/key/item values.
+- Friends, friend requests, friends-only rankings, and public-profile foundation.
+- Lite Mode for a quiet tracking-only experience.
+- Privacy controls for profile, statistics, collection, achievements, profit, accounts, and history.
+- Local-only mode through `localStorage`, plus optional Google/Firebase sync.
 
----
+## Dashboard
 
-## 🇧🇷 Português
+The dashboard summarizes current-week progress, total cashout, net balance, ROI, closest goals, account performance, recent feed activity, insights, achievements, and the activity heatmap.
 
-> **Dashboard para acompanhar, analisar e maximizar seus ganhos com drops semanais do CS2 Prime.**
+Timeline is not a standalone page in LootFlow 2.0. Account, drop, sale, goal, payback, and activity events belong in the existing feed and related pages.
 
-### ⚠️ Em Desenvolvimento
+## Collection System
 
-> **Este projeto está em desenvolvimento ativo.** Podem existir bugs, instabilidades ou recursos incompletos. Sua ajuda é muito bem-vinda!
->
-> Encontrou um problema? **[Reporte aqui →](../../issues/new)**
->
-> Toda issue relatada ajuda a tornar o LootFlow melhor para todo mundo. Não tenha vergonha — bugs fazem parte do processo!
+The collection is built only from the user's own discovered items.
 
-### ✨ Funcionalidades
+- Registering a drop unlocks or updates that item in the collection.
+- Opening a case unlocks or updates the received item.
+- Discovered cards show image, name, count, first seen, last seen, and highest value seen.
+- Locked cards are generic placeholders and do not require maintaining a fixed CS2 drop pool.
 
-| Feature | Descrição |
-|---|---|
-| 📊 **Dashboard** | Visão geral da semana: drops, cashout, progresso e contas pendentes |
-| 🎮 **Contas CS2** | Múltiplas contas Prime · avatar via Steam URL · payback e ROI por conta |
-| 💎 **Drops** | Registre até 2 drops/conta/semana · pesquisa bilíngue PT/EN no Steam Market · desgaste e float |
-| 📈 **Analytics** | Gráficos semanais e acumulados · volume por conta · top 8 drops histórico |
-| 🎯 **Metas** | Defina metas de cashout, receita ou drops com deadline e progresso visual |
-| 📤 **Exportação** | CSV, XLSX (Drops + Contas separados) e backup/restore JSON completo |
-| 🔔 **Bot WhatsApp** | Lembretes automáticos de drops pendentes · resumo semanal · comandos por chat |
-| 🤬 **Modo Xingamentos** | Bot manda mensagem "motivacional" quando você esquece de farmar |
-| ☁️ **Sync Firebase** | Login com Google + Firestore em tempo real · ou 100% offline via localStorage |
-| 📱 **PWA** | Instala como app no celular · suporte a safe-area iOS |
-| 🎨 **Tema** | Cor primária personalizável · glassmorphism · animações on/off |
+## Perfect Weeks
 
-### 🚀 Usar agora
+A perfect week is reached when every active account has its weekly drops registered for that week. LootFlow tracks:
 
-Acesse direto no navegador — sem instalar nada:
+- Total perfect weeks.
+- Current perfect-week streak.
+- Best perfect-week streak.
 
-**[▶ Abrir LootFlow → spxmiguel.github.io/LootFlow](https://spxmiguel.github.io/LootFlow)**
+Unknown-date drops do not count toward weekly limits or perfect-week completion.
 
-- Clique **"Entrar com Google"** para sync entre dispositivos
-- Ou **"Continuar sem conta"** para uso 100% local (dados ficam só no seu navegador)
+## XP & Levels
 
-### 🤖 Bot WhatsApp
+XP rewards weekly efficiency instead of raw account count:
 
-O LootFlow tem um bot de WhatsApp que roda em servidor próprio e avisa quando você está esquecendo de pegar os drops da semana.
+- 100 percent completion: 100 XP.
+- 90 percent or higher: 80 XP.
+- 80 percent or higher: 60 XP.
+- 70 percent or higher: 40 XP.
+- Below 70 percent with progress: 20 XP.
 
-**Comandos disponíveis:**
+Level is calculated with:
 
-| Comando | O que faz |
-|---|---|
-| `STATUS` | Mostra drops registrados e pendentes da semana atual |
-| `RESUMO` | Resumo completo da semana com cashout por conta |
-| `AJUDA` | Lista todos os comandos disponíveis |
-| `PARAR` | Desativa as notificações do bot |
+```ts
+level = Math.floor(totalXP / 500) + 1
+```
 
-**Modos de lembrete:**
+## Titles
 
-| Modo | Comportamento |
-|---|---|
-| 🔔 Normal | Uma mensagem por dia no horário configurado |
-| 😤 Enche o Saco | Manda a cada X minutos até você registrar os drops |
-| 🤬 Xingamentos | Substitui os lembretes por mensagens "motivacionais" personalíveis |
+Titles are unlocked from user activity, including:
 
-Ative e configure em: **Configurações → Notificações WhatsApp**
+- One Account One Dream
+- Valve Employee
+- Case Farmer
+- Lucky Bastard
+- Collector
+- Sunday Night Gang
+- Drop Addict
 
-### 🛠️ Desenvolvimento Local
+Users can select an unlocked active title.
 
-**App:**
+## Friends
+
+The friends foundation includes:
+
+- Friend code display.
+- Add friend by code.
+- Friend requests.
+- Accept and decline requests.
+- Remove friend.
+
+No chat is included.
+
+## Rankings
+
+Rankings are friends-only first and disabled by default for local/offline users. Ranking data is structured around:
+
+- XP
+- Level
+- Drops
+- Efficiency
+- Perfect weeks
+- Streak
+- Profit
+
+## Public Profiles
+
+Public profiles are prepared at:
+
+```txt
+/u/:username
+```
+
+Profiles never show email. They only show data allowed by the user's privacy settings, such as avatar, display name, join date, title, level, XP, total drops, profit, perfect weeks, goal progress, collection progress, cases opened, and opening ROI.
+
+## Goal Tracking
+
+Goals support cashout, revenue, profit, and drop targets. Dashboard and Goals views show progress, remaining amount, and active goals.
+
+## Case Opening Tracker
+
+Case opening is launched from the Drops page for drops detected as cases. Each opening stores historical values:
+
+- `casePriceAtOpen`
+- `keyPriceAtOpen`
+- `receivedValueAtOpen`
+- `openedAt`
+- `profitLoss`
+
+Old openings are never recalculated with current prices.
+
+## Lite Mode
+
+Lite Mode hides gamified/social systems without deleting data:
+
+- XP
+- Levels
+- Titles
+- Achievements
+- Perfect Weeks
+- Streaks
+- Collection
+- Friends
+- Rankings
+- Public Profiles
+- Case Opening Analytics
+
+## Privacy
+
+LootFlow supports local/offline use and optional Firebase sync. Local/offline mode keeps online/social features disabled by default.
+
+Privacy controls allow hiding:
+
+- Profile
+- Statistics
+- Achievements
+- Collection
+- Total profit
+- Accounts
+- History
+
+## Tech Stack
+
+- React
+- TypeScript
+- Vite
+- Zustand
+- Firebase
+- Firestore
+- Tailwind CSS
+- Framer Motion
+- Recharts
+- Lucide React
+- Electron build support
+
+## Local Development
+
 ```bash
-git clone https://github.com/spxmiguel/LootFlow.git
-cd LootFlow
 npm install
 npm run dev
-# Acesse http://localhost:5173
 ```
 
-**Bot WhatsApp (repositório separado):**
+Open:
+
+```txt
+http://localhost:5173
+```
+
+Build:
+
 ```bash
-git clone https://github.com/spxmiguel/lootflow-bot.git
-cd lootflow-bot
-npm install
-cp .env.example .env   # preencha com credenciais Firebase Admin SDK
-npm run dev
-# Escaneie o QR code com o número dedicado do bot
+npm run build
 ```
 
-**Build do app:**
+Typecheck:
+
 ```bash
-npm run build          # gera dist/
-npm run preview        # preview local do build
+npx tsc --noEmit
 ```
 
-### 🔥 Firebase (opcional)
+## Roadmap
 
-Sem Firebase o app funciona 100% offline. Para ativar login Google e sync entre dispositivos:
-
-1. [console.firebase.google.com](https://console.firebase.google.com) → "Criar projeto"
-2. Ative **Authentication → Google**
-3. Crie **Firestore Database** em modo produção
-4. Em **Authentication → Settings → Authorized domains** → adicione `seuusuario.github.io`
-
-**Regras do Firestore:**
-```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{uid}/{d=**} {
-      allow read, write: if request.auth.uid == uid;
-    }
-  }
-}
-```
-
-Configure dentro do próprio app em **Configurações → Firebase**, ou via variáveis de ambiente:
-
-| Secret | Descrição |
-|---|---|
-| `VITE_FIREBASE_API_KEY` | API Key do projeto |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Auth Domain |
-| `VITE_FIREBASE_PROJECT_ID` | Project ID |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Storage Bucket |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Sender ID |
-| `VITE_FIREBASE_APP_ID` | App ID |
-
-### 🚢 Deploy (GitHub Pages)
-
-O repositório já tem CI/CD configurado. Para usar:
-
-1. **GitHub Pages:** Settings → Pages → Source: **GitHub Actions**
-2. Adicione os secrets acima em Settings → Secrets → Actions
-3. Push na `main` → deploy automático em ~2 min
-
-### 🤝 Contribuindo
-
-1. Fork o repositório
-2. Crie uma branch: `git checkout -b feat/minha-feature`
-3. Commit: `git commit -m "feat: descrição"`
-4. Push e abra um Pull Request
-
----
-
-## 🇺🇸🇬🇧 English
-
-> **Dashboard to track, analyze and maximize your CS2 Prime weekly drop earnings.**
-
-### ⚠️ In Development
-
-> **This project is under active development.** Bugs, instabilities or incomplete features may exist. Your help is very welcome!
->
-> Found an issue? **[Report it here →](../../issues/new)**
->
-> Every bug report helps make LootFlow better for everyone. Don't be shy — bugs are part of the process!
-
-### ✨ Features
-
-| Feature | Description |
-|---|---|
-| 📊 **Dashboard** | Week overview: drops, cashout, progress and pending accounts |
-| 🎮 **CS2 Accounts** | Multiple Prime accounts · Steam URL avatar · payback and ROI per account |
-| 💎 **Drops** | Register up to 2 drops/account/week · bilingual PT/EN Steam Market search · wear and float |
-| 📈 **Analytics** | Weekly and all-time charts · volume per account · top 8 drops history |
-| 🎯 **Goals** | Set cashout, revenue or drop goals with deadlines and visual progress |
-| 📤 **Export** | CSV, XLSX (separate Drops + Accounts sheets) and full JSON backup/restore |
-| 🔔 **WhatsApp Bot** | Automatic pending drop reminders · weekly summary · chat commands |
-| 🤬 **Rage Mode** | Bot sends "motivational" messages when you forget to farm |
-| ☁️ **Firebase Sync** | Google login + real-time Firestore · or 100% offline via localStorage |
-| 📱 **PWA** | Installable as a mobile app · iOS safe-area support |
-| 🎨 **Theme** | Customizable primary color · glassmorphism · animations toggle |
-
-### 🚀 Use it now
-
-Access directly in your browser — no install needed:
-
-**[▶ Open LootFlow → spxmiguel.github.io/LootFlow](https://spxmiguel.github.io/LootFlow)**
-
-- Click **"Sign in with Google"** to sync across devices
-- Or **"Continue without account"** for 100% local use (data stays in your browser only)
-
-### 🤖 WhatsApp Bot
-
-LootFlow has a WhatsApp bot that runs on a dedicated server and reminds you when you're forgetting to grab your weekly drops.
-
-**Available commands:**
-
-| Command | What it does |
-|---|---|
-| `STATUS` | Shows registered and pending drops for the current week |
-| `RESUMO` | Full week summary with cashout per account |
-| `AJUDA` | Lists all available commands |
-| `PARAR` | Disables bot notifications |
-
-**Reminder modes:**
-
-| Mode | Behavior |
-|---|---|
-| 🔔 Normal | One message per day at the configured time |
-| 😤 Annoying Mode | Sends every X minutes until you register your drops |
-| 🤬 Rage Mode | Replaces reminders with customizable "motivational" messages |
-
-Enable and configure at: **Settings → WhatsApp Notifications**
-
-### 🛠️ Local Development
-
-**App:**
-```bash
-git clone https://github.com/spxmiguel/LootFlow.git
-cd LootFlow
-npm install
-npm run dev
-# Open http://localhost:5173
-```
-
-**WhatsApp Bot (separate repo):**
-```bash
-git clone https://github.com/spxmiguel/lootflow-bot.git
-cd lootflow-bot
-npm install
-cp .env.example .env   # fill in Firebase Admin SDK credentials
-npm run dev
-# Scan the QR code with the bot's dedicated number
-```
-
-**App build:**
-```bash
-npm run build          # outputs to dist/
-npm run preview        # local preview of the build
-```
-
-### 🔥 Firebase (optional)
-
-Without Firebase the app works 100% offline. To enable Google login and cross-device sync:
-
-1. [console.firebase.google.com](https://console.firebase.google.com) → "Create project"
-2. Enable **Authentication → Google**
-3. Create **Firestore Database** in production mode
-4. In **Authentication → Settings → Authorized domains** → add `yourusername.github.io`
-
-**Firestore Rules:**
-```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{uid}/{d=**} {
-      allow read, write: if request.auth.uid == uid;
-    }
-  }
-}
-```
-
-Configure inside the app at **Settings → Firebase**, or via environment variables:
-
-| Secret | Description |
-|---|---|
-| `VITE_FIREBASE_API_KEY` | Project API Key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Auth Domain |
-| `VITE_FIREBASE_PROJECT_ID` | Project ID |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Storage Bucket |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Sender ID |
-| `VITE_FIREBASE_APP_ID` | App ID |
-
-### 🚢 Deploy (GitHub Pages)
-
-The repository already has CI/CD configured. To use it:
-
-1. **GitHub Pages:** Settings → Pages → Source: **GitHub Actions**
-2. Add the secrets above in Settings → Secrets → Actions
-3. Push to `main` → auto-deploy in ~2 min
-
-### 🤝 Contributing
-
-1. Fork the repository
-2. Create a branch: `git checkout -b feat/my-feature`
-3. Commit: `git commit -m "feat: description"`
-4. Push and open a Pull Request
-
----
-
-## 🔧 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| UI | React 18 + TypeScript + TailwindCSS + Framer Motion |
-| State | Zustand |
-| Charts | Recharts |
-| Auth & DB | Firebase Authentication + Firestore |
-| Steam | Steam Market API (price lookup) |
-| Icons | Lucide React |
-| Fonts | Geist + JetBrains Mono |
-| Build | Vite + GitHub Actions |
-| Bot | Node.js + whatsapp-web.js + node-cron + Firebase Admin SDK |
-| Bot Deploy | PM2 + Oracle Cloud Free Tier |
-
----
-
-## 📄 Licença
-
-Este projeto **NÃO é open source**.  
-O código está disponível apenas para visualização e aprendizado pessoal.
-
-- ✅ Permitido: estudar o código, usar para aprendizado pessoal
-- ❌ Proibido: copiar, modificar, redistribuir, vender ou criar derivados comerciais
-
-Veja o arquivo [LICENSE](./LICENSE) para os termos completos.
-
----
-
-## 🤖 Built with Claude
-
-This project was developed in collaboration with [Claude](https://claude.ai) (Anthropic's AI). Claude helped design the architecture, write and review code, fix bugs, and iterate on the UI throughout development.
-
----
-
-<div align="center">
-
-Copyright (c) 2026 Spxmiguel · Feito com ☕ e raiva de perder drop.
-
-**[🇧🇷 PT](#-português) · [🇺🇸🇬🇧 EN](#-english) · [Issues](../../issues) · [Abrir App](https://spxmiguel.github.io/LootFlow)**
-
-</div>
+- Real Firestore-backed friend search and requests.
+- Real friends-only ranking aggregation.
+- Username reservation for public profiles.
+- Profile sharing controls.
+- Better case opening analytics.
+- More automated regression tests.

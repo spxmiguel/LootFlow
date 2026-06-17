@@ -1,7 +1,7 @@
 /**
  * MarketplaceLinks — affiliate links para plataformas de venda de skins CS2.
  *
- * ⚠️  SUBSTITUA OS REF CODES antes de publicar:
+ * SUBSTITUA OS REF CODES antes de publicar:
  *   Skinport : https://skinport.com/partner  → troca "lootflow" pelo seu código
  *   CSFloat  : https://csfloat.com/affiliate  → troca "lootflow" pelo seu código
  *   DMarket  : programa de afiliados no painel  → troca "lootflow" pelo seu código

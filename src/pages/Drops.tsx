@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Plus, Search, X, Package,
   Trash2, DollarSign, AlertCircle, Calendar, HelpCircle, Zap, Filter, Edit2,
+  PackageOpen, Check,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn, formatCurrency, getCurrentWeekId, getWeekLabel, getWeekIdForDate, getWeekRange } from '../lib/utils'
@@ -11,7 +12,7 @@ import { SteamItemImage } from '../components/SteamItemImage'
 import { searchSteamMarket, getSteamItemPrice } from '../lib/steam'
 import { useT } from '../hooks/useT'
 import toast from 'react-hot-toast'
-import type { Drop, SteamItem, WearCondition } from '../lib/types'
+import type { CaseOpeningLog, Drop, SteamItem, WearCondition } from '../lib/types'
 
 // ─── Item type detection ──────────────────────────────────────────────────────
 
@@ -281,13 +282,14 @@ function DropModal({ onSave, onClose }: DropModalProps) {
   const existingDrops = weekId === 'unknown'
     ? []
     : drops.filter(d => d.accountId === accountId && d.weekId === weekId)
-  const slotsLeft = weekId === 'unknown' ? 2 : 2 - existingDrops.length
+  // When date is unknown, there is no weekly limit (we don't know the week)
+  const slotsLeft = weekId === 'unknown' ? Infinity : 2 - existingDrops.length
 
   function handleSave() {
     setError('')
     if (!accountId) { setError(t('drops.register_modal_validation_account')); return }
     if (!item1 && !item2) { setError(t('drops.register_modal_validation_item')); return }
-    if (slotsLeft <= 0) { setError(t('drops.register_modal_validation_limit')); return }
+    if (slotsLeft !== Infinity && slotsLeft <= 0) { setError(t('drops.register_modal_validation_limit')); return }
 
     const rate = settings.cashoutRate / 100
     const toSave: Array<Omit<Drop, 'id' | 'createdAt'>> = []
@@ -295,7 +297,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
     const firstDropNum = existingDrops.length === 0 ? 1 : 2
     const usdRate = settings.usdRate || 5.2
 
-    if (item1 && slotsLeft >= 1) {
+    if (item1 && (slotsLeft === Infinity || slotsLeft >= 1)) {
       let sv = parseFloat(value1) || 0
       if (currency === 'USD') sv = sv * usdRate
       const f1 = parseFloat(float1)
@@ -309,7 +311,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
         sold: false,
       })
     }
-    if (item2 && slotsLeft >= 2 && existingDrops.length === 0) {
+    if (item2 && (slotsLeft === Infinity || (slotsLeft >= 2 && existingDrops.length === 0))) {
       let sv = parseFloat(value2) || 0
       if (currency === 'USD') sv = sv * usdRate
       const f2 = parseFloat(float2)
@@ -409,12 +411,12 @@ function DropModal({ onSave, onClose }: DropModalProps) {
         </div>
 
         {/* Status */}
-        {slotsLeft <= 0 ? (
+        {slotsLeft !== Infinity && slotsLeft <= 0 ? (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-loss/10 border border-loss/20 text-loss text-sm">
             <AlertCircle size={14} />
             {t('drops.register_modal_limit_reached')}
           </div>
-        ) : slotsLeft === 1 && (
+        ) : slotsLeft !== Infinity && slotsLeft === 1 && (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-gold/10 border border-gold/20 text-gold text-xs">
             <AlertCircle size={13} />
             {t('drops.register_modal_limit_one')}
@@ -422,7 +424,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
         )}
 
         {/* Item pickers */}
-        {slotsLeft > 0 && (
+        {(slotsLeft === Infinity || slotsLeft > 0) && (
           <>
             <ItemPicker
               label={t('drops.register_modal_input_item_label', { n: 1 })}
@@ -436,7 +438,7 @@ function DropModal({ onSave, onClose }: DropModalProps) {
             {item1 && detectItemType(item1.name) === 'weapon' && (
               <FloatInput float={float1} onFloatChange={setFloat1} />
             )}
-            {slotsLeft >= 2 && existingDrops.length === 0 && (
+            {(slotsLeft === Infinity || (slotsLeft >= 2 && existingDrops.length === 0)) && (
               <>
                 <ItemPicker
                   label={t('drops.register_modal_input_item_label', { n: 2 })}
@@ -517,6 +519,173 @@ function SellModal({ drop, onSave, onClose }: { drop: Drop; onSave: (id: string,
             }} className="flex-1">
             {t('drops.sell_modal_confirm')}
           </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+// ─── Case Opening Modal ──────────────────────────────────────────────────────
+
+function CaseOpeningModal({ drop, onSave, onClose }: {
+  drop: Drop
+  onSave: (data: Omit<CaseOpeningLog, 'id' | 'createdAt'>) => void
+  onClose: () => void
+}) {
+  const { settings } = useStore()
+  const t = useT()
+  const currency = settings.currency
+  const usdRate = settings.usdRate || 5.2
+  const toDisplay = (valueBRL: number) => currency === 'USD' ? (valueBRL / usdRate).toFixed(2) : valueBRL.toFixed(2)
+  const toBRL = (value: string) => {
+    const parsed = parseFloat(value) || 0
+    return currency === 'USD' ? parsed * usdRate : parsed
+  }
+
+  const [caseValue, setCaseValue] = useState(toDisplay(drop.steamValue || 0))
+  const [keyValue, setKeyValue] = useState(toDisplay(13.99))
+  const [receivedItem, setReceivedItem] = useState<SteamItem | null>(null)
+  const [receivedValue, setReceivedValue] = useState('')
+  const [wear, setWear] = useState<WearCondition>('FT')
+  const [statTrak, setStatTrak] = useState(false)
+  const [loadingCasePrice, setLoadingCasePrice] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (drop.steamValue > 0) return
+    let cancelled = false
+    setLoadingCasePrice(true)
+    getSteamItemPrice(drop.item.marketHashName)
+      .then(price => {
+        if (cancelled) return
+        const value = price?.lowestPrice ?? price?.medianPrice ?? 0
+        if (value > 0) setCaseValue(toDisplay(value))
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCasePrice(false)
+      })
+    return () => { cancelled = true }
+  }, [drop.item.marketHashName, drop.steamValue])
+
+  const caseBRL = toBRL(caseValue)
+  const keyBRL = toBRL(keyValue)
+  const receivedBRL = toBRL(receivedValue)
+  const profitLoss = receivedBRL - caseBRL - keyBRL
+  const valid = receivedItem && receivedBRL >= 0 && caseBRL >= 0 && keyBRL >= 0
+
+  function handleSave() {
+    setError('')
+    if (!receivedItem) { setError(t('drops.case_modal_validation_item')); return }
+    if (!Number.isFinite(profitLoss)) { setError(t('drops.case_modal_validation_values')); return }
+    onSave({
+      dropId: drop.id,
+      caseItem: drop.item,
+      casePriceAtOpen: parseFloat(caseBRL.toFixed(2)),
+      keyPriceAtOpen: parseFloat(keyBRL.toFixed(2)),
+      keyPrice: parseFloat(keyBRL.toFixed(2)),
+      obtainedItem: receivedItem,
+      receivedItem,
+      obtainedValue: parseFloat(receivedBRL.toFixed(2)),
+      receivedValueAtOpen: parseFloat(receivedBRL.toFixed(2)),
+      openedAt: new Date().toISOString(),
+      profitLoss: parseFloat(profitLoss.toFixed(2)),
+      wear,
+      statTrak,
+      sold: false,
+    })
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t('drops.case_modal_title')} size="lg">
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 rounded-xl border border-white/[0.04] bg-[#111827]/60 p-3">
+          <div className="h-12 w-12 rounded-lg bg-[#0d1117] border border-white/[0.04] overflow-hidden flex items-center justify-center">
+            <SteamItemImage imageUrl={drop.item.imageUrl} alt={drop.item.name} size={48} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-white truncate">{drop.item.name}</p>
+            <p className="text-xs text-slate-500">{t('drops.case_modal_case_locked')}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label={t('drops.case_modal_case_value', { currency: currency === 'USD' ? '$' : 'R$' })}
+            type="number"
+            min="0"
+            step="0.01"
+            value={caseValue}
+            onChange={e => setCaseValue(e.target.value)}
+            hint={loadingCasePrice ? t('drops.case_modal_loading_price') : undefined}
+          />
+          <Input
+            label={t('drops.case_modal_key_value', { currency: currency === 'USD' ? '$' : 'R$' })}
+            type="number"
+            min="0"
+            step="0.01"
+            value={keyValue}
+            onChange={e => setKeyValue(e.target.value)}
+          />
+        </div>
+
+        <ItemPicker
+          label={t('drops.case_modal_received_item')}
+          value={receivedItem}
+          steamValue={receivedValue}
+          onItemChange={setReceivedItem}
+          onValueChange={setReceivedValue}
+          cashoutRate={100}
+          currency={currency}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('drops.case_modal_wear')}</label>
+            <select
+              value={wear}
+              onChange={e => setWear(e.target.value as WearCondition)}
+              className="w-full h-10 rounded-xl border border-white/[0.05] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60"
+            >
+              <option value="FN">Factory New</option>
+              <option value="MW">Minimal Wear</option>
+              <option value="FT">Field-Tested</option>
+              <option value="WW">Well-Worn</option>
+              <option value="BS">Battle-Scarred</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatTrak(v => !v)}
+            className={cn(
+              'mt-6 h-10 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2',
+              statTrak
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-white/[0.05] bg-[#111827] text-slate-400 hover:text-slate-200',
+            )}
+          >
+            {statTrak && <Check size={14} />}
+            StatTrak
+          </button>
+        </div>
+
+        <div className={cn(
+          'rounded-xl border p-4',
+          profitLoss >= 0 ? 'border-profit/20 bg-profit/5' : 'border-loss/20 bg-loss/5',
+        )}>
+          <p className="text-xs text-slate-500">{t('drops.case_modal_profit_loss')}</p>
+          <p className={cn('mt-1 font-mono text-xl font-bold', profitLoss >= 0 ? 'text-profit' : 'text-loss')}>
+            {formatCurrency(profitLoss, currency)}
+          </p>
+          <p className="mt-1 text-xs text-slate-600">
+            {t('drops.case_modal_formula')}
+          </p>
+        </div>
+
+        {error && <p className="text-xs text-loss flex items-center gap-1"><AlertCircle size={12} />{error}</p>}
+
+        <div className="flex gap-3 pt-1">
+          <Button variant="ghost" onClick={onClose} className="flex-1">{t('accounts.delete_modal_cancel')}</Button>
+          <Button onClick={handleSave} disabled={!valid} className="flex-1">{t('drops.case_modal_save')}</Button>
         </div>
       </div>
     </Modal>
@@ -746,14 +915,16 @@ function getRarityColor(name: string, value: number): { border: string; glow: st
 
 // ─── Drop Card ────────────────────────────────────────────────────────────────
 
-function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate, currency, onDelete, onSell, onEdit, index }: {
+function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate, currency, onDelete, onSell, onEdit, onOpenCase, caseOpened, index }: {
   drop: Drop; accountName: string; accountAvatar?: string; accountColor: string
   cashoutRate: number; currency: 'BRL' | 'USD'; index: number
   onDelete: () => void; onSell: () => void; onEdit: () => void
+  onOpenCase?: () => void; caseOpened?: boolean
 }) {
   const cashout = drop.cashoutValue ?? drop.steamValue * cashoutRate / 100
   const rarity = getRarityColor(drop.item?.name ?? '', drop.steamValue)
   const t = useT()
+  const isCaseDrop = detectItemType(drop.item?.name ?? '') === 'case'
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -785,6 +956,21 @@ function DropCard({ drop, accountName, accountAvatar, accountColor, cashoutRate,
             {drop.sold && <span className="text-[9px] bg-profit/15 text-profit px-1.5 py-0.5 rounded-full font-semibold font-body">{t('common.sold')}</span>}
           </div>
           <div className="flex gap-1.5 items-center flex-shrink-0">
+            {isCaseDrop && (
+              <button
+                onClick={onOpenCase}
+                disabled={caseOpened}
+                className={cn(
+                  'text-[10px] font-semibold px-3 py-2 rounded-lg transition-colors font-body inline-flex items-center gap-1.5',
+                  caseOpened
+                    ? 'text-slate-600 bg-white/[0.02] cursor-not-allowed'
+                    : 'text-gold hover:text-gold hover:bg-gold/10',
+                )}
+              >
+                <PackageOpen size={12} />
+                {caseOpened ? t('drops.case_opened') : t('drops.open_case')}
+              </button>
+            )}
             {!drop.sold && (
               <button onClick={onSell}
                 className="text-[10px] font-semibold text-slate-400 hover:text-profit hover:bg-profit/10 px-3 py-2 rounded-lg transition-colors font-body">
@@ -964,12 +1150,13 @@ type FilterStatus = 'all' | 'sold' | 'unsold'
 type FilterType = 'all' | 'weapon' | 'case' | 'sticker' | 'other'
 
 export default function Drops() {
-  const { accounts, drops, settings, addDrop, deleteDrop, markDropSold, updateDrop } = useStore()
+  const { accounts, drops, cases, settings, addDrop, deleteDrop, markDropSold, updateDrop, addCaseOpening } = useStore()
   const t = useT()
   const currency = settings.currency
   const [showModal, setShowModal] = useState(false)
   const [sellingDrop, setSellingDrop] = useState<Drop | null>(null)
   const [editingDrop, setEditingDrop] = useState<Drop | null>(null)
+  const [openingDrop, setOpeningDrop] = useState<Drop | null>(null)
   const [showFilters, setShowFilters] = useState(false)
 
   const [search, setSearch] = useState('')
@@ -1182,6 +1369,8 @@ export default function Drops() {
                           onDelete={() => { deleteDrop(drop.id); toast.success(t('drops.toast_drop_deleted')) }}
                           onSell={() => setSellingDrop(drop)}
                           onEdit={() => setEditingDrop(drop)}
+                          onOpenCase={() => setOpeningDrop(drop)}
+                          caseOpened={cases.some(c => c.dropId === drop.id)}
                         />
                       )
                     })}
@@ -1213,6 +1402,17 @@ export default function Drops() {
         )}
         {editingDrop && (
           <EditDropModal drop={editingDrop} onSave={(id, updates) => { updateDrop(id, updates); setEditingDrop(null); toast.success(t('drops.toast_drop_updated')) }} onClose={() => setEditingDrop(null)} />
+        )}
+        {openingDrop && (
+          <CaseOpeningModal
+            drop={openingDrop}
+            onSave={(data) => {
+              addCaseOpening(data)
+              setOpeningDrop(null)
+              toast.success(t('drops.case_modal_toast_saved'))
+            }}
+            onClose={() => setOpeningDrop(null)}
+          />
         )}
       </AnimatePresence>
     </div>

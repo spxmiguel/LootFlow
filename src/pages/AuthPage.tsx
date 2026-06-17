@@ -97,7 +97,7 @@ function ElectronCallbackScreen() {
 
         {status === 'done' && (
           <div className="text-center">
-            <p className="text-sm text-green-400 mb-1">✅ Login realizado!</p>
+            <p className="text-sm text-green-400 mb-1">Login realizado!</p>
             <p className="text-xs text-slate-500">Pode fechar esta aba e voltar para o app.</p>
           </div>
         )}
@@ -170,7 +170,7 @@ function DeviceCallbackScreen() {
         )}
         {status === 'done' && (
           <>
-            <h1 className="font-display text-2xl font-bold text-slate-100 mb-2">✅ Autorizado!</h1>
+            <h1 className="font-display text-2xl font-bold text-slate-100 mb-2">Autorizado!</h1>
             <p className="text-sm text-slate-500">Pode fechar essa aba e voltar pro app.</p>
           </>
         )}

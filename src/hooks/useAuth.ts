@@ -233,7 +233,7 @@ export function useAuth() {
     }
     return new Promise<LoginResult>((resolve) => {
       window.electronAPI!.openBrowserLogin()
-      toast('Faça login no navegador que abriu...', { duration: 10000, icon: '🌐' })
+      toast('Faça login no navegador que abriu...', { duration: 10000 })
       window.electronAPI!.removeAuthListener()
       window.electronAPI!.onAuthCredential(async ({ idToken, accessToken }) => {
         window.electronAPI!.removeAuthListener()

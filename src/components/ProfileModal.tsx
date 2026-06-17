@@ -90,7 +90,7 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
     setPhotoRemoved(true)
     setCustomPhotoURL('')
     setConfirmRemovePhoto(false)
-    toast('Foto removida — salve para confirmar.', { icon: '🗑️' })
+    toast('Foto removida — salve para confirmar.')
   }
 
   function handleRestorePhoto() {

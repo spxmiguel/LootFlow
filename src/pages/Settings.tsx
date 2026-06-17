@@ -11,7 +11,7 @@ import type { WhatsAppSettings, DaySchedule } from '../lib/types'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { exportDrops, exportBackupJSON, DEFAULT_EXPORT_OPTIONS, type ExportOptions, type ExportFormat, type ExportFilter, type ExportColumns, type ExportCurrency } from '../lib/export'
-import { storage } from '../lib/storage'
+import { storage, DEFAULT_SETTINGS } from '../lib/storage'
 import { clearSteamCache, getSteamCacheStats } from '../lib/steam'
 import { CUSTOM_FIREBASE_KEY, getCustomFirebaseConfig, isUsingCustomFirebase, FIREBASE_CONFIG } from '../lib/config'
 import { formatCurrency } from '../lib/utils'
@@ -98,26 +98,26 @@ const PRESET_COLORS = [
 
 // ─── Xingamentos metadata (espelha REMINDERS_XINGAMENTOS do bot) ──────────────
 const XINGAMENTOS_META = [
-  { id:  0, emoji: '🤬', title: 'BORA SEU VAGABUNDO!' },
-  { id:  1, emoji: '😡', title: 'ACORDA PORRA!' },
-  { id:  2, emoji: '🔥', title: 'EI SEU FILHO DA PUTA!' },
-  { id:  3, emoji: '💢', title: 'FALTA FARMAR N CONTAS SEU PREGUIÇOSO DE MERDA!' },
-  { id:  4, emoji: '😤', title: 'QUE É ISSO SEU MERDA!' },
-  { id:  5, emoji: '🤦', title: 'PORRA, TÁ DORMINDO NO PONTO?' },
-  { id:  6, emoji: '💀', title: 'BORA SEU PUTO, PARA DE ENROLAÇÃO!' },
-  { id:  7, emoji: '🚨', title: 'ACORDA SEU FILHO DA PUTA!' },
-  { id:  8, emoji: '😡', title: 'FALTANDO N CONTAS PRA FARMAR SEU LERDO DO CARALHO!' },
-  { id:  9, emoji: '🤡', title: 'RELATÓRIO DO INÚTIL DA SEMANA' },
-  { id: 10, emoji: '🔥', title: 'VAI TOMAR NO CU SEU ESQUECIDO!' },
-  { id: 11, emoji: '💢', title: 'BORA PORRA!' },
-  { id: 12, emoji: '😤', title: 'DROP SEMANAL SEU FILHO DA PUTA!' },
-  { id: 13, emoji: '🤬', title: 'ACORDA SEU PREGUIÇOSO DO CARALHO!' },
-  { id: 14, emoji: '💀', title: 'PARA DE SER UM FRACASSADO!' },
-  { id: 15, emoji: '🚨', title: 'PORRA, OS DROPS TÃO TE CHAMANDO!' },
-  { id: 16, emoji: '😡', title: 'BORA SEU MOLEZA DE MERDA!' },
-  { id: 17, emoji: '🤦', title: 'EI SEU INÚTIL, PARA DE COISA!' },
-  { id: 18, emoji: '🔥', title: 'OI SEU ANIMAL, TUDO BEM?' },
-  { id: 19, emoji: '💢', title: 'ÚLTIMA CHAMADA SEU FILHO DA PUTA!' },
+  { id:  0, title: 'BORA SEU VAGABUNDO!' },
+  { id:  1, title: 'ACORDA PORRA!' },
+  { id:  2, title: 'EI SEU FILHO DA PUTA!' },
+  { id:  3, title: 'FALTA FARMAR N CONTAS SEU PREGUIÇOSO DE MERDA!' },
+  { id:  4, title: 'QUE É ISSO SEU MERDA!' },
+  { id:  5, title: 'PORRA, TÁ DORMINDO NO PONTO?' },
+  { id:  6, title: 'BORA SEU PUTO, PARA DE ENROLAÇÃO!' },
+  { id:  7, title: 'ACORDA SEU FILHO DA PUTA!' },
+  { id:  8, title: 'FALTANDO N CONTAS PRA FARMAR SEU LERDO DO CARALHO!' },
+  { id:  9, title: 'RELATÓRIO DO INÚTIL DA SEMANA' },
+  { id: 10, title: 'VAI TOMAR NO CU SEU ESQUECIDO!' },
+  { id: 11, title: 'BORA PORRA!' },
+  { id: 12, title: 'DROP SEMANAL SEU FILHO DA PUTA!' },
+  { id: 13, title: 'ACORDA SEU PREGUIÇOSO DO CARALHO!' },
+  { id: 14, title: 'PARA DE SER UM FRACASSADO!' },
+  { id: 15, title: 'PORRA, OS DROPS TÃO TE CHAMANDO!' },
+  { id: 16, title: 'BORA SEU MOLEZA DE MERDA!' },
+  { id: 17, title: 'EI SEU INÚTIL, PARA DE COISA!' },
+  { id: 18, title: 'OI SEU ANIMAL, TUDO BEM?' },
+  { id: 19, title: 'ÚLTIMA CHAMADA SEU FILHO DA PUTA!' },
 ]
 
 // ─── WhatsApp Section ─────────────────────────────────────────────────────────
@@ -565,7 +565,7 @@ function WhatsAppSection() {
                               })
                             }}
                           >
-                            <span className="text-base leading-none shrink-0">{x.emoji}</span>
+                            <span className="text-[10px] font-mono text-slate-500 leading-none shrink-0">#{x.id + 1}</span>
                             <span className="text-[11px] font-mono flex-1 truncate">{x.title}</span>
                             <span className={`text-[10px] shrink-0 ${enabled ? 'text-profit' : 'text-slate-700'}`}>
                               {enabled ? 'ON' : 'OFF'}
@@ -700,7 +700,7 @@ export default function Settings() {
   const t = useT()
   const {
     accounts, drops, goals, settings,
-    updateSettings, updateTheme, reset,
+    updateSettings, updateTheme, updateProfile, reset,
     clearDrops, clearAccounts, clearGoals, resetSettingsToDefault,
   } = useStore()
   const { user, deleteAccount } = useAuth()
@@ -795,6 +795,30 @@ export default function Settings() {
 
   function handleCashoutRate(val: number) {
     updateSettings({ cashoutRate: Math.min(100, Math.max(0, val)) })
+  }
+
+  function handleGamificationMode(liteMode: boolean) {
+    updateSettings({
+      liteMode,
+      gamification: {
+        ...(settings.gamification ?? {}),
+        showInsights: !liteMode,
+        showHeatmap: !liteMode,
+        showTimeline: false,
+        showAchievements: !liteMode,
+        showHallOfFame: !liteMode,
+        showPerfectWeek: !liteMode,
+        showLevels: !liteMode,
+        showTitles: !liteMode,
+        showRankings: liteMode ? false : (settings.gamification?.showRankings ?? false),
+        showCollection: !liteMode,
+        showCaseTracker: !liteMode,
+      },
+    })
+  }
+
+  function updatePrivacySetting(key: keyof NonNullable<typeof settings.privacy>, value: boolean) {
+    updateSettings({ privacy: { ...(settings.privacy ?? {}), [key]: value } })
   }
 
   function handleExport() {
@@ -1119,6 +1143,36 @@ export default function Settings() {
                   </div>
                 </Section>
 
+                {/* 2. Gamification Mode */}
+                <Section icon={Zap} color="gold" title={t('settings.section_gamification_mode')} subtitle={t('settings.section_gamification_mode_desc')} defaultOpen={false}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleGamificationMode(false)}
+                      className={`rounded-xl border p-4 text-left transition-all ${
+                        !settings.liteMode
+                          ? 'border-primary/40 bg-primary/10 text-primary'
+                          : 'border-white/[0.025] bg-[#111827]/60 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold">{t('settings.gamification_full')}</p>
+                      <p className="mt-1 text-xs text-slate-500">{t('settings.gamification_full_hint')}</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleGamificationMode(true)}
+                      className={`rounded-xl border p-4 text-left transition-all ${
+                        settings.liteMode
+                          ? 'border-primary/40 bg-primary/10 text-primary'
+                          : 'border-white/[0.025] bg-[#111827]/60 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold">{t('settings.gamification_lite')}</p>
+                      <p className="mt-1 text-xs text-slate-500">{t('settings.gamification_lite_hint')}</p>
+                    </button>
+                  </div>
+                </Section>
+
                 {/* 2. Interface & Otimização */}
                 <Section icon={Palette} color="blue" title={t('settings.section_interface')} subtitle={t('settings.section_interface_desc')} defaultOpen={false}>
                   <SettingRow label={t('settings.interface_animations')} hint={t('settings.interface_animations_hint')}>
@@ -1145,11 +1199,11 @@ export default function Settings() {
                       <button
                         onClick={() => updateSettings({ language: 'pt' })}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language !== 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/[0.025] text-slate-400 hover:text-slate-200'}`}
-                      >🇧🇷 PT</button>
+                      >PT</button>
                       <button
                         onClick={() => updateSettings({ language: 'en' })}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${settings.language === 'en' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-white/5 border border-white/[0.025] text-slate-400 hover:text-slate-200'}`}
-                      >🇺🇸 EN</button>
+                      >EN</button>
                     </div>
                   </SettingRow>
                 </Section>
@@ -1257,6 +1311,77 @@ export default function Settings() {
                         </div>
                       </div>
                     )}
+                  </div>
+                </Section>
+
+                {/* Profile privacy */}
+                <Section icon={Shield} color="purple" title={t('settings.section_profile_privacy')} subtitle={t('settings.section_profile_privacy_desc')} defaultOpen={false}>
+                  <div className="space-y-4">
+                    <Input
+                      label={t('settings.profile_display_name')}
+                      value={settings.profile?.displayName ?? ''}
+                      onChange={e => updateProfile({ displayName: e.target.value || undefined })}
+                      placeholder={user?.displayName ?? t('settings.profile_display_name_placeholder')}
+                      maxLength={60}
+                    />
+
+                    <SettingRow label={t('settings.profile_hide_email')} hint={t('settings.profile_hide_email_hint')}>
+                      <Toggle
+                        value={settings.profile?.hideEmail ?? true}
+                        onChange={v => updateProfile({ hideEmail: v })}
+                      />
+                    </SettingRow>
+
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1.5">{t('settings.profile_visibility')}</label>
+                      <select
+                        value={settings.profilePrivacy ?? 'private'}
+                        onChange={e => updateSettings({ profilePrivacy: e.target.value as 'public' | 'private' | 'friends' })}
+                        disabled={user?.provider !== 'google'}
+                        className="w-full h-10 rounded-xl border border-white/[0.05] bg-[#111827] text-slate-200 text-sm px-3 focus:outline-none focus:border-primary/60 disabled:opacity-50"
+                      >
+                        <option value="private">{t('settings.profile_visibility_private')}</option>
+                        <option value="friends">{t('settings.profile_visibility_friends')}</option>
+                        <option value="public">{t('settings.profile_visibility_public')}</option>
+                      </select>
+                      <p className="text-[10px] text-slate-600 mt-1.5">
+                        {user?.provider === 'google' ? t('settings.profile_visibility_hint') : t('settings.profile_visibility_offline_hint')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 pt-3 border-t border-white/[0.025]">
+                      <SettingRow label={t('settings.privacy_hide_profile')} hint={t('settings.privacy_hide_profile_hint')}>
+                        <Toggle value={settings.privacy?.hideProfile ?? true} onChange={v => updatePrivacySetting('hideProfile', v)} />
+                      </SettingRow>
+                      <SettingRow label={t('settings.privacy_hide_statistics')}>
+                        <Toggle value={settings.privacy?.hideStatistics ?? false} onChange={v => updatePrivacySetting('hideStatistics', v)} />
+                      </SettingRow>
+                      <SettingRow label={t('settings.privacy_hide_achievements')}>
+                        <Toggle value={settings.privacy?.hideAchievements ?? true} onChange={v => updatePrivacySetting('hideAchievements', v)} />
+                      </SettingRow>
+                      <SettingRow label={t('settings.privacy_hide_collection')}>
+                        <Toggle value={settings.privacy?.hideCollection ?? true} onChange={v => updatePrivacySetting('hideCollection', v)} />
+                      </SettingRow>
+                      <SettingRow label={t('settings.privacy_hide_profit')}>
+                        <Toggle value={settings.privacy?.hideTotalProfit ?? true} onChange={v => updatePrivacySetting('hideTotalProfit', v)} />
+                      </SettingRow>
+                      <SettingRow label={t('settings.privacy_hide_accounts')}>
+                        <Toggle value={settings.privacy?.hideAccounts ?? true} onChange={v => updatePrivacySetting('hideAccounts', v)} />
+                      </SettingRow>
+                      <SettingRow label={t('settings.privacy_hide_history')}>
+                        <Toggle value={settings.privacy?.hideHistory ?? true} onChange={v => updatePrivacySetting('hideHistory', v)} />
+                      </SettingRow>
+                    </div>
+
+                    <div className="pt-3 border-t border-white/[0.025]">
+                      <SettingRow label={t('settings.profile_rankings')} hint={t('settings.profile_rankings_hint')}>
+                        <Toggle
+                          disabled={user?.provider !== 'google' || settings.liteMode}
+                          value={settings.gamification?.showRankings ?? false}
+                          onChange={v => updateSettings({ gamification: { ...DEFAULT_SETTINGS.gamification!, ...(settings.gamification ?? {}), showRankings: v } })}
+                        />
+                      </SettingRow>
+                    </div>
                   </div>
                 </Section>
 
@@ -1387,7 +1512,7 @@ export default function Settings() {
                                 ? 'bg-primary/10 border-primary/40 text-primary'
                                 : 'bg-[#0d1117] border-white/[0.025] text-slate-500 hover:text-slate-300'
                             }`}
-                          >{c === 'BRL' ? '🇧🇷 R$ BRL' : '🇺🇸 $ USD'}</button>
+                          >{c === 'BRL' ? 'R$ BRL' : '$ USD'}</button>
                         ))}
                       </div>
                       {exportOpts.currency === 'USD' && (

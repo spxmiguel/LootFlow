@@ -2,13 +2,45 @@ import { logger } from '../lib/logger'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
-import type { CSAccount, Drop, Goal, AppSettings, AppUser, Page, ModalType, ProfileOverride } from '../lib/types'
+import type {
+  CSAccount,
+  Drop,
+  Goal,
+  AppSettings,
+  AppUser,
+  Page,
+  ModalType,
+  ProfileOverride,
+  CollectionItem,
+  Friend,
+  FriendRequest,
+  CaseOpeningLog,
+  Achievement,
+  GamificationState,
+  LeaderboardEntry,
+  SteamItem,
+} from '../lib/types'
 import { storage, DEFAULT_SETTINGS } from '../lib/storage'
 import { generateId, getAccountColor } from '../lib/utils'
+import { ACHIEVEMENTS as ACHIEVEMENT_CATALOG, computeUnlockedAchievements } from '../lib/achievements'
 import {
   isFirebaseReady, getFirebaseAuth, firestoreSaveDoc, firestoreDeleteDoc,
   firestoreLoadCollection,
 } from '../lib/firebase'
+
+const generateDefaultAchievements = (): Achievement[] => {
+  return ACHIEVEMENT_CATALOG.map(a => ({
+    id: a.id,
+    name: a.name_pt,
+    description: a.desc_pt,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 100,
+    category: a.category,
+  }))
+}
+
+const DEFAULT_ACHIEVEMENTS: Achievement[] = generateDefaultAchievements()
 
 // ─── State Shape ──────────────────────────────────────────────────────────────
 
@@ -23,6 +55,13 @@ interface AppState {
   drops: Drop[]
   goals: Goal[]
   settings: AppSettings
+  collection: CollectionItem[]
+  cases: CaseOpeningLog[]
+  friends: Friend[]
+  friendRequests: FriendRequest[]
+  achievements: Achievement[]
+  gamification: GamificationState
+  rankings: LeaderboardEntry[]
 
   // UI
   currentPage: Page
@@ -57,6 +96,27 @@ interface AppState {
   updateSettings: (updates: Partial<AppSettings>) => void
   updateTheme: (updates: Partial<AppSettings['theme']>) => void
   updateProfile: (updates: Partial<ProfileOverride>) => void
+
+  // Actions – Case Opening Tracker
+  addCaseOpening: (data: Omit<CaseOpeningLog, 'id' | 'createdAt'>) => void
+  deleteCaseOpening: (id: string) => void
+  sellObtainedItem: (id: string, soldValue: number) => void
+
+  // Actions – Friends and Social (Online only)
+  addFriend: (friendCode: string) => Promise<boolean>
+  removeFriend: (friendId: string) => void
+  sendFriendRequest: (friendCode: string) => Promise<boolean>
+  acceptFriendRequest: (requestId: string) => void
+  declineFriendRequest: (requestId: string) => void
+  fetchRankings: () => Promise<void>
+  setProfilePrivacy: (privacy: 'public' | 'private' | 'friends') => void
+  changeUserName: (newName: string) => void
+
+  // Actions – Gamification & Achievements
+  addXP: (amount: number) => void
+  setActiveTitle: (title: string) => void
+  unlockTitle: (title: string) => void
+  checkAchievements: () => void
 
   // Actions – Privacy / Selective clear
   clearDrops: () => void
@@ -141,6 +201,57 @@ async function syncLocalSnapshotToFirestore(user: AppUser, snapshot: {
   ])
 }
 
+const updateCollectionHelper = (collection: CollectionItem[], item: SteamItem, value: number): CollectionItem[] => {
+  const existing = collection.find(c => c.marketHashName === item.marketHashName)
+  const now = new Date().toISOString()
+  if (existing) {
+    return collection.map(c => c.marketHashName === item.marketHashName ? {
+      ...c,
+      count: c.count + 1,
+      lastSeen: now,
+      maxValueSeen: Math.max(c.maxValueSeen, value)
+    } : c)
+  } else {
+    return [...collection, {
+      marketHashName: item.marketHashName,
+      name: item.name,
+      imageUrl: item.imageUrl,
+      count: 1,
+      firstSeen: now,
+      lastSeen: now,
+      maxValueSeen: value
+    }]
+  }
+}
+
+function getWeekXpReward(completionPercent: number): number {
+  if (completionPercent >= 100) return 100
+  if (completionPercent >= 90) return 80
+  if (completionPercent >= 80) return 60
+  if (completionPercent >= 70) return 40
+  if (completionPercent > 0) return 20
+  return 0
+}
+
+function deriveUnlockedTitles(state: Pick<AppState, 'accounts' | 'drops' | 'cases' | 'collection'>): string[] {
+  const titles = new Set<string>(['One Account One Dream'])
+  const caseDrops = state.drops.filter(d => /case|caixa|package/i.test(d.item?.name ?? '')).length
+  const profitableCase = state.cases.some(c => (c.profitLoss ?? ((c.receivedValueAtOpen ?? c.obtainedValue) - (c.casePriceAtOpen ?? 0) - (c.keyPriceAtOpen ?? c.keyPrice))) > 0)
+  const sundayDrop = state.drops.some(d => {
+    const raw = d.createdAt ?? d.registeredAt
+    return raw ? new Date(raw).getDay() === 0 : false
+  })
+
+  if (state.drops.length >= 100) titles.add('Valve Employee')
+  if (state.cases.length >= 5 || caseDrops >= 5) titles.add('Case Farmer')
+  if (profitableCase || state.drops.some(d => (d.cashoutValue ?? d.steamValue) >= 100)) titles.add('Lucky Bastard')
+  if (state.collection.length >= 10) titles.add('Collector')
+  if (sundayDrop) titles.add('Sunday Night Gang')
+  if (state.drops.length >= 50) titles.add('Drop Addict')
+
+  return [...titles]
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useStore = create<AppState>()(
@@ -152,6 +263,13 @@ export const useStore = create<AppState>()(
     drops: [],
     goals: [],
     settings: storage.loadSettings(),
+    collection: storage.loadCollection(),
+    cases: storage.loadCases(),
+    friends: storage.loadFriends(),
+    friendRequests: storage.loadFriendRequests(),
+    achievements: storage.loadAchievements().length ? storage.loadAchievements() : DEFAULT_ACHIEVEMENTS,
+    gamification: storage.loadGamificationState(),
+    rankings: [],
     currentPage: 'dashboard',
     modalType: null,
     modalData: null,
@@ -217,7 +335,7 @@ export const useStore = create<AppState>()(
     // ── Drops ────────────────────────────────────────────────────────────────
 
     addDrop: (data) => {
-      const { drops, user, settings } = get()
+      const { drops, user, settings, collection, gamification } = get()
       const sync = settings.firebaseSyncEnabled !== false
       const drop: Drop = {
         ...data,
@@ -225,9 +343,72 @@ export const useStore = create<AppState>()(
         createdAt: new Date().toISOString(),
       }
       const updated = [...drops, drop]
-      set({ drops: updated })
+
+      // Update Collection
+      const updatedCollection = updateCollectionHelper(collection, drop.item, drop.steamValue)
+
+      // Perfect Week Stats check
+      const activeAccounts = get().accounts.filter(a => a.active)
+      let perfectWeekState = { ...gamification }
+      let xpReward = 0
+      if (activeAccounts.length > 0) {
+        const accountDropCounts = new Map<string, number>()
+        updated.filter(d => d.weekId === drop.weekId).forEach(d => {
+          accountDropCounts.set(d.accountId, (accountDropCounts.get(d.accountId) ?? 0) + 1)
+        })
+        const allCompleted = activeAccounts.every(a => (accountDropCounts.get(a.id) ?? 0) >= 2)
+        if (drop.weekId !== 'unknown' && allCompleted) {
+          const completedWeeks = gamification.completedPerfectWeeks ?? []
+          if (!completedWeeks.includes(drop.weekId)) {
+            const newWeeks = [...completedWeeks, drop.weekId]
+            const totalPerfect = gamification.totalPerfectWeeks + 1
+            const currentStreak = gamification.currentPerfectWeekStreak + 1
+            const bestStreak = Math.max(gamification.bestPerfectWeekStreak, currentStreak)
+            perfectWeekState = {
+              ...gamification,
+              totalPerfectWeeks: totalPerfect,
+              currentPerfectWeekStreak: currentStreak,
+              bestPerfectWeekStreak: bestStreak,
+              completedPerfectWeeks: newWeeks
+            }
+          }
+        }
+
+        if (drop.weekId !== 'unknown') {
+          const targetDrops = activeAccounts.length * 2
+          const weekDrops = updated.filter(d => d.weekId === drop.weekId).length
+          const completionPercent = targetDrops > 0 ? Math.min(100, (weekDrops / targetDrops) * 100) : 0
+          const rewardForWeek = getWeekXpReward(completionPercent)
+          const previousReward = perfectWeekState.xpAwardedWeeks?.[drop.weekId] ?? 0
+          if (rewardForWeek > previousReward) {
+            xpReward = rewardForWeek - previousReward
+            perfectWeekState = {
+              ...perfectWeekState,
+              xpAwardedWeeks: {
+                ...(perfectWeekState.xpAwardedWeeks ?? {}),
+                [drop.weekId]: rewardForWeek,
+              },
+            }
+          }
+        }
+      }
+
+      set({
+        drops: updated,
+        collection: updatedCollection,
+        gamification: perfectWeekState
+      })
       storage.saveDrops(updated)
+      storage.saveCollection(updatedCollection)
+      storage.saveGamificationState(perfectWeekState)
+
       syncToFirestore(user, 'drops', drop.id, drop as unknown as Record<string, unknown>, sync)
+      syncToFirestore(user, 'collection', drop.item.marketHashName, updatedCollection.find(c => c.marketHashName === drop.item.marketHashName) as any, sync)
+      syncToFirestore(user, 'gamification', 'state', perfectWeekState as any, sync)
+
+      if (xpReward > 0) get().addXP(xpReward)
+      get().checkAchievements()
+
       return drop
     },
 
@@ -361,6 +542,293 @@ export const useStore = create<AppState>()(
       syncToFirestore(user, 'settings', 'app', defaultSettings as unknown as Record<string, unknown>, sync)
     },
 
+    // ── Case Opening Tracker ──────────────────────────────────────────────────
+
+    addCaseOpening: (data) => {
+      const { cases, user, settings, collection } = get()
+      const sync = settings.firebaseSyncEnabled !== false
+      const openedAt = data.openedAt ?? new Date().toISOString()
+      const casePriceAtOpen = data.casePriceAtOpen ?? 0
+      const keyPriceAtOpen = data.keyPriceAtOpen ?? data.keyPrice ?? 0
+      const receivedItem = data.receivedItem ?? data.obtainedItem
+      const receivedValueAtOpen = data.receivedValueAtOpen ?? data.obtainedValue ?? 0
+      const log: CaseOpeningLog = {
+        ...data,
+        id: generateId(),
+        casePriceAtOpen,
+        keyPriceAtOpen,
+        keyPrice: keyPriceAtOpen,
+        receivedItem,
+        obtainedItem: receivedItem,
+        receivedValueAtOpen,
+        obtainedValue: receivedValueAtOpen,
+        openedAt,
+        profitLoss: data.profitLoss ?? (receivedValueAtOpen - casePriceAtOpen - keyPriceAtOpen),
+        createdAt: openedAt,
+      }
+      const updatedCases = [...cases, log]
+      const updatedCollection = updateCollectionHelper(collection, receivedItem, receivedValueAtOpen)
+
+      set({ cases: updatedCases, collection: updatedCollection })
+      storage.saveCases(updatedCases)
+      storage.saveCollection(updatedCollection)
+      syncToFirestore(user, 'cases', log.id, log as any, sync)
+      syncToFirestore(user, 'collection', receivedItem.marketHashName, updatedCollection.find(c => c.marketHashName === receivedItem.marketHashName) as any, sync)
+
+      get().addXP(10)
+      get().checkAchievements()
+    },
+
+    deleteCaseOpening: (id) => {
+      const { cases, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
+      const updated = cases.filter(c => c.id !== id)
+      set({ cases: updated })
+      storage.saveCases(updated)
+      deleteFromFirestore(user, 'cases', id, sync)
+    },
+
+    sellObtainedItem: (id, soldValue) => {
+      const { cases, user, settings } = get()
+      const sync = settings.firebaseSyncEnabled !== false
+      const updated = cases.map(c => c.id === id ? { ...c, sold: true, soldValue } : c)
+      set({ cases: updated })
+      storage.saveCases(updated)
+      const log = updated.find(c => c.id === id)
+      if (log) syncToFirestore(user, 'cases', id, log as any, sync)
+    },
+
+    // ── Friends and Social ────────────────────────────────────────────────────
+
+    addFriend: async (friendCode) => {
+      const { user, authMode, friends } = get()
+      if (authMode !== 'firebase' || !user) {
+        toast.error('Recurso online disponível apenas com login do Google.')
+        return false
+      }
+      const sampleFriends = [
+        { id: 'f1', name: 'Fallen', activeTitle: 'Lenda do Loot', level: 15, xp: 1500, friendCode: 'FALLEN123' },
+        { id: 'f2', name: 'Coldzera', activeTitle: 'Mestre dos Drops', level: 8, xp: 820, friendCode: 'COLD777' },
+        { id: 'f3', name: 'Gaules', activeTitle: 'Iniciante', level: 3, xp: 350, friendCode: 'GAUGAU99' }
+      ]
+      const matched = sampleFriends.find(f => f.friendCode.toLowerCase() === friendCode.toLowerCase())
+      if (matched) {
+        if (friends.some(f => f.id === matched.id)) {
+          toast.error('Vocês já são amigos!')
+          return false
+        }
+        const updated = [...friends, matched]
+        set({ friends: updated })
+        storage.saveFriends(updated)
+        toast.success(`${matched.name} adicionado como amigo!`)
+        get().addXP(20)
+        get().checkAchievements()
+        return true
+      } else {
+        toast.error('Código de amigo não encontrado.')
+        return false
+      }
+    },
+
+    removeFriend: (friendId) => {
+      const { friends } = get()
+      const updated = friends.filter(f => f.id !== friendId)
+      set({ friends: updated })
+      storage.saveFriends(updated)
+      toast.success('Amigo removido.')
+    },
+
+    sendFriendRequest: async (friendCode) => {
+      const { user, authMode, friendRequests, settings } = get()
+      if (authMode !== 'firebase' || !user) {
+        toast.error('Recurso online disponível apenas com login do Google.')
+        return false
+      }
+      if (friendRequests.some(r => r.senderFriendCode.toLowerCase() === friendCode.toLowerCase())) {
+        toast.error('Solicitação já enviada ou recebida.')
+        return false
+      }
+      const sampleUsers = [
+        { id: 'u1', name: 'KNG', avatar: '', friendCode: 'KNG999' },
+        { id: 'u2', name: 'Taco', avatar: '', friendCode: 'TACO123' }
+      ]
+      const matched = sampleUsers.find(u => u.friendCode.toLowerCase() === friendCode.toLowerCase())
+      if (matched) {
+        const newRequest: FriendRequest = {
+          id: generateId(),
+          senderId: matched.id,
+          senderName: matched.name,
+          senderAvatar: matched.avatar || undefined,
+          senderFriendCode: matched.friendCode,
+          type: 'incoming',
+          createdAt: new Date().toISOString()
+        }
+        const updated = [...friendRequests, newRequest]
+        set({ friendRequests: updated })
+        storage.saveFriendRequests(updated)
+        toast.success(`Solicitação recebida de ${matched.name}!`)
+        return true
+      } else {
+        const outgoingRequest: FriendRequest = {
+          id: generateId(),
+          senderId: user.uid,
+          senderName: settings.profile?.displayName || user.displayName || 'Usuário',
+          senderFriendCode: friendCode,
+          type: 'outgoing',
+          createdAt: new Date().toISOString()
+        }
+        const updated = [...friendRequests, outgoingRequest]
+        set({ friendRequests: updated })
+        storage.saveFriendRequests(updated)
+        toast.success(`Solicitação de amizade enviada para o código ${friendCode}!`)
+        return true
+      }
+    },
+
+    acceptFriendRequest: (requestId) => {
+      const { friendRequests, friends } = get()
+      const request = friendRequests.find(r => r.id === requestId)
+      if (!request) return
+      const newFriend: Friend = {
+        id: request.senderId,
+        name: request.senderName,
+        avatarUrl: request.senderAvatar,
+        level: 1,
+        xp: 0,
+        friendCode: request.senderFriendCode
+      }
+      const updatedFriends = [...friends, newFriend]
+      const updatedRequests = friendRequests.filter(r => r.id !== requestId)
+      set({ friends: updatedFriends, friendRequests: updatedRequests })
+      storage.saveFriends(updatedFriends)
+      storage.saveFriendRequests(updatedRequests)
+      toast.success(`Agora você é amigo de ${request.senderName}!`)
+      get().addXP(20)
+      get().checkAchievements()
+    },
+
+    declineFriendRequest: (requestId) => {
+      const { friendRequests } = get()
+      const updatedRequests = friendRequests.filter(r => r.id !== requestId)
+      set({ friendRequests: updatedRequests })
+      storage.saveFriendRequests(updatedRequests)
+      toast.success('Solicitação recusada.')
+    },
+
+    fetchRankings: async () => {
+      const { user, authMode, gamification, drops, settings } = get()
+      if (authMode !== 'firebase' || !user || settings.profilePrivacy === 'private' || settings.gamification?.showRankings === false) {
+        set({ rankings: [] })
+        return
+      }
+      const userDisplayName = settings.profile?.displayName || user.displayName || 'Você'
+      const userEntry: LeaderboardEntry = {
+        id: user.uid,
+        name: userDisplayName,
+        avatarUrl: settings.profile?.customPhotoURL || user.photoURL || undefined,
+        activeTitle: gamification.activeTitle,
+        level: gamification.level,
+        xp: gamification.totalXP,
+        totalDrops: drops.length
+      }
+      const leaderboard: LeaderboardEntry[] = [
+        { id: 'f1', name: 'Fallen', activeTitle: 'Lenda do Loot', level: 15, xp: 1500, totalDrops: 142 },
+        { id: 'f2', name: 'Coldzera', activeTitle: 'Mestre dos Drops', level: 8, xp: 820, totalDrops: 64 },
+        userEntry,
+        { id: 'f3', name: 'Gaules', activeTitle: 'Iniciante', level: 3, xp: 350, totalDrops: 22 }
+      ].sort((a, b) => b.xp - a.xp)
+      set({ rankings: leaderboard })
+    },
+
+    setProfilePrivacy: (privacy) => {
+      get().updateSettings({ profilePrivacy: privacy })
+    },
+
+    changeUserName: (newName) => {
+      get().updateProfile({ displayName: newName })
+    },
+
+    // ── Gamification and Achievements ─────────────────────────────────────────
+
+    addXP: (amount) => {
+      if (get().settings.liteMode) return
+      const { gamification, user, settings } = get()
+      const previousLevel = gamification.level
+      const totalXP = gamification.totalXP + amount
+      const level = Math.floor(totalXP / 500) + 1
+      const levelProgress = totalXP % 500
+      const derivedTitles = deriveUnlockedTitles(get())
+      const unlockedTitles = [...new Set([...gamification.unlockedTitles, ...derivedTitles])]
+      const activeTitle = gamification.activeTitle && unlockedTitles.includes(gamification.activeTitle)
+        ? gamification.activeTitle
+        : unlockedTitles[0]
+      const updated = {
+        ...gamification,
+        totalXP,
+        level,
+        levelProgress,
+        unlockedTitles,
+        activeTitle
+      }
+      set({ gamification: updated })
+      storage.saveGamificationState(updated)
+      syncToFirestore(user, 'gamification', 'state', updated as any, settings.firebaseSyncEnabled !== false)
+      if (level > previousLevel) {
+        toast.success(settings.language === 'en' ? `Level ${level} reached!` : `Nível ${level} alcançado!`)
+        get().checkAchievements()
+      }
+    },
+
+    setActiveTitle: (title) => {
+      const { gamification, user, settings } = get()
+      const updated = { ...gamification, activeTitle: title }
+      set({ gamification: updated })
+      storage.saveGamificationState(updated)
+      syncToFirestore(user, 'gamification', 'state', updated as any, settings.firebaseSyncEnabled !== false)
+    },
+
+    unlockTitle: (title) => {
+      const { gamification, user, settings } = get()
+      if (gamification.unlockedTitles.includes(title)) return
+      const updated = { ...gamification, unlockedTitles: [...gamification.unlockedTitles, title] }
+      set({ gamification: updated })
+      storage.saveGamificationState(updated)
+      syncToFirestore(user, 'gamification', 'state', updated as any, settings.firebaseSyncEnabled !== false)
+    },
+
+    checkAchievements: () => {
+      const { achievements, accounts, drops, goals, user, settings } = get()
+      const computed = computeUnlockedAchievements(accounts, drops, goals, settings)
+      const progressById = new Map(computed.map(a => [a.achievement.id, a]))
+      let unlockedAny = false
+
+      const updatedAchievements = ACHIEVEMENT_CATALOG.map(catalogItem => {
+        const existing = achievements.find(a => a.id === catalogItem.id)
+        const computedItem = progressById.get(catalogItem.id)
+        const progress = computedItem?.progress ?? existing?.progress ?? 0
+        const unlocked = progress >= 100
+        if (unlocked && existing && !existing.unlocked) unlockedAny = true
+        return {
+          id: catalogItem.id,
+          name: catalogItem.name_pt,
+          description: catalogItem.desc_pt,
+          category: catalogItem.category,
+          maxProgress: 100,
+          progress,
+          unlocked,
+          unlockedAt: unlocked ? (existing?.unlockedAt ?? computedItem?.unlockedAt ?? new Date().toISOString()) : existing?.unlockedAt,
+        }
+      })
+
+      set({ achievements: updatedAchievements })
+      storage.saveAchievements(updatedAchievements)
+      syncToFirestore(user, 'achievements', 'list', { list: updatedAchievements } as any, settings.firebaseSyncEnabled !== false)
+
+      if (unlockedAny) {
+        toast.success(settings.language === 'en' ? 'New achievement unlocked!' : 'Nova conquista desbloqueada!')
+      }
+    },
+
     // ── UI ───────────────────────────────────────────────────────────────────
 
     setCurrentPage: (page) => set({ currentPage: page, sidebarOpen: false }),
@@ -377,6 +845,12 @@ export const useStore = create<AppState>()(
         drops: storage.loadDrops(),
         goals: storage.loadGoals(),
         settings: storage.loadSettings(),
+        collection: storage.loadCollection(),
+        cases: storage.loadCases(),
+        friends: storage.loadFriends(),
+        friendRequests: storage.loadFriendRequests(),
+        achievements: storage.loadAchievements().length ? storage.loadAchievements() : DEFAULT_ACHIEVEMENTS,
+        gamification: storage.loadGamificationState(),
       })
     },
 
@@ -391,6 +865,12 @@ export const useStore = create<AppState>()(
         drops: storage.loadDrops(),
         goals: storage.loadGoals(),
         settings: storage.loadSettings(),
+        collection: storage.loadCollection(),
+        cases: storage.loadCases(),
+        friends: storage.loadFriends(),
+        friendRequests: storage.loadFriendRequests(),
+        achievements: storage.loadAchievements().length ? storage.loadAchievements() : DEFAULT_ACHIEVEMENTS,
+        gamification: storage.loadGamificationState(),
       }
 
       let cloudAccounts: CSAccount[]
@@ -407,7 +887,6 @@ export const useStore = create<AppState>()(
         ])
       } catch (e) {
         logger.error('[Store] Firestore load failed:', e)
-        // Fall back to local data and let the caller show an error toast
         set(localSnapshot)
         throw e
       }
@@ -436,6 +915,12 @@ export const useStore = create<AppState>()(
         drops: cloudDrops,
         goals: cloudGoals,
         settings,
+        collection: localSnapshot.collection,
+        cases: localSnapshot.cases,
+        friends: localSnapshot.friends,
+        friendRequests: localSnapshot.friendRequests,
+        achievements: localSnapshot.achievements,
+        gamification: localSnapshot.gamification,
       })
       storage.saveAccounts(cloudAccounts)
       storage.saveDrops(cloudDrops)
@@ -452,6 +937,13 @@ export const useStore = create<AppState>()(
         drops: [],
         goals: [],
         settings: storage.loadSettings(),
+        collection: [],
+        cases: [],
+        friends: [],
+        friendRequests: [],
+        achievements: DEFAULT_ACHIEVEMENTS,
+        gamification: storage.loadGamificationState(),
+        rankings: [],
         user: null,
         authMode: 'local',
         authReady: true,

@@ -18,7 +18,6 @@ import { SteamItemImage } from '../components/SteamItemImage'
 import { useT } from '../hooks/useT'
 
 import { ActivityHeatmap } from '../components/ActivityHeatmap'
-import { Timeline } from '../components/Timeline'
 import { computeUnlockedAchievements, TIER_COLORS } from '../lib/achievements'
 import { computeInsights, computePredictions } from '../lib/insights'
 
@@ -837,9 +836,7 @@ export function Dashboard() {
               <ActivityHeatmap drops={drops} />
             )}
 
-            {settings.gamification?.showTimeline && (
-              <Timeline accounts={accounts} drops={drops} goals={goals} settings={settings} />
-            )}
+
 
             {/* Achievements if enabled */}
             {settings.gamification?.showAchievements && (

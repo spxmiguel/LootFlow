@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, Package, BarChart3, Target,
   Settings, X, LogOut, ChevronRight,
-  TrendingUp,
+  TrendingUp, BookOpen, Trophy, Crown,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useStore } from '../store'
@@ -19,14 +19,30 @@ type NavItem = { id: Page; label: string; icon: typeof LayoutDashboard; badge?: 
 
 function useNavItems(): NavItem[] {
   const t = useT()
-  return [
-    { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
-    { id: 'accounts', label: t('nav.accounts'), icon: Users },
-    { id: 'drops', label: t('nav.drops'), icon: Package },
-    { id: 'analytics', label: t('nav.analytics'), icon: BarChart3 },
-    { id: 'goals', label: t('nav.goals'), icon: Target },
-    { id: 'settings', label: t('nav.settings'), icon: Settings },
+  const settings = useStore(s => s.settings)
+  const isLite = settings.liteMode
+
+  const items: NavItem[] = [
+    { id: 'dashboard', label: t('nav.dashboard') || 'Dashboard', icon: LayoutDashboard },
+    { id: 'accounts', label: t('nav.accounts') || 'Contas', icon: Users },
+    { id: 'drops', label: t('nav.drops') || 'Drops', icon: Package },
+    { id: 'analytics', label: t('nav.analytics') || 'Analítico', icon: BarChart3 },
+    { id: 'goals', label: t('nav.goals') || 'Metas', icon: Target },
   ]
+
+  if (!isLite) {
+    items.push(
+      { id: 'collection', label: t('nav.collection') || 'Coleção', icon: BookOpen },
+      { id: 'achievements', label: t('nav.achievements') || 'Conquistas', icon: Trophy },
+      { id: 'friends', label: t('nav.friends') || 'Amigos & Rankings', icon: Crown }
+    )
+  }
+
+  items.push(
+    { id: 'settings', label: t('nav.settings') || 'Configurações', icon: Settings }
+  )
+
+  return items
 }
 
 // ─── Sidebar Item ─────────────────────────────────────────────────────────────
@@ -283,7 +299,7 @@ function MobileBottomNav() {
 
   return (
     <nav className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.025] bg-[#080b12]/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 backdrop-blur-xl">
-      <div className="grid grid-cols-6 gap-1">
+      <div className="flex overflow-x-auto gap-1 scrollbar-none py-1">
         {navItems.map(item => {
           const Icon = item.icon
           const active = currentPage === item.id
@@ -292,20 +308,20 @@ function MobileBottomNav() {
               key={item.id}
               onClick={() => setCurrentPage(item.id)}
               className={cn(
-                'flex h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-medium transition-all',
+                'flex h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-medium transition-all shrink-0 min-w-[70px] flex-1',
                 active
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-primary/10 text-primary font-semibold'
                   : 'text-slate-500 active:bg-[#111827] active:text-slate-200',
               )}
             >
               <Icon className="h-4 w-4" />
               <span className="max-w-full truncate px-0.5 leading-none">
                 {item.id === 'dashboard'
-                  ? t('nav.mobile.dashboard')
+                  ? t('nav.mobile.dashboard') || 'Home'
                   : item.id === 'analytics'
-                    ? t('nav.mobile.analytics')
+                    ? t('nav.mobile.analytics') || 'Stats'
                     : item.id === 'settings'
-                      ? t('nav.mobile.settings')
+                      ? t('nav.mobile.settings') || 'Config'
                       : item.label}
               </span>
             </button>

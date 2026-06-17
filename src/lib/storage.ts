@@ -1,5 +1,16 @@
 import { logger } from './logger'
-import type { CSAccount, Drop, Goal, AppSettings } from './types'
+import type {
+  CSAccount,
+  Drop,
+  Goal,
+  AppSettings,
+  CollectionItem,
+  Friend,
+  FriendRequest,
+  CaseOpeningLog,
+  Achievement,
+  GamificationState,
+} from './types'
 
 const KEYS = {
   accounts: 'lootflow_accounts',
@@ -7,6 +18,12 @@ const KEYS = {
   goals: 'lootflow_goals',
   settings: 'lootflow_settings',
   user: 'lootflow_user',
+  collection: 'lootflow_collection',
+  cases: 'lootflow_cases',
+  friends: 'lootflow_friends',
+  friendRequests: 'lootflow_friend_requests',
+  achievements: 'lootflow_achievements',
+  gamification: 'lootflow_gamification',
 } as const
 
 function load<T>(key: string, fallback: T): T {
@@ -50,12 +67,29 @@ export const DEFAULT_SETTINGS: AppSettings = {
     sidebarCompact: false,
   },
   showOnboarding: true,
+  liteMode: false,
+  profilePrivacy: 'private',
+  privacy: {
+    hideProfile: true,
+    hideStatistics: false,
+    hideAchievements: true,
+    hideCollection: true,
+    hideTotalProfit: true,
+    hideAccounts: true,
+    hideHistory: true,
+  },
   gamification: {
     showInsights: true,
     showHeatmap: true,
-    showTimeline: true,
+    showTimeline: false,
     showAchievements: true,
     showHallOfFame: true,
+    showPerfectWeek: true,
+    showLevels: true,
+    showTitles: true,
+    showRankings: false,
+    showCollection: true,
+    showCaseTracker: true,
   },
 }
 
@@ -64,6 +98,27 @@ export const DEFAULT_SETTINGS: AppSettings = {
 function loadAccounts(): CSAccount[] { return load<CSAccount[]>(KEYS.accounts, []) }
 function loadDrops(): Drop[] { return load<Drop[]>(KEYS.drops, []) }
 function loadGoals(): Goal[] { return load<Goal[]>(KEYS.goals, []) }
+function loadCollection(): CollectionItem[] { return load<CollectionItem[]>(KEYS.collection, []) }
+function loadCases(): CaseOpeningLog[] { return load<CaseOpeningLog[]>(KEYS.cases, []) }
+function loadFriends(): Friend[] { return load<Friend[]>(KEYS.friends, []) }
+function loadFriendRequests(): FriendRequest[] { return load<FriendRequest[]>(KEYS.friendRequests, []) }
+function loadAchievements(): Achievement[] { return load<Achievement[]>(KEYS.achievements, []) }
+function loadGamificationState(): GamificationState {
+  const def: GamificationState = {
+    totalPerfectWeeks: 0,
+    currentPerfectWeekStreak: 0,
+    bestPerfectWeekStreak: 0,
+    totalXP: 0,
+    level: 1,
+    levelProgress: 0,
+    unlockedTitles: ['One Account One Dream'],
+    activeTitle: 'One Account One Dream',
+    completedPerfectWeeks: [],
+    xpAwardedWeeks: {},
+  }
+  return load<GamificationState>(KEYS.gamification, def)
+}
+
 function loadSettings(): AppSettings {
   const saved = load<Partial<AppSettings>>(KEYS.settings, {})
   const merged: AppSettings = {
@@ -71,6 +126,7 @@ function loadSettings(): AppSettings {
     ...saved,
     theme: { ...DEFAULT_SETTINGS.theme, ...(saved.theme ?? {}) },
     gamification: { ...DEFAULT_SETTINGS.gamification, ...(saved.gamification ?? {}) } as any,
+    privacy: { ...DEFAULT_SETTINGS.privacy, ...(saved.privacy ?? {}) },
   }
   // Migrate old cyan default → green to match new design system
   if (merged.theme.primaryColor === '#38bdf8') merged.theme.primaryColor = '#10b981'
@@ -79,20 +135,39 @@ function loadSettings(): AppSettings {
   if (!merged.language) merged.language = detectLanguage()
   return merged
 }
+
 function saveAccounts(accounts: CSAccount[]) { save(KEYS.accounts, accounts) }
 function saveDrops(drops: Drop[]) { save(KEYS.drops, drops) }
 function saveGoals(goals: Goal[]) { save(KEYS.goals, goals) }
 function saveSettings(settings: AppSettings) { save(KEYS.settings, settings) }
+function saveCollection(collection: CollectionItem[]) { save(KEYS.collection, collection) }
+function saveCases(cases: CaseOpeningLog[]) { save(KEYS.cases, cases) }
+function saveFriends(friends: Friend[]) { save(KEYS.friends, friends) }
+function saveFriendRequests(requests: FriendRequest[]) { save(KEYS.friendRequests, requests) }
+function saveAchievements(achievements: Achievement[]) { save(KEYS.achievements, achievements) }
+function saveGamificationState(state: GamificationState) { save(KEYS.gamification, state) }
 
 export const storage = {
   loadAccounts,
   loadDrops,
   loadGoals,
   loadSettings,
+  loadCollection,
+  loadCases,
+  loadFriends,
+  loadFriendRequests,
+  loadAchievements,
+  loadGamificationState,
   saveAccounts,
   saveDrops,
   saveGoals,
   saveSettings,
+  saveCollection,
+  saveCases,
+  saveFriends,
+  saveFriendRequests,
+  saveAchievements,
+  saveGamificationState,
 
   clearAll: () => {
     Object.values(KEYS).forEach(k => localStorage.removeItem(k))
@@ -103,18 +178,40 @@ export const storage = {
     drops: loadDrops(),
     goals: loadGoals(),
     settings: loadSettings(),
+    collection: loadCollection(),
+    cases: loadCases(),
+    friends: loadFriends(),
+    friendRequests: loadFriendRequests(),
+    achievements: loadAchievements(),
+    gamification: loadGamificationState(),
     exportedAt: new Date().toISOString(),
-    version: '1.0',
+    version: '2.0',
   }),
 
   // Validates the shape of an imported backup and throws if invalid.
-  validateImport(data: unknown): data is { accounts?: unknown[]; drops?: unknown[]; goals?: unknown[]; settings?: unknown } {
+  validateImport(data: unknown): data is {
+    accounts?: unknown[];
+    drops?: unknown[];
+    goals?: unknown[];
+    settings?: unknown;
+    collection?: unknown[];
+    cases?: unknown[];
+    friends?: unknown[];
+    friendRequests?: unknown[];
+    achievements?: unknown[];
+    gamification?: unknown;
+  } {
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Formato inválido')
     const d = data as Record<string, unknown>
     if (d.accounts !== undefined && !Array.isArray(d.accounts)) throw new Error('Campo "accounts" inválido')
     if (d.drops !== undefined && !Array.isArray(d.drops)) throw new Error('Campo "drops" inválido')
     if (d.goals !== undefined && !Array.isArray(d.goals)) throw new Error('Campo "goals" inválido')
     if (d.settings !== undefined && (typeof d.settings !== 'object' || Array.isArray(d.settings))) throw new Error('Campo "settings" inválido')
+    if (d.collection !== undefined && !Array.isArray(d.collection)) throw new Error('Campo "collection" inválido')
+    if (d.cases !== undefined && !Array.isArray(d.cases)) throw new Error('Campo "cases" inválido')
+    if (d.friends !== undefined && !Array.isArray(d.friends)) throw new Error('Campo "friends" inválido')
+    if (d.friendRequests !== undefined && !Array.isArray(d.friendRequests)) throw new Error('Campo "friendRequests" inválido')
+    if (d.achievements !== undefined && !Array.isArray(d.achievements)) throw new Error('Campo "achievements" inválido')
     if (!d.accounts && !d.drops && !d.goals && !d.settings) throw new Error('Backup vazio ou sem dados reconhecidos')
     // Enforce max item counts to prevent DoS
     if (Array.isArray(d.accounts) && d.accounts.length > 50) throw new Error('Muitas contas (máx 50)')
@@ -123,10 +220,27 @@ export const storage = {
     return true
   },
 
-  importAll: (data: { accounts?: CSAccount[]; drops?: Drop[]; goals?: Goal[]; settings?: AppSettings }) => {
+  importAll: (data: {
+    accounts?: CSAccount[];
+    drops?: Drop[];
+    goals?: Goal[];
+    settings?: AppSettings;
+    collection?: CollectionItem[];
+    cases?: CaseOpeningLog[];
+    friends?: Friend[];
+    friendRequests?: FriendRequest[];
+    achievements?: Achievement[];
+    gamification?: GamificationState;
+  }) => {
     if (data.accounts) saveAccounts(data.accounts)
     if (data.drops) saveDrops(data.drops)
     if (data.goals) saveGoals(data.goals)
     if (data.settings) saveSettings(data.settings)
+    if (data.collection) saveCollection(data.collection)
+    if (data.cases) saveCases(data.cases)
+    if (data.friends) saveFriends(data.friends)
+    if (data.friendRequests) saveFriendRequests(data.friendRequests)
+    if (data.achievements) saveAchievements(data.achievements)
+    if (data.gamification) saveGamificationState(data.gamification)
   },
 }
