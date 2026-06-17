@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Crown, Lock, Plus, RefreshCw, Send, Trash2, UserCheck, Users } from 'lucide-react'
+import { Crown, Lock, RefreshCw, Send, Trash2, UserCheck, UserX, Users, X } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, Empty, Input, Badge } from '../components/ui'
 import { useT } from '../hooks/useT'
-import { DEFAULT_SETTINGS } from '../lib/storage'
 import toast from 'react-hot-toast'
+import { localizeGamificationTitle } from '../lib/gamificationTitles'
 
 function fallbackFriendCode(uid: string): string {
   let hash = 0
@@ -24,17 +24,18 @@ export default function Friends() {
     gamification,
     addFriend,
     removeFriend,
-    sendFriendRequest,
     acceptFriendRequest,
     declineFriendRequest,
+    cancelFriendRequest,
     fetchRankings,
-    updateSettings,
   } = useStore()
   const [friendCode, setFriendCode] = useState('')
-  const [requestCode, setRequestCode] = useState('')
   const [busy, setBusy] = useState(false)
   const onlineEnabled = authMode === 'firebase' && user?.provider === 'google'
-  const rankingsEnabled = onlineEnabled && settings.gamification?.showRankings === true && !settings.liteMode
+  const rankingsEnabled = onlineEnabled
+  const language = settings.language ?? 'pt'
+  const incomingRequests = friendRequests.filter(request => request.type === 'incoming')
+  const outgoingRequests = friendRequests.filter(request => request.type === 'outgoing')
 
   const ownCode = useMemo(() => {
     if (settings.friendCode) return settings.friendCode
@@ -50,19 +51,8 @@ export default function Friends() {
     if (!friendCode.trim()) return
     setBusy(true)
     try {
-      await addFriend(friendCode.trim())
-      setFriendCode('')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleRequest() {
-    if (!requestCode.trim()) return
-    setBusy(true)
-    try {
-      await sendFriendRequest(requestCode.trim())
-      setRequestCode('')
+      const sent = await addFriend(friendCode.trim())
+      if (sent) setFriendCode('')
     } finally {
       setBusy(false)
     }
@@ -103,14 +93,20 @@ export default function Friends() {
             </div>
             <Users size={18} className="text-slate-500" />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={friendCode}
               onChange={e => setFriendCode(e.target.value.toUpperCase())}
               placeholder="FALLEN123"
               disabled={!onlineEnabled}
             />
-            <Button icon={Plus} onClick={handleAddFriend} disabled={!onlineEnabled || busy || !friendCode.trim()}>
+            <Button
+              icon={Send}
+              loading={busy}
+              onClick={handleAddFriend}
+              disabled={!onlineEnabled || !friendCode.trim()}
+              className="w-full whitespace-nowrap sm:w-auto"
+            >
               {t('friends.add_button')}
             </Button>
           </div>
@@ -125,9 +121,9 @@ export default function Friends() {
                   <div key={friend.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.025] bg-[#111827]/50 p-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-100 truncate">{friend.name}</p>
-                      <p className="text-xs text-slate-500">Level {friend.level} · {friend.xp} XP</p>
+                      <p className="text-xs text-slate-500">{t('friends.friend_progress', { level: friend.level, xp: friend.xp })}</p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeFriend(friend.id)} aria-label={t('friends.remove')}>
+                    <Button variant="ghost" size="icon" onClick={() => void removeFriend(friend.id)} aria-label={t('friends.remove')}>
                       <Trash2 size={14} />
                     </Button>
                   </div>
@@ -145,36 +141,54 @@ export default function Friends() {
             </div>
             <Send size={18} className="text-slate-500" />
           </div>
-          <div className="flex gap-2">
-            <Input
-              value={requestCode}
-              onChange={e => setRequestCode(e.target.value.toUpperCase())}
-              placeholder="KNG999"
-              disabled={!onlineEnabled}
-            />
-            <Button icon={Send} onClick={handleRequest} disabled={!onlineEnabled || busy || !requestCode.trim()}>
-              {t('friends.request_button')}
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {friendRequests.length === 0 ? (
-              <p className="text-xs text-slate-600">{t('friends.no_requests')}</p>
-            ) : friendRequests.map(request => (
-              <div key={request.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.025] bg-[#111827]/50 p-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-100 truncate">{request.senderName}</p>
-                  <p className="text-xs text-slate-500">{request.type === 'incoming' ? t('friends.incoming') : t('friends.outgoing')}</p>
-                </div>
-                {request.type === 'incoming' ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" icon={UserCheck} onClick={() => acceptFriendRequest(request.id)}>{t('friends.accept')}</Button>
-                    <Button size="sm" variant="ghost" onClick={() => declineFriendRequest(request.id)}>{t('friends.decline')}</Button>
-                  </div>
-                ) : (
-                  <Badge>{t('friends.pending')}</Badge>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section className="space-y-2" aria-labelledby="received-invitations">
+              <div className="flex items-center justify-between">
+                <h3 id="received-invitations" className="text-xs font-semibold text-slate-300">{t('friends.received_title')}</h3>
+                <Badge color="green">{incomingRequests.length}</Badge>
               </div>
-            ))}
+              {incomingRequests.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-white/[0.05] p-3 text-xs text-slate-600">{t('friends.no_received')}</p>
+              ) : incomingRequests.map(request => (
+                <div key={request.id} className="rounded-xl border border-white/[0.04] bg-[#111827]/50 p-3 space-y-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-100 truncate">{request.senderName}</p>
+                    <p className="text-xs font-mono text-slate-500">{request.senderFriendCode}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="success" icon={UserCheck} onClick={() => void acceptFriendRequest(request.id)}>
+                      {t('friends.accept')}
+                    </Button>
+                    <Button size="sm" variant="ghost" icon={UserX} onClick={() => void declineFriendRequest(request.id)}>
+                      {t('friends.decline')}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <section className="space-y-2" aria-labelledby="sent-invitations">
+              <div className="flex items-center justify-between">
+                <h3 id="sent-invitations" className="text-xs font-semibold text-slate-300">{t('friends.sent_title')}</h3>
+                <Badge>{outgoingRequests.length}</Badge>
+              </div>
+              {outgoingRequests.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-white/[0.05] p-3 text-xs text-slate-600">{t('friends.no_sent')}</p>
+              ) : outgoingRequests.map(request => (
+                <div key={request.id} className="rounded-xl border border-white/[0.04] bg-[#111827]/50 p-3 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-100 truncate">{request.recipientName}</p>
+                      <p className="text-xs font-mono text-slate-500">{request.recipientFriendCode}</p>
+                    </div>
+                    <Badge>{t('friends.pending')}</Badge>
+                  </div>
+                  <Button size="sm" variant="ghost" icon={X} onClick={() => void cancelFriendRequest(request.id)}>
+                    {t('friends.cancel')}
+                  </Button>
+                </div>
+              ))}
+            </section>
           </div>
         </Card>
       </div>
@@ -199,25 +213,9 @@ export default function Friends() {
           </Button>
         </div>
 
-        {!rankingsEnabled ? (
+        {!onlineEnabled ? (
           <div className="rounded-xl border border-white/[0.025] bg-[#111827]/40 p-4 text-sm text-slate-500 space-y-3">
-            <p>{!onlineEnabled ? t('friends.rankings_disabled_offline') : t('friends.rankings_disabled')}</p>
-            {onlineEnabled && (
-              <Button
-                size="sm"
-                icon={Crown}
-                onClick={() => updateSettings({
-                  liteMode: false,
-                  gamification: {
-                    ...DEFAULT_SETTINGS.gamification!,
-                    ...(settings.gamification ?? {}),
-                    showRankings: true,
-                  },
-                })}
-              >
-                {t('friends.rankings_enable')}
-              </Button>
-            )}
+            <p>{t('friends.rankings_disabled_offline')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -238,7 +236,9 @@ export default function Friends() {
                         <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">{index + 1}</span>
                         <div>
                           <p className="text-sm font-semibold text-slate-100">{entry.name}</p>
-                          <p className="text-xs text-slate-600">{entry.activeTitle ?? gamification.activeTitle}</p>
+                          <p className="text-xs text-slate-600">
+                            {localizeGamificationTitle(entry.activeTitle ?? gamification.activeTitle, language)}
+                          </p>
                         </div>
                       </div>
                     </td>

@@ -11,6 +11,7 @@ import type {
   Achievement,
   GamificationState,
 } from './types'
+import { DEFAULT_GAMIFICATION_TITLE, normalizeGamificationTitle } from './gamificationTitles'
 
 const KEYS = {
   accounts: 'lootflow_accounts',
@@ -150,7 +151,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     showPerfectWeek: true,
     showLevels: true,
     showTitles: true,
-    showRankings: false,
+    showRankings: true,
     showCollection: true,
     showCaseTracker: true,
   },
@@ -174,12 +175,19 @@ function loadGamificationState(): GamificationState {
     totalXP: 0,
     level: 1,
     levelProgress: 0,
-    unlockedTitles: ['One Account One Dream'],
-    activeTitle: 'One Account One Dream',
+    unlockedTitles: [DEFAULT_GAMIFICATION_TITLE],
+    activeTitle: DEFAULT_GAMIFICATION_TITLE,
     completedPerfectWeeks: [],
     xpAwardedWeeks: {},
   }
-  return load<GamificationState>(KEYS.gamification, def)
+  const saved = load<GamificationState>(KEYS.gamification, def)
+  const unlockedTitles = [...new Set((saved.unlockedTitles ?? def.unlockedTitles).map(normalizeGamificationTitle))]
+  return {
+    ...def,
+    ...saved,
+    unlockedTitles,
+    activeTitle: normalizeGamificationTitle(saved.activeTitle ?? def.activeTitle),
+  }
 }
 
 function loadSettings(): AppSettings {
@@ -191,6 +199,8 @@ function loadSettings(): AppSettings {
     gamification: { ...DEFAULT_SETTINGS.gamification, ...(saved.gamification ?? {}) } as any,
     privacy: { ...DEFAULT_SETTINGS.privacy, ...(saved.privacy ?? {}) },
   }
+  // Rankings são padrão; a opção antiga fica habilitada apenas por compatibilidade.
+  merged.gamification!.showRankings = true
   // Migrate old cyan default → green to match new design system
   if (merged.theme.primaryColor === '#38bdf8') merged.theme.primaryColor = '#10b981'
   if (merged.theme.accentColor === '#4ade80') merged.theme.accentColor = '#10b981'

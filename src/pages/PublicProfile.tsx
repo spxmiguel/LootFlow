@@ -7,6 +7,7 @@ import { firestoreLoadPublicProfile, firestoreLookupFriendCode } from '../lib/fi
 import { formatCurrency } from '../lib/utils'
 import type { PublicProfileSummary } from '../lib/types'
 import { useT } from '../hooks/useT'
+import { localizeGamificationTitle } from '../lib/gamificationTitles'
 
 export default function PublicProfile() {
   const t = useT()
@@ -48,7 +49,7 @@ export default function PublicProfile() {
         collectionCount: collection.length,
         perfectWeeks: gamification.totalPerfectWeeks,
         showProfile: settings.profilePrivacy === 'public' && !(settings.privacy?.hideProfile ?? true),
-        allowRankings: settings.gamification?.showRankings === true,
+        allowRankings: true,
         showStatistics: !(settings.privacy?.hideStatistics ?? false),
         showCollection: !(settings.privacy?.hideCollection ?? true),
         showProfit: !(settings.privacy?.hideTotalProfit ?? true),
@@ -90,8 +91,12 @@ export default function PublicProfile() {
                 <h1 className="text-xl font-bold text-white">{visibleProfile.name ?? visibleProfile.friendCode}</h1>
                 <p className="text-sm text-slate-500">@{visibleProfile.friendCode}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {visibleProfile.activeTitle && <Badge color="purple">{visibleProfile.activeTitle}</Badge>}
-                  {visibleProfile.level && <Badge color="blue">Level {visibleProfile.level}</Badge>}
+                  {visibleProfile.activeTitle && (
+                    <Badge color="purple">
+                      {localizeGamificationTitle(visibleProfile.activeTitle, settings.language ?? 'pt')}
+                    </Badge>
+                  )}
+                  {visibleProfile.level && <Badge color="blue">{t('profile.level', { level: visibleProfile.level })}</Badge>}
                 </div>
               </div>
             </div>

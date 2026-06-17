@@ -3,9 +3,14 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { initializeAuth, getAuth, browserLocalPersistence, browserPopupRedirectResolver, GoogleAuthProvider, type Auth } from 'firebase/auth'
 import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc,
-  deleteDoc, type Firestore,
+  deleteDoc, onSnapshot, query, where, writeBatch, type Firestore,
 } from 'firebase/firestore'
-import type { FirebaseConfig, PublicProfileSummary } from './types'
+import type {
+  FirebaseConfig,
+  FriendRequest,
+  Friendship,
+  PublicProfileSummary,
+} from './types'
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -120,6 +125,105 @@ export async function firestoreLoadPublicProfiles(uids: string[]): Promise<Publi
   return profiles.filter((profile): profile is PublicProfileSummary => profile !== null)
 }
 
+export function firestoreSubscribePublicProfiles(
+  uids: string[],
+  onChange: () => void,
+  onError: (error: unknown) => void,
+): () => void {
+  if (!db) throw new Error('Firestore not initialized')
+  const unique = [...new Set(uids)].filter(Boolean)
+  const unsubscribe = unique.map(uid =>
+    onSnapshot(doc(db!, 'publicProfiles', uid), onChange, onError),
+  )
+  return () => unsubscribe.forEach(stop => stop())
+}
+
+export async function firestoreCreateFriendRequest(request: FriendRequest): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized')
+  await setDoc(doc(db, 'friendRequests', request.id), sanitize(request as unknown as Record<string, unknown>))
+}
+
+export async function firestoreAcceptFriendRequest(
+  request: FriendRequest,
+  friendship: Friendship,
+): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized')
+  const batch = writeBatch(db)
+  batch.set(doc(db, 'friendships', friendship.id), sanitize(friendship as unknown as Record<string, unknown>))
+  batch.delete(doc(db, 'friendRequests', request.id))
+  await batch.commit()
+}
+
+export async function firestoreDeleteFriendRequest(requestId: string): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized')
+  await deleteDoc(doc(db, 'friendRequests', requestId))
+}
+
+export async function firestoreDeleteFriendship(friendshipId: string): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized')
+  await deleteDoc(doc(db, 'friendships', friendshipId))
+}
+
+export function firestoreSubscribeSocial(
+  userId: string,
+  onChange: (requests: FriendRequest[], friendships: Friendship[]) => void,
+  onError: (error: unknown) => void,
+): () => void {
+  if (!db) throw new Error('Firestore not initialized')
+
+  let incoming: FriendRequest[] = []
+  let outgoing: FriendRequest[] = []
+  let friendships: Friendship[] = []
+  const emit = () => {
+    const requests = [...incoming, ...outgoing]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    onChange(requests, friendships)
+  }
+
+  const incomingQuery = query(collection(db, 'friendRequests'), where('recipientId', '==', userId))
+  const outgoingQuery = query(collection(db, 'friendRequests'), where('senderId', '==', userId))
+  const friendshipsQuery = query(collection(db, 'friendships'), where('memberIds', 'array-contains', userId))
+
+  const unsubIncoming = onSnapshot(incomingQuery, snap => {
+    incoming = snap.docs.map(item => ({
+      id: item.id,
+      ...item.data(),
+      type: 'incoming',
+    } as FriendRequest))
+    emit()
+  }, onError)
+  const unsubOutgoing = onSnapshot(outgoingQuery, snap => {
+    outgoing = snap.docs.map(item => ({
+      id: item.id,
+      ...item.data(),
+      type: 'outgoing',
+    } as FriendRequest))
+    emit()
+  }, onError)
+  const unsubFriendships = onSnapshot(friendshipsQuery, snap => {
+    friendships = snap.docs.map(item => ({ id: item.id, ...item.data() } as Friendship))
+    emit()
+  }, onError)
+
+  return () => {
+    unsubIncoming()
+    unsubOutgoing()
+    unsubFriendships()
+  }
+}
+
+export function firestoreSubscribeUserCollection<T>(
+  userId: string,
+  collectionName: string,
+  onChange: (items: T[]) => void,
+  onError: (error: unknown) => void,
+): () => void {
+  if (!db) throw new Error('Firestore not initialized')
+  return onSnapshot(collection(db, 'users', userId, collectionName), snap => {
+    onChange(snap.docs.map(item => ({ id: item.id, ...item.data() } as T)))
+  }, onError)
+}
+
 export async function firestoreDeleteDoc(
   userId: string,
   collectionName: string,
@@ -156,9 +260,17 @@ export async function firestoreDeleteAllUserData(userId: string): Promise<void> 
     const snap = await getDocs(collection(db!, 'users', userId, col))
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)))
   }))
+  const [sentRequests, receivedRequests, friendships] = await Promise.all([
+    getDocs(query(collection(db, 'friendRequests'), where('senderId', '==', userId))),
+    getDocs(query(collection(db, 'friendRequests'), where('recipientId', '==', userId))),
+    getDocs(query(collection(db, 'friendships'), where('memberIds', 'array-contains', userId))),
+  ])
   await Promise.allSettled([
     deleteDoc(publicProfileRef),
     friendCode ? deleteDoc(doc(db, 'friendCodes', friendCode.toUpperCase())) : Promise.resolve(),
+    ...sentRequests.docs.map(request => deleteDoc(request.ref)),
+    ...receivedRequests.docs.map(request => deleteDoc(request.ref)),
+    ...friendships.docs.map(friendship => deleteDoc(friendship.ref)),
   ])
   const failed = results.filter(r => r.status === 'rejected')
   if (failed.length > 0) {

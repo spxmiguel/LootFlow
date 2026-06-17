@@ -5,7 +5,15 @@ import {
   signOut, onAuthStateChanged, GoogleAuthProvider, signInWithCredential,
 } from 'firebase/auth'
 import { useStore } from '../store'
-import { initFirebase, getGoogleProvider, isFirebaseReady, firestoreDeleteAllUserData } from '../lib/firebase'
+import {
+  initFirebase,
+  getGoogleProvider,
+  isFirebaseReady,
+  firestoreDeleteAllUserData,
+  firestoreSubscribePublicProfiles,
+  firestoreSubscribeSocial,
+  firestoreSubscribeUserCollection,
+} from '../lib/firebase'
 import { FIREBASE_ENABLED, getActiveFirebaseConfig } from '../lib/config'
 import { storage } from '../lib/storage'
 import type { AppUser } from '../lib/types'
@@ -72,6 +80,10 @@ export function useAuth() {
   const setAuthReady = useStore(s => s.setAuthReady)
   const hydrate = useStore(s => s.hydrate)
   const hydrateCloud = useStore(s => s.hydrateCloud)
+  const applySocialSnapshot = useStore(s => s.applySocialSnapshot)
+  const applyRealtimeCollection = useStore(s => s.applyRealtimeCollection)
+  const friends = useStore(s => s.friends)
+  const fetchRankings = useStore(s => s.fetchRankings)
   const userRef = useRef(user)
   userRef.current = user
 
@@ -96,9 +108,69 @@ export function useAuth() {
     const onVisible = () => {
       if (document.visibilityState === 'visible') resync(false)
     }
+    const onFocus = () => resync(false)
+    const interval = window.setInterval(() => resync(false), 5 * 60_000)
     document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onFocus)
+      window.clearInterval(interval)
+    }
   }, [resync])
+
+  // Firestore listeners keep an open desktop tab in sync with changes made
+  // from another browser or phone. Visibility re-sync above remains a fallback.
+  useEffect(() => {
+    if (
+      authMode !== 'firebase' ||
+      user?.provider !== 'google' ||
+      !authReady ||
+      !isFirebaseReady()
+    ) return
+
+    const onError = (error: unknown) => {
+      logger.error('[Realtime] listener error:', error)
+    }
+    const unsubscribe = [
+      firestoreSubscribeSocial(user.uid, applySocialSnapshot, onError),
+      ...['accounts', 'drops', 'goals', 'settings', 'cases', 'collection', 'achievements', 'gamification'].map(collectionName =>
+        firestoreSubscribeUserCollection(
+          user.uid,
+          collectionName,
+          items => applyRealtimeCollection(collectionName, items),
+          onError,
+        ),
+      ),
+    ]
+
+    return () => unsubscribe.forEach(stop => stop())
+  }, [applyRealtimeCollection, applySocialSnapshot, authMode, authReady, user])
+
+  useEffect(() => {
+    if (
+      authMode !== 'firebase' ||
+      user?.provider !== 'google' ||
+      !authReady ||
+      !isFirebaseReady() ||
+      friends.length === 0
+    ) return
+
+    let refreshTimer: number | undefined
+    const scheduleRefresh = () => {
+      window.clearTimeout(refreshTimer)
+      refreshTimer = window.setTimeout(() => void fetchRankings(), 250)
+    }
+    const unsubscribe = firestoreSubscribePublicProfiles(
+      friends.map(friend => friend.id),
+      scheduleRefresh,
+      error => logger.error('[Realtime] ranking listener error:', error),
+    )
+    return () => {
+      window.clearTimeout(refreshTimer)
+      unsubscribe()
+    }
+  }, [authMode, authReady, fetchRankings, friends, user])
 
   useEffect(() => {
     const finishReady = () => setAuthReady(true)

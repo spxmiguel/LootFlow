@@ -405,7 +405,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'privacy_private', icon: 'Lock', tier: 'bronze', category: 'privacy', name_pt: 'Perfil Privado', name_en: 'Private Profile', desc_pt: 'Use perfil privado', desc_en: 'Use a private profile' },
   { id: 'lite_mode_enabled', icon: 'Minimize2', tier: 'bronze', category: 'privacy', name_pt: 'Modo Lite', name_en: 'Lite Mode', desc_pt: 'Ative o Lite Mode', desc_en: 'Enable Lite Mode' },
   { id: 'profile_named', icon: 'UserPen', tier: 'bronze', category: 'privacy', name_pt: 'Nome Próprio', name_en: 'Custom Name', desc_pt: 'Defina um nome de exibição', desc_en: 'Set a display name' },
-  { id: 'rankings_enabled', icon: 'ListOrdered', tier: 'silver', category: 'social', name_pt: 'Rankings Ativos', name_en: 'Rankings Enabled', desc_pt: 'Ative rankings de amigos', desc_en: 'Enable friend rankings' },
+  { id: 'rankings_enabled', icon: 'ListOrdered', tier: 'silver', category: 'social', name_pt: 'Ranking Social', name_en: 'Social Ranking', desc_pt: 'Use o ranking de amigos', desc_en: 'Use friend rankings' },
   { id: 'active_account_1', icon: 'UserCheck', tier: 'bronze', category: 'accounts', name_pt: 'Conta Ativa', name_en: 'Active Account', desc_pt: 'Tenha 1 conta ativa', desc_en: 'Have 1 active account' },
   { id: 'active_account_5', icon: 'UsersRound', tier: 'silver', category: 'accounts', name_pt: '5 Ativas', name_en: '5 Active Accounts', desc_pt: 'Tenha 5 contas ativas', desc_en: 'Have 5 active accounts' },
   { id: 'goal_forecast_week', icon: 'CalendarClock', tier: 'silver', category: 'goals', name_pt: 'Meta da Semana', name_en: 'Weekly Forecast', desc_pt: 'Tenha meta de cashout semanal', desc_en: 'Have a weekly cashout goal' },

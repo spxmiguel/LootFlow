@@ -14,6 +14,7 @@ import type {
   CollectionItem,
   Friend,
   FriendRequest,
+  Friendship,
   CaseOpeningLog,
   Achievement,
   GamificationState,
@@ -25,10 +26,13 @@ import { storage, DEFAULT_SETTINGS } from '../lib/storage'
 import { generateId, getAccountColor } from '../lib/utils'
 import { calcCashout } from '../lib/calculations'
 import { ACHIEVEMENTS as ACHIEVEMENT_CATALOG, computeUnlockedAchievements } from '../lib/achievements'
+import { DEFAULT_GAMIFICATION_TITLE, normalizeGamificationTitle } from '../lib/gamificationTitles'
 import {
   isFirebaseReady, getFirebaseAuth, firestoreSaveDoc, firestoreDeleteDoc,
   firestoreLoadCollection, firestoreLookupFriendCode, firestoreLoadPublicProfile,
   firestoreLoadPublicProfiles, firestoreSavePublicProfile,
+  firestoreAcceptFriendRequest, firestoreCreateFriendRequest,
+  firestoreDeleteFriendRequest, firestoreDeleteFriendship,
 } from '../lib/firebase'
 
 const generateDefaultAchievements = (): Achievement[] => {
@@ -107,10 +111,13 @@ interface AppState {
 
   // Actions – Friends and Social (Online only)
   addFriend: (friendCode: string) => Promise<boolean>
-  removeFriend: (friendId: string) => void
+  removeFriend: (friendId: string) => Promise<void>
   sendFriendRequest: (friendCode: string) => Promise<boolean>
-  acceptFriendRequest: (requestId: string) => void
-  declineFriendRequest: (requestId: string) => void
+  acceptFriendRequest: (requestId: string) => Promise<void>
+  declineFriendRequest: (requestId: string) => Promise<void>
+  cancelFriendRequest: (requestId: string) => Promise<void>
+  applySocialSnapshot: (requests: FriendRequest[], friendships: Friendship[]) => void
+  applyRealtimeCollection: (collectionName: string, items: unknown[]) => void
   fetchRankings: () => Promise<void>
   setProfilePrivacy: (privacy: 'public' | 'private' | 'friends') => void
   changeUserName: (newName: string) => void
@@ -197,6 +204,7 @@ type LocalSnapshot = {
 }
 
 function loadLocalSnapshot(): LocalSnapshot {
+  const sharedSocialEnabled = storage.getOwner().startsWith('google_')
   return {
     accounts: storage.loadAccounts(),
     drops: storage.loadDrops(),
@@ -204,8 +212,8 @@ function loadLocalSnapshot(): LocalSnapshot {
     settings: storage.loadSettings(),
     collection: storage.loadCollection(),
     cases: storage.loadCases(),
-    friends: storage.loadFriends(),
-    friendRequests: storage.loadFriendRequests(),
+    friends: sharedSocialEnabled ? [] : storage.loadFriends(),
+    friendRequests: sharedSocialEnabled ? [] : storage.loadFriendRequests(),
     achievements: storage.loadAchievements().length ? storage.loadAchievements() : DEFAULT_ACHIEVEMENTS,
     gamification: storage.loadGamificationState(),
   }
@@ -228,12 +236,6 @@ async function syncLocalSnapshotToFirestore(user: AppUser, snapshot: LocalSnapsh
     ),
     ...snapshot.cases.map(log =>
       firestoreSaveDoc(user.uid, 'cases', log.id, log as unknown as Record<string, unknown>),
-    ),
-    ...snapshot.friends.map(friend =>
-      firestoreSaveDoc(user.uid, 'friends', friend.id, friend as unknown as Record<string, unknown>),
-    ),
-    ...snapshot.friendRequests.map(request =>
-      firestoreSaveDoc(user.uid, 'friendRequests', request.id, request as unknown as Record<string, unknown>),
     ),
     firestoreSaveDoc(user.uid, 'settings', 'app', snapshot.settings as unknown as Record<string, unknown>),
     firestoreSaveDoc(user.uid, 'achievements', 'list', { list: snapshot.achievements }),
@@ -319,7 +321,7 @@ function buildPublicProfile(state: AppState): PublicProfileSummary | null {
   const privacy = settings.privacy ?? {}
   const friendCode = (settings.friendCode || generateFriendCode(user)).toUpperCase()
   const showProfile = settings.profilePrivacy === 'public' && !privacy.hideProfile
-  const allowRankings = settings.gamification?.showRankings === true && !settings.liteMode
+  const allowRankings = true
   const name = settings.profile?.displayName || user.displayName || friendCode
   const totalProfit = drops.reduce((sum, drop) => {
     const cashout = drop.cashoutValue ?? calcCashout(drop.steamValue, settings.cashoutRate)
@@ -364,7 +366,7 @@ function getWeekXpReward(completionPercent: number): number {
 }
 
 function deriveUnlockedTitles(state: Pick<AppState, 'accounts' | 'drops' | 'cases' | 'collection'>): string[] {
-  const titles = new Set<string>(['One Account One Dream'])
+  const titles = new Set<string>([DEFAULT_GAMIFICATION_TITLE])
   const caseDrops = state.drops.filter(d => /case|caixa|package/i.test(d.item?.name ?? '')).length
   const profitableCase = state.cases.some(c => (c.profitLoss ?? ((c.receivedValueAtOpen ?? c.obtainedValue) - (c.casePriceAtOpen ?? 0) - (c.keyPriceAtOpen ?? c.keyPrice))) > 0)
   const sundayDrop = state.drops.some(d => {
@@ -752,7 +754,11 @@ export const useStore = create<AppState>()(
     // ── Friends and Social ────────────────────────────────────────────────────
 
     addFriend: async (friendCode) => {
-      const { user, authMode, friends, settings } = get()
+      return get().sendFriendRequest(friendCode)
+    },
+
+    sendFriendRequest: async (friendCode) => {
+      const { user, authMode, friends, friendRequests, settings, gamification } = get()
       if (authMode !== 'firebase' || user?.provider !== 'google') {
         toast.error('Recurso online disponível apenas com login do Google.')
         return false
@@ -786,115 +792,225 @@ export const useStore = create<AppState>()(
           toast.error('Vocês já são amigos!')
           return false
         }
-
-        const profile = await firestoreLoadPublicProfile(match.uid).catch(() => null)
-        const friend: Friend = {
-          id: match.uid,
-          name: profile?.name || match.friendCode,
-          avatarUrl: profile?.avatarUrl,
-          activeTitle: profile?.activeTitle,
-          level: profile?.level ?? 1,
-          xp: profile?.xp ?? 0,
-          friendCode: match.friendCode,
-        }
-        const updated = [...friends, friend]
-        set({ friends: updated })
-        storage.saveFriends(updated)
-        syncToFirestore(user, 'friends', friend.id, friend as unknown as Record<string, unknown>, settings.firebaseSyncEnabled !== false)
-        toast.success(`${friend.name} adicionado como amigo!`)
-        get().addXP(20)
-        get().checkAchievements()
-        return true
-      } catch (e) {
-        logger.error('[Social] addFriend:', e)
-        toast.error('Não consegui adicionar esse amigo agora.')
-        return false
-      }
-    },
-
-    removeFriend: (friendId) => {
-      const { friends, user, settings } = get()
-      const updated = friends.filter(f => f.id !== friendId)
-      set({ friends: updated })
-      storage.saveFriends(updated)
-      deleteFromFirestore(user, 'friends', friendId, settings.firebaseSyncEnabled !== false)
-      toast.success('Amigo removido.')
-    },
-
-    sendFriendRequest: async (friendCode) => {
-      const { user, authMode, friendRequests, settings } = get()
-      if (authMode !== 'firebase' || user?.provider !== 'google') {
-        toast.error('Recurso online disponível apenas com login do Google.')
-        return false
-      }
-      if (friendRequests.some(r => r.senderFriendCode.toLowerCase() === friendCode.toLowerCase())) {
-        toast.error('Solicitação já enviada ou recebida.')
-        return false
-      }
-      try {
-        const match = await firestoreLookupFriendCode(friendCode.trim().toUpperCase())
-        if (!match || match.uid === user.uid) {
-          toast.error('Código de amigo não encontrado.')
+        if (friendRequests.some(request =>
+          request.senderId === match.uid || request.recipientId === match.uid
+        )) {
+          toast.error('Já existe um convite pendente entre vocês.')
           return false
         }
+
         const profile = await firestoreLoadPublicProfile(match.uid).catch(() => null)
+        const requestId = [user.uid, match.uid].sort().join('_')
         const outgoingRequest: FriendRequest = {
-          id: generateId(),
+          id: requestId,
           senderId: user.uid,
-          senderName: settings.profile?.displayName || user.displayName || 'Usuário',
-          senderFriendCode: match.friendCode,
+          senderName: settings.profile?.displayName || user.displayName || ownCode,
+          senderAvatar: settings.profile?.customPhotoURL || user.photoURL || undefined,
+          senderFriendCode: ownCode,
+          senderActiveTitle: gamification.activeTitle,
+          senderLevel: gamification.level,
+          senderXp: gamification.totalXP,
+          recipientId: match.uid,
+          recipientName: profile?.name || match.friendCode,
+          recipientAvatar: profile?.avatarUrl,
+          recipientFriendCode: match.friendCode,
+          recipientActiveTitle: profile?.activeTitle,
+          recipientLevel: profile?.level ?? 1,
+          recipientXp: profile?.xp ?? 0,
           type: 'outgoing',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         }
-        const updated = [...friendRequests, outgoingRequest]
-        set({ friendRequests: updated })
-        storage.saveFriendRequests(updated)
-        syncToFirestore(user, 'friendRequests', outgoingRequest.id, outgoingRequest as unknown as Record<string, unknown>, settings.firebaseSyncEnabled !== false)
-        toast.success(`Solicitação registrada para ${profile?.name || match.friendCode}.`)
+        await firestoreCreateFriendRequest(outgoingRequest)
+        toast.success(`Convite enviado para ${outgoingRequest.recipientName}.`)
         return true
       } catch (e) {
         logger.error('[Social] sendFriendRequest:', e)
-        toast.error('Não consegui enviar a solicitação agora.')
+        toast.error('Não consegui enviar o convite agora.')
         return false
       }
     },
 
-    acceptFriendRequest: (requestId) => {
-      const { friendRequests, friends, user, settings } = get()
-      const request = friendRequests.find(r => r.id === requestId)
-      if (!request) return
-      const newFriend: Friend = {
-        id: request.senderId,
-        name: request.senderName,
-        avatarUrl: request.senderAvatar,
-        level: 1,
-        xp: 0,
-        friendCode: request.senderFriendCode
+    removeFriend: async (friendId) => {
+      const { user } = get()
+      if (!user || user.provider !== 'google') return
+      try {
+        await firestoreDeleteFriendship([user.uid, friendId].sort().join('_'))
+        toast.success('Amigo removido.')
+      } catch (e) {
+        logger.error('[Social] removeFriend:', e)
+        toast.error('Não consegui remover esse amigo agora.')
       }
-      const updatedFriends = [...friends, newFriend]
-      const updatedRequests = friendRequests.filter(r => r.id !== requestId)
-      set({ friends: updatedFriends, friendRequests: updatedRequests })
-      storage.saveFriends(updatedFriends)
-      storage.saveFriendRequests(updatedRequests)
-      syncToFirestore(user, 'friends', newFriend.id, newFriend as unknown as Record<string, unknown>, settings.firebaseSyncEnabled !== false)
-      deleteFromFirestore(user, 'friendRequests', requestId, settings.firebaseSyncEnabled !== false)
-      toast.success(`Agora você é amigo de ${request.senderName}!`)
-      get().addXP(20)
-      get().checkAchievements()
     },
 
-    declineFriendRequest: (requestId) => {
-      const { friendRequests, user, settings } = get()
-      const updatedRequests = friendRequests.filter(r => r.id !== requestId)
-      set({ friendRequests: updatedRequests })
-      storage.saveFriendRequests(updatedRequests)
-      deleteFromFirestore(user, 'friendRequests', requestId, settings.firebaseSyncEnabled !== false)
-      toast.success('Solicitação recusada.')
+    acceptFriendRequest: async (requestId) => {
+      const { friendRequests, user } = get()
+      const request = friendRequests.find(r => r.id === requestId)
+      if (!request || !user || request.type !== 'incoming' || request.recipientId !== user.uid) return
+      const friendship: Friendship = {
+        id: request.id,
+        memberIds: [request.senderId, request.recipientId].sort(),
+        memberProfiles: {
+          [request.senderId]: {
+            id: request.senderId,
+            name: request.senderName,
+            avatarUrl: request.senderAvatar,
+            activeTitle: request.senderActiveTitle,
+            level: request.senderLevel ?? 1,
+            xp: request.senderXp ?? 0,
+            friendCode: request.senderFriendCode,
+          },
+          [request.recipientId]: {
+            id: request.recipientId,
+            name: request.recipientName,
+            avatarUrl: request.recipientAvatar,
+            activeTitle: request.recipientActiveTitle,
+            level: request.recipientLevel ?? 1,
+            xp: request.recipientXp ?? 0,
+            friendCode: request.recipientFriendCode,
+          },
+        },
+        acceptedBy: user.uid,
+        createdAt: new Date().toISOString(),
+      }
+      try {
+        await firestoreAcceptFriendRequest(request, friendship)
+        toast.success(`Agora você é amigo de ${request.senderName}!`)
+        get().addXP(20)
+        get().checkAchievements()
+      } catch (e) {
+        logger.error('[Social] acceptFriendRequest:', e)
+        toast.error('Não consegui aceitar o convite agora.')
+      }
+    },
+
+    declineFriendRequest: async (requestId) => {
+      const request = get().friendRequests.find(item => item.id === requestId)
+      if (!request || request.type !== 'incoming') return
+      try {
+        await firestoreDeleteFriendRequest(requestId)
+        toast.success('Convite recusado.')
+      } catch (e) {
+        logger.error('[Social] declineFriendRequest:', e)
+        toast.error('Não consegui recusar o convite agora.')
+      }
+    },
+
+    cancelFriendRequest: async (requestId) => {
+      const request = get().friendRequests.find(item => item.id === requestId)
+      if (!request || request.type !== 'outgoing') return
+      try {
+        await firestoreDeleteFriendRequest(requestId)
+        toast.success('Convite cancelado.')
+      } catch (e) {
+        logger.error('[Social] cancelFriendRequest:', e)
+        toast.error('Não consegui cancelar o convite agora.')
+      }
+    },
+
+    applySocialSnapshot: (requests, friendships) => {
+      const user = get().user
+      if (!user) return
+      const friends = friendships.flatMap(friendship => {
+        const friendId = friendship.memberIds.find(id => id !== user.uid)
+        const friend = friendId ? friendship.memberProfiles[friendId] : undefined
+        return friend ? [{ ...friend, id: friendId! }] : []
+      })
+      set({ friendRequests: requests, friends })
+      storage.saveFriendRequests(requests)
+      storage.saveFriends(friends)
+      void get().fetchRankings()
+    },
+
+    applyRealtimeCollection: (collectionName, items) => {
+      if (get().authMode !== 'firebase') return
+      switch (collectionName) {
+        case 'accounts': {
+          const accounts = items as CSAccount[]
+          set({ accounts })
+          storage.saveAccounts(accounts)
+          break
+        }
+        case 'drops': {
+          const drops = items as Drop[]
+          const collection = rebuildCollectionFromHistory(drops, get().cases, get().collection)
+          set({ drops, collection })
+          storage.saveDrops(drops)
+          storage.saveCollection(collection)
+          void get().fetchRankings()
+          break
+        }
+        case 'goals': {
+          const goals = items as Goal[]
+          set({ goals })
+          storage.saveGoals(goals)
+          break
+        }
+        case 'settings': {
+          const cloudSettings = (items as Array<AppSettings & { id?: string }>)[0]
+          if (!cloudSettings) break
+          const current = get().settings
+          const settings: AppSettings = {
+            ...current,
+            ...cloudSettings,
+            theme: { ...current.theme, ...(cloudSettings.theme ?? {}) },
+            gamification: {
+              ...DEFAULT_SETTINGS.gamification!,
+              ...(current.gamification ?? {}),
+              ...(cloudSettings.gamification ?? {}),
+              showRankings: true,
+            },
+            privacy: {
+              ...DEFAULT_SETTINGS.privacy!,
+              ...(current.privacy ?? {}),
+              ...(cloudSettings.privacy ?? {}),
+            },
+            profile: { ...(current.profile ?? {}), ...(cloudSettings.profile ?? {}) },
+          }
+          delete (settings as { id?: string }).id
+          set({ settings })
+          storage.saveSettings(settings)
+          break
+        }
+        case 'cases': {
+          const cases = items as CaseOpeningLog[]
+          const collection = rebuildCollectionFromHistory(get().drops, cases, get().collection)
+          set({ cases, collection })
+          storage.saveCases(cases)
+          storage.saveCollection(collection)
+          break
+        }
+        case 'collection': {
+          const collection = rebuildCollectionFromHistory(get().drops, get().cases, items as CollectionItem[])
+          set({ collection })
+          storage.saveCollection(collection)
+          break
+        }
+        case 'achievements': {
+          const achievements = (items as Array<{ id?: string; list?: Achievement[] }>).find(item => Array.isArray(item.list))?.list
+          if (!achievements) break
+          set({ achievements })
+          storage.saveAchievements(achievements)
+          break
+        }
+        case 'gamification': {
+          const gamification = (items as Array<GamificationState & { id?: string }>)[0]
+          if (!gamification) break
+          delete gamification.id
+          gamification.unlockedTitles = [...new Set(
+            (gamification.unlockedTitles ?? [DEFAULT_GAMIFICATION_TITLE]).map(normalizeGamificationTitle),
+          )]
+          gamification.activeTitle = normalizeGamificationTitle(gamification.activeTitle)
+          set({ gamification })
+          storage.saveGamificationState(gamification)
+          void get().fetchRankings()
+          break
+        }
+      }
     },
 
     fetchRankings: async () => {
       const { user, authMode, gamification, drops, settings, friends } = get()
-      if (authMode !== 'firebase' || user?.provider !== 'google' || settings.gamification?.showRankings !== true || settings.liteMode) {
+      if (authMode !== 'firebase' || user?.provider !== 'google') {
         set({ rankings: [] })
         return
       }
@@ -905,7 +1021,7 @@ export const useStore = create<AppState>()(
         return []
       })
       const entries: LeaderboardEntry[] = []
-      if (ownProfile?.allowRankings) {
+      if (ownProfile) {
         entries.push({
           id: user.uid,
           name: ownProfile.name || settings.profile?.displayName || user.displayName || 'Você',
@@ -916,17 +1032,19 @@ export const useStore = create<AppState>()(
           totalDrops: ownProfile.totalDrops ?? drops.length,
         })
       }
-      friendProfiles
-        .filter(profile => profile.allowRankings)
-        .forEach(profile => entries.push({
-          id: profile.uid,
-          name: profile.name || profile.friendCode,
-          avatarUrl: profile.avatarUrl,
-          activeTitle: profile.activeTitle,
-          level: profile.level ?? 1,
-          xp: profile.xp ?? 0,
-          totalDrops: profile.totalDrops ?? 0,
-        }))
+      const profilesById = new Map(friendProfiles.map(profile => [profile.uid, profile]))
+      friends.forEach(friend => {
+        const profile = profilesById.get(friend.id)
+        entries.push({
+          id: friend.id,
+          name: profile?.name || friend.name,
+          avatarUrl: profile?.avatarUrl || friend.avatarUrl,
+          activeTitle: profile?.activeTitle,
+          level: profile?.level ?? friend.level,
+          xp: profile?.xp ?? friend.xp,
+          totalDrops: profile?.totalDrops ?? 0,
+        })
+      })
       set({ rankings: entries.sort((a, b) => b.xp - a.xp) })
     },
 
@@ -1056,8 +1174,6 @@ export const useStore = create<AppState>()(
       let cloudSettings: Array<AppSettings & { id?: string }>
       let cloudCollection: CollectionItem[]
       let cloudCases: CaseOpeningLog[]
-      let cloudFriends: Friend[]
-      let cloudFriendRequests: FriendRequest[]
       let cloudAchievements: Array<{ id?: string; list?: Achievement[] }>
       let cloudGamification: Array<GamificationState & { id?: string }>
 
@@ -1069,8 +1185,6 @@ export const useStore = create<AppState>()(
           cloudSettings,
           cloudCollection,
           cloudCases,
-          cloudFriends,
-          cloudFriendRequests,
           cloudAchievements,
           cloudGamification,
         ] = await Promise.all([
@@ -1080,8 +1194,6 @@ export const useStore = create<AppState>()(
           firestoreLoadCollection<AppSettings & { id?: string }>(user.uid, 'settings'),
           firestoreLoadCollection<CollectionItem>(user.uid, 'collection'),
           firestoreLoadCollection<CaseOpeningLog>(user.uid, 'cases'),
-          firestoreLoadCollection<Friend>(user.uid, 'friends'),
-          firestoreLoadCollection<FriendRequest>(user.uid, 'friendRequests'),
           firestoreLoadCollection<{ id?: string; list?: Achievement[] }>(user.uid, 'achievements'),
           firestoreLoadCollection<GamificationState & { id?: string }>(user.uid, 'gamification'),
         ])
@@ -1111,6 +1223,7 @@ export const useStore = create<AppState>()(
           throw e
         })
         publishPublicProfileSnapshot(get())
+        void get().fetchRankings()
         return
       }
 
@@ -1123,6 +1236,7 @@ export const useStore = create<AppState>()(
               ...DEFAULT_SETTINGS.gamification!,
               ...(localSnapshot.settings.gamification ?? {}),
               ...(cloudSettings[0].gamification ?? {}),
+              showRankings: true,
             },
             privacy: {
               ...DEFAULT_SETTINGS.privacy!,
@@ -1141,6 +1255,10 @@ export const useStore = create<AppState>()(
         ? { ...localSnapshot.gamification, ...cloudGamification[0] }
         : localSnapshot.gamification
       delete (gamification as { id?: string }).id
+      gamification.unlockedTitles = [...new Set(
+        (gamification.unlockedTitles ?? [DEFAULT_GAMIFICATION_TITLE]).map(normalizeGamificationTitle),
+      )]
+      gamification.activeTitle = normalizeGamificationTitle(gamification.activeTitle)
 
       const collection = rebuildCollectionFromHistory(cloudDrops, cloudCases, cloudCollection)
 
@@ -1151,8 +1269,8 @@ export const useStore = create<AppState>()(
         settings,
         collection,
         cases: cloudCases,
-        friends: cloudFriends,
-        friendRequests: cloudFriendRequests,
+        friends: get().friends,
+        friendRequests: get().friendRequests,
         achievements,
         gamification,
         rankings: [],
@@ -1163,8 +1281,8 @@ export const useStore = create<AppState>()(
       storage.saveSettings(settings)
       storage.saveCollection(collection)
       storage.saveCases(cloudCases)
-      storage.saveFriends(cloudFriends)
-      storage.saveFriendRequests(cloudFriendRequests)
+      storage.saveFriends(get().friends)
+      storage.saveFriendRequests(get().friendRequests)
       storage.saveAchievements(achievements)
       storage.saveGamificationState(gamification)
       await firestoreSaveDoc(user.uid, 'settings', 'app', settings as unknown as Record<string, unknown>)
@@ -1173,6 +1291,7 @@ export const useStore = create<AppState>()(
         firestoreSaveDoc(user.uid, 'collection', item.marketHashName, item as unknown as Record<string, unknown>),
       )).catch(e => logger.error('[Store] Collection backfill sync failed:', e))
       publishPublicProfileSnapshot(get())
+      void get().fetchRankings()
     },
 
     reset: () => {

@@ -25,6 +25,37 @@ service cloud.firestore {
                             && resource.data.uid == request.auth.uid;
     }
 
+    // Convites e amizades só podem ser lidos pelas duas contas envolvidas.
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null
+                  && request.auth.uid in [resource.data.senderId, resource.data.recipientId];
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.senderId
+                    && request.resource.data.senderId != request.resource.data.recipientId
+                    && request.resource.data.id == requestId;
+      allow delete: if request.auth != null
+                    && request.auth.uid in [resource.data.senderId, resource.data.recipientId];
+      allow update: if false;
+    }
+
+    match /friendships/{friendshipId} {
+      allow read: if request.auth != null
+                  && request.auth.uid in resource.data.memberIds;
+      allow create: if request.auth != null
+                    && request.resource.data.id == friendshipId
+                    && request.resource.data.memberIds.size() == 2
+                    && request.auth.uid == request.resource.data.acceptedBy
+                    && exists(/databases/$(database)/documents/friendRequests/$(friendshipId))
+                    && get(/databases/$(database)/documents/friendRequests/$(friendshipId)).data.recipientId == request.auth.uid
+                    && request.resource.data.memberIds.hasAll([
+                      get(/databases/$(database)/documents/friendRequests/$(friendshipId)).data.senderId,
+                      get(/databases/$(database)/documents/friendRequests/$(friendshipId)).data.recipientId
+                    ]);
+      allow delete: if request.auth != null
+                    && request.auth.uid in resource.data.memberIds;
+      allow update: if false;
+    }
+
     // Device code auth (YouTube TV style flow)
     // - Unauthenticated Electron app creates a pending code
     // - Anyone can read (Electron polls for completion)

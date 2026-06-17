@@ -823,7 +823,7 @@ export default function Settings() {
         showPerfectWeek: !liteMode,
         showLevels: !liteMode,
         showTitles: !liteMode,
-        showRankings: liteMode ? false : (settings.gamification?.showRankings ?? false),
+        showRankings: true,
         showCollection: !liteMode,
         showCaseTracker: !liteMode,
       },
@@ -1399,15 +1399,6 @@ export default function Settings() {
                       </SettingRow>
                     </div>
 
-                    <div className="pt-3 border-t border-white/[0.025]">
-                      <SettingRow label={t('settings.profile_rankings')} hint={t('settings.profile_rankings_hint')}>
-                        <Toggle
-                          disabled={user?.provider !== 'google' || settings.liteMode}
-                          value={settings.gamification?.showRankings ?? false}
-                          onChange={v => updateSettings({ gamification: { ...DEFAULT_SETTINGS.gamification!, ...(settings.gamification ?? {}), showRankings: v } })}
-                        />
-                      </SettingRow>
-                    </div>
                   </div>
                 </Section>
 

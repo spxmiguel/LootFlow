@@ -277,8 +277,26 @@ export interface FriendRequest {
   senderName: string;
   senderAvatar?: string;
   senderFriendCode: string;
+  senderActiveTitle?: string;
+  senderLevel?: number;
+  senderXp?: number;
+  recipientId: string;
+  recipientName: string;
+  recipientAvatar?: string;
+  recipientFriendCode: string;
+  recipientActiveTitle?: string;
+  recipientLevel?: number;
+  recipientXp?: number;
   type: 'incoming' | 'outgoing';
   createdAt: string; // ISO date
+}
+
+export interface Friendship {
+  id: string;
+  memberIds: string[];
+  memberProfiles: Record<string, Friend>;
+  acceptedBy: string;
+  createdAt: string;
 }
 
 export interface LeaderboardEntry {
