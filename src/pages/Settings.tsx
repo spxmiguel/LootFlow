@@ -703,9 +703,10 @@ export default function Settings() {
     updateSettings, updateTheme, updateProfile, reset,
     clearDrops, clearAccounts, clearGoals, resetSettingsToDefault,
   } = useStore()
-  const { user, deleteAccount } = useAuth()
+  const { user, deleteAccount, resync } = useAuth()
 
   const [activeTab, setActiveTab] = useState<'finance' | 'appearance' | 'notifications' | 'privacy'>('finance')
+  const [syncing, setSyncing] = useState(false)
   const [resetConfirm, setResetConfirm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<'drops' | 'accounts' | 'goals' | 'settings' | null>(null)
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(0)
@@ -749,6 +750,18 @@ export default function Settings() {
   }, [settings.currency, settings.usdRate])
 
   // ── Handlers ──
+
+  async function handleResync() {
+    setSyncing(true)
+    try {
+      await resync(true)
+      toast.success(t('settings.firebase_resync_success'))
+    } catch {
+      toast.error(t('settings.firebase_resync_error'))
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   async function handleDeleteAccount() {
     if (deleteAccountConfirm < 2) {
@@ -1242,6 +1255,19 @@ export default function Settings() {
                         <p>{t('settings.firebase_status_desc')}</p>
                       </div>
                     </div>
+
+                    {user?.provider === 'google' && (
+                      <Button
+                        variant="ghost"
+                        icon={RefreshCw}
+                        size="sm"
+                        onClick={handleResync}
+                        disabled={syncing}
+                        className="w-full justify-center"
+                      >
+                        {syncing ? t('settings.firebase_resyncing') : t('settings.firebase_resync_now')}
+                      </Button>
+                    )}
 
                     <button
                       onClick={() => setShowCustomFirebase(v => !v)}
