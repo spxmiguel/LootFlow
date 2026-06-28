@@ -313,7 +313,14 @@ function WhatsAppSection() {
   return (
     <div className="space-y-5">
       {/* 1. Conexão & Status */}
-      <Section icon={MessageCircle} color="green" title={t('wa.section_connection')} subtitle={t('wa.section_connection_desc')} defaultOpen={true}>
+      <Section icon={MessageCircle} color="green" title={<span className="flex items-center gap-2">{t('wa.section_connection')} <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-400 border border-amber-400/30">BETA</span></span> as any} subtitle={t('wa.section_connection_desc')} defaultOpen={true}>
+        {/* Beta warning */}
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-400/5 border border-amber-400/20">
+          <span className="text-amber-400 mt-0.5 shrink-0 text-xs">⚠</span>
+          <p className="text-[11px] text-amber-300/80 leading-relaxed">
+            {t('wa.beta_warning') || 'Funcionalidade em beta — pode ser instável e às vezes não funcionar corretamente.'}
+          </p>
+        </div>
         {/* Info */}
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d1117] border border-white/[0.025]">
           <Info size={13} className="text-slate-500 mt-0.5 shrink-0" />

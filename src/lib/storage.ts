@@ -111,9 +111,9 @@ function hasLegacyData(): boolean {
 
 function detectLanguage(): 'pt' | 'en' {
   try {
-    const nav = navigator.language || 'pt'
+    const nav = navigator.language || 'en'
     return nav.toLowerCase().startsWith('pt') ? 'pt' : 'en'
-  } catch { return 'pt' }
+  } catch { return 'en' }
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
