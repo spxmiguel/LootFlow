@@ -998,6 +998,9 @@ export default function Settings() {
               >
                 <Icon size={16} className="shrink-0" />
                 <span>{t(`settings.tab_${tab.id}` as any)}</span>
+                {tab.id === 'notifications' && (
+                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-400 border border-amber-400/30 leading-none">BETA</span>
+                )}
               </button>
             )
           })}
