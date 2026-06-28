@@ -156,6 +156,7 @@ function WhatsAppSection() {
     weeklySummary: wa?.weeklySummary ?? true,
     xingamentos: wa?.xingamentos ?? false,
     enabledXingamentos: wa?.enabledXingamentos,
+    notifLang: wa?.notifLang ?? 'pt',
   }))
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -231,6 +232,7 @@ function WhatsAppSection() {
         weeklySummary: draft.weeklySummary ?? true,
         xingamentos: draft.xingamentos ?? false,
         enabledXingamentos: draft.enabledXingamentos,
+        notifLang: draft.notifLang ?? 'pt',
       }
       updateSettings({ whatsapp: newWA })
       setHasChanges(false)
@@ -453,6 +455,28 @@ function WhatsAppSection() {
       {/* 2. Tipos de Alerta */}
       <Section icon={MessageCircle} color="blue" title={t('wa.section_alert_types')} subtitle={t('wa.section_alert_types_desc')} defaultOpen={true}>
         <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.025]">
+            <div>
+              <p className="text-sm text-white">{t('wa.notif_lang_label')}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{t('wa.notif_lang_desc')}</p>
+            </div>
+            <div className="flex gap-1.5 shrink-0">
+              {(['pt', 'en'] as const).map(l => (
+                <button
+                  key={l}
+                  onClick={() => updateDraft({ notifLang: l })}
+                  className={`h-7 px-3 rounded-lg text-xs font-medium border transition-all ${
+                    (draft.notifLang ?? 'pt') === l
+                      ? 'bg-profit/10 border-profit/40 text-profit'
+                      : 'bg-[#0d1117] border-white/[0.025] text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {t(l === 'pt' ? 'wa.notif_lang_pt' : 'wa.notif_lang_en')}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#111827] border border-white/[0.025]">
             <div>
               <p className="text-sm text-white">{t('wa.summary_label')}</p>

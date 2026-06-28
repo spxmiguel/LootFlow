@@ -102,6 +102,7 @@ export interface WhatsAppSettings {
   verifyCode?: string;
   lastReminderAt?: string;
   consentAt?: string;       // ISO timestamp — quando usuário consentiu coleta do telefone (LGPD Art. 7, I)
+  notifLang?: 'pt' | 'en'; // idioma das mensagens enviadas pelo bot
 }
 
 export interface GamificationSettings {
