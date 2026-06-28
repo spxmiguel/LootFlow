@@ -131,7 +131,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     sidebarCompact: false,
   },
   showOnboarding: true,
-  liteMode: false,
+  liteMode: true,
   profilePrivacy: 'private',
   privacy: {
     hideProfile: true,
@@ -143,17 +143,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
     hideHistory: true,
   },
   gamification: {
-    showInsights: true,
-    showHeatmap: true,
+    showInsights: false,
+    showHeatmap: false,
     showTimeline: false,
-    showAchievements: true,
-    showHallOfFame: true,
-    showPerfectWeek: true,
-    showLevels: true,
-    showTitles: true,
-    showRankings: true,
-    showCollection: true,
-    showCaseTracker: true,
+    showAchievements: false,
+    showHallOfFame: false,
+    showPerfectWeek: false,
+    showLevels: false,
+    showTitles: false,
+    showRankings: false,
+    showCollection: false,
+    showCaseTracker: false,
   },
 }
 
@@ -199,8 +199,6 @@ function loadSettings(): AppSettings {
     gamification: { ...DEFAULT_SETTINGS.gamification, ...(saved.gamification ?? {}) } as any,
     privacy: { ...DEFAULT_SETTINGS.privacy, ...(saved.privacy ?? {}) },
   }
-  // Rankings são padrão; a opção antiga fica habilitada apenas por compatibilidade.
-  merged.gamification!.showRankings = true
   // Migrate old cyan default → green to match new design system
   if (merged.theme.primaryColor === '#38bdf8') merged.theme.primaryColor = '#10b981'
   if (merged.theme.accentColor === '#4ade80') merged.theme.accentColor = '#10b981'

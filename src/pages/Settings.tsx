@@ -1168,7 +1168,7 @@ export default function Settings() {
                           : 'border-white/[0.025] bg-[#111827]/60 text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <p className="text-sm font-semibold">{t('settings.gamification_full')}</p>
+                      <p className="text-sm font-semibold">{t('settings.gamification_full')} <span className="text-xs font-bold text-amber-400">(BETA)</span></p>
                       <p className="mt-1 text-xs text-slate-500">{t('settings.gamification_full_hint')}</p>
                     </button>
                     <button
